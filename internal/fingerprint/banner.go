@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	maxBanner     = 1024     // printable banner size kept in model.Service
-	maxResponse   = 64 << 10 // max bytes read from one probe response
+	maxBanner      = 1024     // printable banner size kept in model.Service
+	maxResponse    = 64 << 10 // max bytes read from one probe response
 	defaultTimeout = 5 * time.Second
 )
 

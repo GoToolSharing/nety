@@ -2,6 +2,7 @@ package fingerprint
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -9,7 +10,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -42,6 +45,89 @@ func clientTLSConfig(serverName string, alpn []string) *tls.Config {
 		cfg.ServerName = serverName
 	}
 	return cfg
+}
+
+// tlsLadder is walked from the highest version down: the first handshake that
+// succeeds tells us the highest version the server accepts. Most servers
+// negotiate their best version from the first (TLS 1.3 capable) ClientHello;
+// the lower rungs exist for version-intolerant middleboxes and legacy stacks.
+var tlsLadder = []uint16{
+	tls.VersionTLS13, tls.VersionTLS12, tls.VersionTLS11, tls.VersionTLS10,
+}
+
+// probeTLS tries to establish a TLS session on the target port. On success it
+// returns the observed parameters together with the LIVE connection: the
+// caller owns it and must close it. The connection is bound to ctx.
+func (d *dialer) probeTLS(ctx context.Context, alpn []string) (*model.TLSInfo, *tls.Conn, error) {
+	var firstErr error
+	for _, max := range tlsLadder {
+		if err := ctx.Err(); err != nil {
+			return nil, nil, err
+		}
+		raw, err := d.dial(ctx)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			return nil, nil, firstErr
+		}
+		cfg := clientTLSConfig(d.hostname, alpn)
+		cfg.MaxVersion = max
+		tc := tls.Client(raw, cfg)
+
+		hctx, cancel := context.WithTimeout(ctx, d.handshakeTimeout())
+		err = tc.HandshakeContext(hctx)
+		cancel()
+		if err == nil {
+			return tlsInfoFromState(tc.ConnectionState(), time.Now()), tc, nil
+		}
+		_ = raw.Close()
+		if firstErr == nil {
+			firstErr = err
+		}
+		if !retryLowerTLS(err) {
+			break
+		}
+	}
+	if firstErr == nil {
+		firstErr = errors.New("tls: handshake failed")
+	}
+	return nil, nil, firstErr
+}
+
+// retryLowerTLS reports whether err is consistent with a server that speaks
+// TLS but refused the version we offered. A plaintext service, a refused
+// connection or a silent peer are definitive: there is nothing lower to try.
+func retryLowerTLS(err error) bool {
+	if err == nil {
+		return false
+	}
+	var rec tls.RecordHeaderError
+	if errors.As(err, &rec) {
+		// The first record is not a TLS record: this is not a TLS service.
+		return false
+	}
+	if isTimeout(err) || isRefused(err) || errors.Is(err, context.Canceled) ||
+		errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	var alert tls.AlertError
+	if errors.As(err, &alert) {
+		switch uint8(alert) {
+		case 40, // handshake_failure
+			47,  // illegal_parameter
+			50,  // decode_error
+			70,  // protocol_version
+			71,  // insufficient_security
+			80,  // internal_error
+			109: // no_application_protocol (unlikely, but harmless to retry)
+			return true
+		}
+		return false
+	}
+	// A reset or an EOF mid-handshake is the classic symptom of version
+	// intolerance, so one more rung down is worth a try.
+	return errors.Is(err, io.EOF) || isConnReset(err) || strings.Contains(err.Error(), "tls:")
 }
 
 // tlsInfoFromState extracts negotiated parameters and leaf certificate facts.

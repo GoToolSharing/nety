@@ -1,0 +1,53 @@
+# Synthetic service-probe file -- hand-written test data for NETY.
+#
+# This file is NOT nmap's nmap-service-probes database and is NOT derived from
+# it in any way: every probe, pattern, service name, product and CPE below was
+# invented for this package's unit tests. It exists only to exercise the
+# parser, the selector and the matcher, and is useless for real service
+# detection. Do not ship it as a service-probe database.
+
+Exclude T:9100-9107,U:1900
+
+##############################NEXT PROBE##############################
+Probe TCP NULL q||
+rarity 1
+totalwaitms 5000
+tcpwrappedms 3000
+
+match synthbanner m|^SYNTH ([\d.]+) ready\r\n| p/SyntheticServer banner/ v/$1/ cpe:/a:nety:synthetic_banner:$1/
+match synthbin m|^\xca\xfe\x00(....)|s p/SyntheticBinary/ v/$I(1,"<")/ i/node $P(1)/
+softmatch synthsoft m|^SYNTH | p/SyntheticServer generic/
+
+##############################NEXT PROBE##############################
+Probe TCP SynthGet q|GET /synthetic HTTP/1.0\r\nHost: nety\r\n\r\n|
+rarity 3
+ports 80,8080-8090
+sslports 443,8443
+totalwaitms 4000
+fallback NULL
+
+match synthhttp m|^HTTP/1\.[01] \d\d\d [^\r\n]*\r\nServer: SyntheticServer httpd ([\w._-]+) \(([^)]+)\)|s p/SyntheticServer httpd/ v/$1/ i/$2; fee $$0/ cpe:/a:nety:synthetic_httpd:$1/a
+match synthadmin m@^SynthAdmin/([\w.]+) \(([\w_]+)\)@i p/SyntheticAdmin console/ v/$1/ i/$SUBST(2,"_"," ")/ h/$P(2)/ o/SynthOS/ d/router/
+
+##############################NEXT PROBE##############################
+Probe UDP SynthUDP q|\x53\x59\x4e\x54\0\x01\101|
+rarity 7
+ports 7777,9999
+totalwaitms 1500
+
+match synthudp m=^RESP\0(..)(.*)$=s p/SyntheticUDP daemon/ v/$I(1,">")/ i/$P(2)/ cpe:/a:nety:synthetic_udpd/
+
+##############################NEXT PROBE##############################
+Probe TCP SynthPipe q|PIPE \| ESC\\END\t\x07|
+rarity 9
+
+match synthpipe m%^PIPEOK (\d+)(?: (\w+))?% p/SyntheticPipe/ v/$1/ i/opt=$2/
+
+##############################NEXT PROBE##############################
+Probe TCP SynthFlags q|FLAGS\n|
+rarity 9
+ports 7000
+
+match synthdot m|^DOTS(.)END|s p/SyntheticDots/ i/$P(1)/
+match synthnodot m|^NODOTS(.)END| p/SyntheticNoDots/
+match synthcase m/^CaseTest\/([\d.]+)/i p/SyntheticCase/ v/$1/
