@@ -11,3 +11,4 @@
 
 # Tooling side-channel logs, not part of the project
 /.vaadata/
+/.playwright-mcp/
