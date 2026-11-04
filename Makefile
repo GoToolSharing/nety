@@ -14,6 +14,13 @@ SHELL      := /bin/bash
 PROJECT    := nety
 TOOL_IMAGE := nety-toolchain:latest
 RUN_IMAGE  := nety:latest
+# Architecture of the lab containers, which follow the host.
+HOST_ARCH  := $(shell uname -m)
+ifeq ($(filter arm64 aarch64,$(HOST_ARCH)),)
+LAB_ARCH   := amd64
+else
+LAB_ARCH   := arm64
+endif
 UID        := $(shell id -u)
 GID        := $(shell id -g)
 PWD        := $(shell pwd)
@@ -96,9 +103,17 @@ image:
 	docker build -f build/Dockerfile -t $(RUN_IMAGE) \
 		--build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) .
 
-## Integration lab: NETY plus a set of isolated networks with fake services.
-lab-up:
+## Integration lab: NETY plus a set of isolated networks with real services.
+## It runs the binary build/ produced, so the lab exercises what ships.
+lab-up: build
 	docker compose -f build/lab/docker-compose.yml up -d --build
+
+## Exercise the raw-socket and netlink paths against a real kernel inside the
+## lab. It reconfigures the lab container's interfaces, never your machine.
+lab-verify: toolchain
+	$(DOCKER_RUN) env GOOS=linux GOARCH=$(LAB_ARCH) go build -o dist/labcheck ./cmd/labcheck
+	docker cp dist/labcheck nety-lab:/usr/local/bin/labcheck
+	docker exec nety-lab labcheck
 
 lab-down:
 	docker compose -f build/lab/docker-compose.yml down -v

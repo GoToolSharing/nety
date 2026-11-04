@@ -160,7 +160,31 @@ other two unreachable. To watch a crossing appear in the matrix:
 docker network connect lab_vlan20 nety-lab
 ```
 
+`make lab-verify` additionally exercises, against the lab's real kernel, the
+paths unit tests cannot reach: creating an 802.1Q sub-interface, addressing it,
+installing a route, and proving every one of those changes is tracked and
+reverted.
+
+Note that Docker bridges forward between each other by default, so the lab's
+matrix will legitimately show VLAN 10 reaching VLAN 20. That is a real
+reachability result, not a false positive — it is what an unsegmented network
+looks like.
+
 Tear it down with `make lab-down`.
+
+### What the lab does and does not prove
+
+Validated against a live network in the lab: raw sockets, the ARP sweep, the
+stateless SYN scan, UDP probing, service fingerprinting, identity collection,
+the checks, the full segmentation matrix with its per-technique breakdown, and
+the guarantee that the machine is left exactly as it was found.
+
+Still requiring physical hardware: that a real switch grants a trunk in
+response to DTP, and that an access port forwards a double-tagged frame. The
+code paths are exercised, their cleanup is proven, but the switch's half of
+those conversations cannot be simulated. Treat the first run of the
+`dtp-trunk` and `double-tag` techniques on a client site as untested in the
+field.
 
 ---
 
