@@ -47,7 +47,7 @@ DOCKER_RUN = docker run --rm -t \
 	-e HOME=/tmp \
 	$(TOOL_IMAGE)
 
-.PHONY: all build test vet fmt web shell image lab-up lab-down lab-verify verify-kernel clean toolchain
+.PHONY: all build test vet fmt web shell image release lab-up lab-down lab-verify verify-kernel clean toolchain
 
 all: build
 
@@ -97,6 +97,25 @@ shell: toolchain
 		-v $(PWD)/.cache/go-build:/.cache/go-build -v $(PWD)/.cache/go-mod:/go/pkg/mod \
 		-e GOCACHE=/.cache/go-build -e GOMODCACHE=/go/pkg/mod -e HOME=/tmp \
 		$(TOOL_IMAGE) bash
+
+## Release tarball: the binary, the systemd unit and the installer, ready to
+## scp to the machine you will scan from.
+##   make release ARCH=amd64   (default)
+##   make release ARCH=arm64
+ARCH ?= amd64
+release: build
+	@rm -rf dist/release && mkdir -p dist/release/nety-$(VERSION)-linux-$(ARCH)
+	@cp dist/nety-linux-$(ARCH) dist/release/nety-$(VERSION)-linux-$(ARCH)/nety
+	@cp deploy/nety.service deploy/install.sh dist/release/nety-$(VERSION)-linux-$(ARCH)/
+	@cp README.md docs/DEPLOY.md dist/release/nety-$(VERSION)-linux-$(ARCH)/
+	@chmod +x dist/release/nety-$(VERSION)-linux-$(ARCH)/install.sh
+	@cd dist/release && tar czf nety-$(VERSION)-linux-$(ARCH).tar.gz nety-$(VERSION)-linux-$(ARCH)
+	@cd dist/release && shasum -a 256 nety-$(VERSION)-linux-$(ARCH).tar.gz > nety-$(VERSION)-linux-$(ARCH).tar.gz.sha256
+	@echo
+	@ls -lh dist/release/*.tar.gz
+	@echo
+	@echo "  scp dist/release/nety-$(VERSION)-linux-$(ARCH).tar.gz user@host:"
+	@echo "  ssh user@host 'tar xzf nety-$(VERSION)-linux-$(ARCH).tar.gz && cd nety-$(VERSION)-linux-$(ARCH) && sudo ./install.sh'"
 
 ## Runtime image: the binary plus the capabilities it needs.
 image:

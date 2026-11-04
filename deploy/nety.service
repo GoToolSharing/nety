@@ -1,0 +1,48 @@
+# systemd unit for NETY.
+#
+# Installed to /etc/systemd/system/nety.service by deploy/install.sh.
+#
+# The capabilities are the whole point of running it this way: NETY needs raw
+# sockets for SYN scanning, ARP discovery and the passive layer-2 recon, and
+# NET_ADMIN to create the 802.1Q sub-interfaces and routes the segmentation
+# techniques use. Granting them to the service is better than running the whole
+# thing as root.
+
+[Unit]
+Description=NETY - internal network mapping and VLAN segmentation testing
+Documentation=https://github.com/GoToolSharing/nety
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=nety
+Group=nety
+ExecStart=/usr/local/bin/nety serve --data /var/lib/nety --listen :8443
+Restart=on-failure
+RestartSec=5s
+
+# CAP_NET_RAW      raw sockets: SYN scan, ARP sweep, ICMP, L2 sniffing
+# CAP_NET_ADMIN    netlink: VLAN sub-interfaces, routes, promiscuous mode
+# CAP_NET_BIND_SERVICE  source ports below 1024 for the source-port techniques
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+NoNewPrivileges=yes
+
+# The database holds a complete map of a client's internal network. Keep the
+# rest of the filesystem out of reach.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/nety
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+
+# A scan opens a lot of sockets at once.
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

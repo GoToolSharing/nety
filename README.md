@@ -171,12 +171,17 @@ make test       # the whole test suite
 
 Every target runs in Docker, so Go and Node stay off your machine.
 
-On the laptop you plug in with:
+To install it on the machine you will scan from, there is a release tarball
+with a systemd unit and an installer:
 
 ```bash
-sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip ./nety
-nety serve --data /var/lib/nety
+make release                                  # or ARCH=arm64
+scp dist/release/nety-*-linux-amd64.tar.gz user@host:
+ssh user@host 'tar xzf nety-*.tar.gz && cd nety-*-linux-* && sudo ./install.sh'
 ```
+
+See [`docs/DEPLOY.md`](docs/DEPLOY.md) for the detail, including what it does
+and does not change on a machine that is already busy.
 
 First start prints an administrator password once. The log lists the URLs a
 colleague on the same VLAN can reach you on.
@@ -271,6 +276,9 @@ Get written authorisation before pointing this at anything.
 
 ## More
 
+- [`docs/DEPLOY.md`](docs/DEPLOY.md) - installing it on the Linux box you will
+  scan from, what it does and does not touch on that machine, and the Proxmox
+  network settings VLAN work needs
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) - how it is put together and
   the rules every package follows
 - [`docs/OPERATIONS.md`](docs/OPERATIONS.md) - the field manual: privileges,
