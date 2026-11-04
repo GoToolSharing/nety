@@ -1,0 +1,10 @@
+/dist/
+/.cache/
+/web/node_modules/
+/web/dist/
+/internal/server/dist/assets/
+/internal/server/dist/index.html
+*.db
+*.db-wal
+*.db-shm
+.DS_Store
