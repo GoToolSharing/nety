@@ -239,10 +239,11 @@ export default function ScanLauncherPage() {
       setError('Choose the network you are plugged into.')
       return
     }
+    const targets = splitList(targetsText)
     const payloadOptions: ScanOptions = {
       ...opts,
       profile,
-      targets: splitList(targetsText),
+      targets,
       excludes: splitList(excludesText),
       vlan_range: vlanRange.trim(),
       source_network_ids: kind === 'segmentation' ? sourceIds : [],
@@ -252,7 +253,7 @@ export default function ScanLauncherPage() {
     if (
       kind === 'discovery' &&
       !payloadOptions.auto_targets &&
-      payloadOptions.targets.length === 0
+      targets.length === 0
     ) {
       setError(
         'With auto-targets off you must list at least one target CIDR or address.',

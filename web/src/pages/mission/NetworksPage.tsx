@@ -12,7 +12,7 @@ import {
 import { useMissionId } from '@/lib/hooks'
 import { useAuth } from '@/state/auth'
 import PageContainer from '@/components/layout/PageContainer'
-import { Card, CardBody, CardHeader, KeyValue, PageHeader } from '@/components/ui/Card'
+import { Card, CardHeader, KeyValue, PageHeader } from '@/components/ui/Card'
 import { Button, IconButton, LinkButton } from '@/components/ui/Button'
 import { Modal, ConfirmDialog } from '@/components/ui/Modal'
 import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'

@@ -8,3 +8,6 @@
 *.db-wal
 *.db-shm
 .DS_Store
+
+# Tooling side-channel logs, not part of the project
+/.vaadata/
