@@ -79,6 +79,19 @@ func (a *API) handleListServices(w http.ResponseWriter, r *http.Request, u model
 		Limit:     queryInt(r, "limit", 0),
 		Offset:    queryInt(r, "offset", 0),
 	}
+	for _, v := range q["triage"] {
+		for _, part := range strings.Split(v, ",") {
+			st := model.TriageStatus(strings.TrimSpace(part))
+			if st == "" {
+				continue
+			}
+			if !model.ValidTriageStatus(st) {
+				a.fail(w, http.StatusBadRequest, "invalid", "unknown triage status "+string(st))
+				return
+			}
+			filter.Triage = append(filter.Triage, st)
+		}
+	}
 	if filter.Protocol != "" && filter.Protocol != model.TCP && filter.Protocol != model.UDP {
 		a.fail(w, http.StatusBadRequest, "invalid", "protocol must be tcp or udp")
 		return
@@ -91,7 +104,36 @@ func (a *API) handleListServices(w http.ResponseWriter, r *http.Request, u model
 		a.failStore(w, err, "services")
 		return
 	}
-	a.ok(w, services)
+	a.ok(w, a.fillTriageAuthors(r, services))
+}
+
+// fillTriageAuthors resolves the triage author names in one pass rather than
+// one query per row.
+func (a *API) fillTriageAuthors(r *http.Request, services []model.Service) []model.Service {
+	need := false
+	for _, sv := range services {
+		if sv.Triage.UpdatedBy != 0 {
+			need = true
+			break
+		}
+	}
+	if !need {
+		return services
+	}
+	users, err := a.Store.ListUsers(r.Context())
+	if err != nil {
+		return services
+	}
+	byID := make(map[int64]string, len(users))
+	for _, u := range users {
+		byID[u.ID] = firstNonEmptyString(u.DisplayName, u.Username)
+	}
+	for i := range services {
+		if name, ok := byID[services[i].Triage.UpdatedBy]; ok {
+			services[i].Triage.UpdatedByName = name
+		}
+	}
+	return services
 }
 
 func (a *API) handleListFindings(w http.ResponseWriter, r *http.Request, u model.User) {

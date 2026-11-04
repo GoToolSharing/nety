@@ -178,7 +178,9 @@ func (s *Store) ListHosts(ctx context.Context, missionID, networkID int64) ([]mo
 
 const serviceCols = `id, mission_id, network_id, host_id, ip, port, protocol, state,
 	reason, name, product, version, extra_info, os_type, cpes, tunnel, banner,
-	tls, http, ssh, extra, confidence, method, first_seen, last_seen, last_scan_id`
+	tls, http, ssh, extra, confidence, method,
+	triage_status, triage_note, triage_by, triage_at,
+	first_seen, last_seen, last_scan_id`
 
 func scanService(sc interface{ Scan(...any) error }) (model.Service, error) {
 	var (
@@ -187,10 +189,12 @@ func scanService(sc interface{ Scan(...any) error }) (model.Service, error) {
 		tlsRaw, httpRaw, sshRaw sql.NullString
 		first, last             int64
 	)
+	var triageAt sql.NullInt64
 	err := sc.Scan(&sv.ID, &sv.MissionID, &sv.NetworkID, &sv.HostID, &sv.IP, &sv.Port,
 		&sv.Protocol, &sv.State, &sv.Reason, &sv.Name, &sv.Product, &sv.Version,
 		&sv.ExtraInfo, &sv.OSType, &cpes, &sv.Tunnel, &sv.Banner,
 		&tlsRaw, &httpRaw, &sshRaw, &extra, &sv.Confidence, &sv.Method,
+		&sv.Triage.Status, &sv.Triage.Note, &sv.Triage.UpdatedBy, &triageAt,
 		&first, &last, &sv.LastScanID)
 	if err != nil {
 		return model.Service{}, err
@@ -200,6 +204,10 @@ func scanService(sc interface{ Scan(...any) error }) (model.Service, error) {
 	sv.TLS = jsonDecPtr[model.TLSInfo](tlsRaw)
 	sv.HTTP = jsonDecPtr[model.HTTPInfo](httpRaw)
 	sv.SSH = jsonDecPtr[model.SSHInfo](sshRaw)
+	sv.Triage.UpdatedAt = toTimePtr(triageAt)
+	if sv.Triage.Status == "" {
+		sv.Triage.Status = model.TriageTodo
+	}
 	sv.FirstSeen, sv.LastSeen = toTime(first), toTime(last)
 	return sv, nil
 }
@@ -238,8 +246,13 @@ func (s *Store) UpsertService(ctx context.Context, sv model.Service) (model.Serv
 			if err != nil {
 				return err
 			}
-			sv.ID, err = res.LastInsertId()
-			return err
+			if sv.ID, err = res.LastInsertId(); err != nil {
+				return err
+			}
+			// The row carries the column default; mirror it on the value we
+			// hand back so callers never see an empty status.
+			sv.Triage = model.Triage{Status: model.TriageTodo}
+			return nil
 		}
 		if err != nil {
 			return err
@@ -272,6 +285,9 @@ func (s *Store) UpsertService(ctx context.Context, sv model.Service) (model.Serv
 // mergeService keeps the richer of the two descriptions: a fingerprint result
 // (high confidence) wins over a bare open-port record, but a later low
 // confidence pass never erases a good identification.
+//
+// Triage is deliberately not merged: it belongs to the operator, the UPDATE
+// below does not write its columns, and a value passed in here is ignored.
 func mergeService(old, new model.Service) model.Service {
 	out := old
 	if new.HostID != 0 {
@@ -334,8 +350,11 @@ type ServiceFilter struct {
 	Protocol   model.Protocol
 	Search     string // substring over ip, name, product, version, banner, hostname
 	OnlyWithID bool   // only services already fingerprinted
-	Limit      int
-	Offset     int
+	// Triage narrows to one or more triage statuses, which is how the
+	// services screen shows "what is left to look at".
+	Triage []model.TriageStatus
+	Limit  int
+	Offset int
 }
 
 // ListServices returns services matching the filter.
@@ -366,6 +385,12 @@ func (s *Store) ListServices(ctx context.Context, f ServiceFilter) ([]model.Serv
 	}
 	if f.OnlyWithID {
 		sb.WriteString(` AND name <> ''`)
+	}
+	if len(f.Triage) > 0 {
+		sb.WriteString(` AND triage_status IN (?` + repeatComma(len(f.Triage)-1) + `)`)
+		for _, t := range f.Triage {
+			args = append(args, string(t))
+		}
 	}
 	sb.WriteString(` ORDER BY network_id, ip, port`)
 	if f.Limit > 0 {
@@ -701,4 +726,121 @@ func mergeMaps(old, new map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
+}
+
+// ---------------------------------------------------------------------------
+// Service triage
+// ---------------------------------------------------------------------------
+
+// SetServiceTriage records the operator's pass over a service. Passing a nil
+// status or note leaves that field alone, so the UI can update one without
+// clearing the other.
+//
+// Triage lives in the services table but is never written by UpsertService:
+// re-scanning a network refreshes what was observed and leaves the manual work
+// on top of it intact.
+func (s *Store) SetServiceTriage(ctx context.Context, serviceID int64, status *model.TriageStatus, note *string, userID int64) (model.Service, error) {
+	var out model.Service
+	err := s.tx(ctx, func(tx *sql.Tx) error {
+		sets := []string{"triage_by = ?", "triage_at = ?"}
+		args := []any{userID, time.Now().UnixMilli()}
+		if status != nil {
+			sets = append([]string{"triage_status = ?"}, sets...)
+			args = append([]any{string(*status)}, args...)
+		}
+		if note != nil {
+			sets = append(sets, "triage_note = ?")
+			args = append(args, truncate(*note, 4000))
+		}
+		args = append(args, serviceID)
+		res, err := tx.ExecContext(ctx,
+			`UPDATE services SET `+strings.Join(sets, ", ")+` WHERE id = ?`, args...)
+		if err != nil {
+			return err
+		}
+		if err := affected(res); err != nil {
+			return err
+		}
+		row := tx.QueryRowContext(ctx, `SELECT `+serviceCols+` FROM services WHERE id = ?`, serviceID)
+		out, err = scanService(row)
+		return err
+	})
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return model.Service{}, ErrNotFound
+		}
+		return model.Service{}, fmt.Errorf("store: set service triage: %w", err)
+	}
+	return out, nil
+}
+
+// BulkSetServiceTriage applies one status to many services at once, which is
+// how an operator clears a batch of uninteresting ports in a single gesture.
+// Only services of the given mission are touched, so an id from another
+// mission cannot be slipped in.
+func (s *Store) BulkSetServiceTriage(ctx context.Context, missionID int64, ids []int64, status model.TriageStatus, userID int64) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	var n int64
+	err := s.tx(ctx, func(tx *sql.Tx) error {
+		stmt, err := tx.PrepareContext(ctx,
+			`UPDATE services SET triage_status = ?, triage_by = ?, triage_at = ?
+			 WHERE id = ? AND mission_id = ?`)
+		if err != nil {
+			return err
+		}
+		defer stmt.Close()
+		now := time.Now().UnixMilli()
+		for _, id := range ids {
+			res, err := stmt.ExecContext(ctx, string(status), userID, now, id, missionID)
+			if err != nil {
+				return err
+			}
+			if k, _ := res.RowsAffected(); k > 0 {
+				n += k
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, fmt.Errorf("store: bulk triage: %w", err)
+	}
+	return n, nil
+}
+
+// TriageCounts reports how many services sit in each status, for the progress
+// readout on the services screen.
+func (s *Store) TriageCounts(ctx context.Context, missionID, networkID int64) (map[model.TriageStatus]int, error) {
+	q := `SELECT triage_status, COUNT(*) FROM services WHERE mission_id = ?`
+	args := []any{missionID}
+	if networkID != 0 {
+		q += ` AND network_id = ?`
+		args = append(args, networkID)
+	}
+	q += ` GROUP BY triage_status`
+
+	rows, err := s.r.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("store: triage counts: %w", err)
+	}
+	defer rows.Close()
+	out := map[model.TriageStatus]int{}
+	for _, st := range model.AllTriageStatuses {
+		out[st] = 0
+	}
+	for rows.Next() {
+		var (
+			status string
+			n      int
+		)
+		if err := rows.Scan(&status, &n); err != nil {
+			return nil, err
+		}
+		if status == "" {
+			status = string(model.TriageTodo)
+		}
+		out[model.TriageStatus(status)] += n
+	}
+	return out, rows.Err()
 }

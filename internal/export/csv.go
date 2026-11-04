@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/GoToolSharing/nety/internal/model"
 )
@@ -53,8 +54,12 @@ func writeServicesCSV(w io.Writer, d model.MissionData) error {
 	names := networkNames(d)
 	hosts := hostIndex(d)
 
+	// The triage columns come first after the identity of the service: this
+	// sheet is what gets pasted into the client's tracking spreadsheet, and
+	// "what is left to test" is the column people sort on.
 	if err := cw.Write([]string{
 		"network", "ip", "hostname", "port", "protocol", "state", "service",
+		"triage_status", "triage_note", "triage_by", "triage_at",
 		"product", "version", "extra_info", "tunnel", "os_type", "cpe",
 		"http_status", "http_title", "http_server", "tls_subject", "tls_issuer",
 		"tls_not_after", "tls_sha256", "ssh_hostkey", "banner", "confidence",
@@ -86,7 +91,10 @@ func writeServicesCSV(w io.Writer, d model.MissionData) error {
 		if err := cw.Write([]string{
 			netName(names, s.NetworkID),
 			s.IP, hostLabel(h), itoa(s.Port), string(s.Protocol), string(s.State),
-			s.Name, s.Product, s.Version, s.ExtraInfo, s.Tunnel, s.OSType,
+			s.Name,
+			triageLabel(s.Triage.Status), oneLine(s.Triage.Note, 2000),
+			s.Triage.UpdatedByName, tsPtr(s.Triage.UpdatedAt),
+			s.Product, s.Version, s.ExtraInfo, s.Tunnel, s.OSType,
 			strings.Join(s.CPEs, " "),
 			httpStatus, httpTitle, httpServer,
 			tlsSubject, tlsIssuer, tlsExpiry, tlsFP,
@@ -340,6 +348,31 @@ func servicesByHost(d model.MissionData) map[int64][]model.Service {
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
+
+// triageLabel renders a status for a human reading a spreadsheet.
+func triageLabel(s model.TriageStatus) string {
+	switch s {
+	case model.TriageInProgress:
+		return "in progress"
+	case model.TriageDone:
+		return "done"
+	case model.TriageFlagged:
+		return "flagged"
+	case model.TriageSkipped:
+		return "skipped"
+	case "", model.TriageTodo:
+		return "to do"
+	default:
+		return string(s)
+	}
+}
+
+func tsPtr(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return ts(*t)
+}
 
 func firstNonEmpty(vals ...string) string {
 	for _, v := range vals {

@@ -85,7 +85,8 @@ A scan object carries `status` (`queued|running|paused|completed|failed|cancelle
 ## Results
 
 `GET /api/missions/{id}/hosts?network_id=`
-`GET /api/missions/{id}/services?network_id=&host_id=&port=&protocol=&q=&limit=&offset=`
+`GET /api/missions/{id}/services?network_id=&host_id=&port=&protocol=&q=&triage=&limit=&offset=`
+(`triage` takes a comma separated list of statuses)
 `GET /api/missions/{id}/findings?network_id=`
 `GET /api/missions/{id}/assets`
 `GET /api/assets/{id}` · `PATCH /api/assets/{id}` `{label?, notes?, tags?, kind?}`
@@ -93,6 +94,35 @@ A scan object carries `status` (`queued|running|paused|completed|failed|cancelle
 `GET /api/hosts/{id}` - host plus its services
 `GET /api/missions/{id}/matrix` - `{networks: [...], cells: [...], techniques: [...]}`
 `GET /api/missions/{id}/reach?source_network_id=`
+
+## Service triage
+
+A scan says what is exposed; deciding whether each service is a problem is
+manual work. These endpoints track that pass so a long engagement keeps its
+place, and a re-scan never erases it.
+
+Statuses: `todo` (default), `in_progress`, `done`, `flagged`, `skipped`.
+
+| Method | Path | Body |
+|---|---|---|
+| GET | `/api/services/{id}` | - |
+| PATCH | `/api/services/{id}` | `{status?, note?}`, either or both; a field left out is left alone |
+| POST | `/api/missions/{id}/services/triage` | `{service_ids: [], status}`, one status for a selection |
+| GET | `/api/missions/{id}/triage?network_id=` | counts per status, plus `total` and `reviewed` |
+
+Triage is carried on every service object under `triage`:
+
+```jsonc
+"triage": {
+  "status": "flagged",
+  "note": "SMB signing not required, relay confirmed from the office VLAN",
+  "updated_by": 2, "updated_by_name": "martina",
+  "updated_at": "2026-11-04T09:30:00Z"
+}
+```
+
+It is never written by a scan, and it is exported in the services CSV, the
+Excel workbook, the JSON dump and the reports.
 
 ## Exports
 

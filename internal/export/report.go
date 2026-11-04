@@ -353,14 +353,17 @@ func writeMarkdown(w io.Writer, d model.MissionData) error {
 				}
 				continue
 			}
-			if err := p("| Port | Service | Product | Details |\n|---|---|---|---|\n"); err != nil {
+			if err := p("| Port | Service | Product | Status | Notes |\n|---|---|---|---|---|\n"); err != nil {
 				return err
 			}
 			for _, s := range services {
-				details := serviceDetails(s)
-				if err := p("| %d/%s | %s | %s | %s |\n",
+				notes := mdEscape(s.Triage.Note)
+				if notes == "" {
+					notes = mdEscape(serviceDetails(s))
+				}
+				if err := p("| %d/%s | %s | %s | %s | %s |\n",
 					s.Port, s.Protocol, mdEscape(firstNonEmpty(s.Name, "unknown")),
-					mdEscape(serviceLabel(s)), mdEscape(details)); err != nil {
+					mdEscape(serviceLabel(s)), triageLabel(s.Triage.Status), notes); err != nil {
 					return err
 				}
 			}
@@ -708,7 +711,7 @@ func writeHTML(w io.Writer, d model.MissionData) error {
 		if len(hosts) == 0 {
 			continue
 		}
-		if err := p(`<h3>%s</h3><table><thead><tr><th>Host</th><th>Address</th><th>OS / vendor</th><th>Open services</th></tr></thead><tbody>`, e(n.Name)); err != nil {
+		if err := p(`<h3>%s</h3><table><thead><tr><th>Host</th><th>Address</th><th>OS / vendor</th><th>Open services</th><th>Reviewed</th></tr></thead><tbody>`, e(n.Name)); err != nil {
 			return err
 		}
 		for _, h := range hosts {
@@ -720,9 +723,20 @@ func writeHTML(w io.Writer, d model.MissionData) error {
 				}
 				svc = append(svc, label)
 			}
-			if err := p(`<tr><td>%s</td><td class="mono">%s</td><td>%s</td><td class="mono small">%s</td></tr>`,
+			reviewed, total := 0, 0
+			for _, s := range byHost[h.ID] {
+				total++
+				if s.Triage.Status != "" && s.Triage.Status != model.TriageTodo {
+					reviewed++
+				}
+			}
+			progress := "-"
+			if total > 0 {
+				progress = fmt.Sprintf("%d/%d", reviewed, total)
+			}
+			if err := p(`<tr><td>%s</td><td class="mono">%s</td><td>%s</td><td class="mono small">%s</td><td class="mono">%s</td></tr>`,
 				e(hostLabel(h)), e(h.IP), e(strings.TrimSpace(h.OS+" "+h.Vendor)),
-				e(strings.Join(svc, " · "))); err != nil {
+				e(strings.Join(svc, " · ")), e(progress)); err != nil {
 				return err
 			}
 		}

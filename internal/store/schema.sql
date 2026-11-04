@@ -198,6 +198,12 @@ CREATE TABLE IF NOT EXISTS services (
     extra        TEXT    NOT NULL DEFAULT '{}',
     confidence   INTEGER NOT NULL DEFAULT 0,
     method       TEXT    NOT NULL DEFAULT '',
+    -- Operator triage. Written only through the triage endpoints, never by a
+    -- scan, so re-scanning a network never erases the manual pass over it.
+    triage_status    TEXT    NOT NULL DEFAULT 'todo',
+    triage_note      TEXT    NOT NULL DEFAULT '',
+    triage_by        INTEGER NOT NULL DEFAULT 0,
+    triage_at        INTEGER,
     first_seen   INTEGER NOT NULL,
     last_seen    INTEGER NOT NULL,
     last_scan_id INTEGER NOT NULL DEFAULT 0,
@@ -206,6 +212,7 @@ CREATE TABLE IF NOT EXISTS services (
 CREATE INDEX IF NOT EXISTS idx_services_mission ON services(mission_id, network_id);
 CREATE INDEX IF NOT EXISTS idx_services_host ON services(host_id);
 CREATE INDEX IF NOT EXISTS idx_services_port ON services(mission_id, port);
+CREATE INDEX IF NOT EXISTS idx_services_triage ON services(mission_id, triage_status);
 
 CREATE TABLE IF NOT EXISTS findings (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -362,4 +362,7 @@ func (a *API) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 // userRef is how a user is referred to in the audit log when only the id is
 // known at that point in the handler.
-func userRef(id int64) string { return "user #" + strconv.FormatInt(id, 10) }
+func userRef(id int64) string { return "user #" + itoa64(id) }
+
+// itoa64 is the decimal form of an id, used all over the audit messages.
+func itoa64(v int64) string { return strconv.FormatInt(v, 10) }

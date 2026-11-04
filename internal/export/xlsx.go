@@ -71,6 +71,7 @@ type xlsxStyles struct {
 	mono     int
 	wrap     int
 	severity map[model.Severity]int
+	triage   map[model.TriageStatus]int
 	open     int
 	blocked  int
 	untested int
@@ -119,6 +120,26 @@ func buildStyles(f *excelize.File) (xlsxStyles, error) {
 			return s, err
 		}
 		s.severity[sev] = id
+	}
+
+	triageColors := map[model.TriageStatus][2]string{
+		model.TriageTodo:       {"F3F4F6", "4B5563"},
+		model.TriageInProgress: {"DBEAFE", "1D4ED8"},
+		model.TriageDone:       {"DCFCE7", "166534"},
+		model.TriageFlagged:    {"FEE2E2", "991B1B"},
+		model.TriageSkipped:    {"E5E7EB", "6B7280"},
+	}
+	s.triage = map[model.TriageStatus]int{}
+	for status, c := range triageColors {
+		id, err := f.NewStyle(&excelize.Style{
+			Font:      &excelize.Font{Bold: true, Color: c[1], Size: 10},
+			Fill:      excelize.Fill{Type: "pattern", Pattern: 1, Color: []string{c[0]}},
+			Alignment: &excelize.Alignment{Horizontal: "center"},
+		})
+		if err != nil {
+			return s, err
+		}
+		s.triage[status] = id
 	}
 
 	s.open, err = f.NewStyle(&excelize.Style{
@@ -288,8 +309,9 @@ func sheetHosts(f *excelize.File, st xlsxStyles, d model.MissionData, names map[
 func sheetServices(f *excelize.File, st xlsxStyles, d model.MissionData, names map[int64]string) error {
 	const sheet = "Services"
 	headers := []string{"Network", "IP", "Hostname", "Port", "Proto", "State", "Service",
+		"Status", "Note", "Reviewed by", "Reviewed at",
 		"Product", "Version", "TLS subject", "HTTP title", "Technologies", "Banner", "Confidence"}
-	widths := []float64{18, 16, 24, 7, 7, 9, 16, 22, 14, 30, 34, 24, 46, 11}
+	widths := []float64{18, 16, 24, 7, 7, 9, 16, 13, 46, 16, 20, 22, 14, 30, 34, 24, 46, 11}
 	if err := newSheet(f, st, sheet, headers, widths); err != nil {
 		return err
 	}
@@ -303,11 +325,25 @@ func sheetServices(f *excelize.File, st xlsxStyles, d model.MissionData, names m
 			httpTitle = s.HTTP.Title
 			tech = strings.Join(s.HTTP.Technologies, ", ")
 		}
-		if err := writeRow(f, sheet, i+2, []any{
+		row := i + 2
+		if err := writeRow(f, sheet, row, []any{
 			netName(names, s.NetworkID), s.IP, hostLabel(hosts[s.HostID]),
-			s.Port, string(s.Protocol), string(s.State), s.Name, s.Product, s.Version,
+			s.Port, string(s.Protocol), string(s.State), s.Name,
+			triageLabel(s.Triage.Status), s.Triage.Note,
+			s.Triage.UpdatedByName, tsPtr(s.Triage.UpdatedAt),
+			s.Product, s.Version,
 			tlsSubject, httpTitle, tech, oneLine(s.Banner, 200), s.Confidence,
 		}); err != nil {
+			return err
+		}
+		if style, ok := st.triage[s.Triage.Status]; ok {
+			cell, _ := excelize.CoordinatesToCellName(8, row)
+			if err := f.SetCellStyle(sheet, cell, cell, style); err != nil {
+				return err
+			}
+		}
+		noteCell, _ := excelize.CoordinatesToCellName(9, row)
+		if err := f.SetCellStyle(sheet, noteCell, noteCell, st.wrap); err != nil {
 			return err
 		}
 	}

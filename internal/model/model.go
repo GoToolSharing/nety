@@ -284,6 +284,45 @@ const (
 	PortOpenFiltered PortState = "open|filtered"
 )
 
+// TriageStatus is where the operator is with a service. NETY finds what is
+// exposed; going through each service by hand is still the operator's job, and
+// this is how that pass is tracked so nothing is forgotten and a re-scan does
+// not erase the work.
+type TriageStatus string
+
+const (
+	TriageTodo       TriageStatus = "todo"        // not looked at yet (the default)
+	TriageInProgress TriageStatus = "in_progress" // being tested right now
+	TriageDone       TriageStatus = "done"        // tested, nothing worth reporting
+	TriageFlagged    TriageStatus = "flagged"     // tested, something to report
+	TriageSkipped    TriageStatus = "skipped"     // out of scope or not worth testing
+)
+
+// AllTriageStatuses is the canonical order, used by the UI and the exports.
+var AllTriageStatuses = []TriageStatus{
+	TriageTodo, TriageInProgress, TriageDone, TriageFlagged, TriageSkipped,
+}
+
+// ValidTriageStatus reports whether s is a known status.
+func ValidTriageStatus(s TriageStatus) bool {
+	for _, v := range AllTriageStatuses {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+// Triage is the operator's own record against a service: where they are with
+// it and what they found. It is never written by a scan.
+type Triage struct {
+	Status        TriageStatus `json:"status"`
+	Note          string       `json:"note,omitempty"`
+	UpdatedBy     int64        `json:"updated_by,omitempty"`
+	UpdatedByName string       `json:"updated_by_name,omitempty"`
+	UpdatedAt     *time.Time   `json:"updated_at,omitempty"`
+}
+
 type Service struct {
 	ID         int64             `json:"id"`
 	MissionID  int64             `json:"mission_id"`
@@ -308,9 +347,12 @@ type Service struct {
 	Extra      map[string]string `json:"extra,omitempty"`  // protocol specific facts
 	Confidence int               `json:"confidence"`       // 0..100
 	Method     string            `json:"method,omitempty"` // probe-match | port-table | fingerprintx ...
-	FirstSeen  time.Time         `json:"first_seen"`
-	LastSeen   time.Time         `json:"last_seen"`
-	LastScanID int64             `json:"last_scan_id"`
+	// Triage is the operator's manual pass over this service. Owned by the
+	// operator, never written by a scan.
+	Triage     Triage    `json:"triage"`
+	FirstSeen  time.Time `json:"first_seen"`
+	LastSeen   time.Time `json:"last_seen"`
+	LastScanID int64     `json:"last_scan_id"`
 }
 
 type TLSInfo struct {

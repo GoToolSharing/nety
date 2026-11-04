@@ -150,7 +150,57 @@ type migration struct {
 
 // migrations are applied in order, once each. Append only - never edit or
 // reorder an entry that has shipped.
-var migrations = []migration{}
+//
+// schema.sql only ever runs CREATE ... IF NOT EXISTS, so it creates new
+// databases but cannot alter an existing table. Anything added to a table that
+// has already shipped needs an entry here as well.
+var migrations = []migration{
+	{
+		name: "service triage columns",
+		apply: func(ctx context.Context, tx *sql.Tx) error {
+			cols := map[string]string{
+				"triage_status": "TEXT NOT NULL DEFAULT 'todo'",
+				"triage_note":   "TEXT NOT NULL DEFAULT ''",
+				"triage_by":     "INTEGER NOT NULL DEFAULT 0",
+				"triage_at":     "INTEGER",
+			}
+			existing, err := tableColumns(ctx, tx, "services")
+			if err != nil {
+				return err
+			}
+			for name, decl := range cols {
+				if existing[name] {
+					continue
+				}
+				if _, err := tx.ExecContext(ctx,
+					fmt.Sprintf(`ALTER TABLE services ADD COLUMN %s %s`, name, decl)); err != nil {
+					return err
+				}
+			}
+			_, err = tx.ExecContext(ctx,
+				`CREATE INDEX IF NOT EXISTS idx_services_triage ON services(mission_id, triage_status)`)
+			return err
+		},
+	},
+}
+
+// tableColumns lists the columns a table currently has.
+func tableColumns(ctx context.Context, tx *sql.Tx, table string) (map[string]bool, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT name FROM pragma_table_info(?)`, table)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]bool{}
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		out[name] = true
+	}
+	return out, rows.Err()
+}
 
 // tx runs fn in a write transaction, serialised against other writers.
 func (s *Store) tx(ctx context.Context, fn func(*sql.Tx) error) error {
