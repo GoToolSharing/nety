@@ -138,6 +138,86 @@ with a warning, and they are the reason this section exists:
 - **`double-tag`** sends doubly-tagged frames. Harmless in itself but equally
   visible.
 
+### "Layer-2 off" means what, exactly?
+
+Nothing to switch off: the three layer-2 techniques are **off unless you turn
+them on**, in one specific place, and the server refuses them otherwise.
+
+There is a single option behind it, `allow_l2_active`, which defaults to false.
+Without it, `dot1q-subif`, `dtp-trunk` and `double-tag` are never run, and
+asking for one is rejected before the scan is even created.
+
+In the scan form it is this block, at the bottom of a **segmentation** scan.
+Leave the toggle alone and nothing layer-2 happens:
+
+![The layer-2 block in the scan form](images/l2-toggle.png)
+
+It only appears for segmentation scans. A discovery scan has no such option at
+all, so no discovery scan can ever touch the switch port.
+
+#### Checking it from the shell
+
+Which techniques are layer-2 in the first place:
+
+```bash
+curl -sk -b cookies https://localhost:8443/api/techniques \
+  | python3 -c 'import json,sys; [print(f"{t[\"id\"]:<16} l2={t[\"l2_active\"]}") for t in json.load(sys.stdin)]'
+```
+
+```
+direct           l2=False
+icmp             l2=False
+src-port-53      l2=False
+...
+dot1q-subif      l2=True
+dtp-trunk        l2=True
+double-tag       l2=True
+```
+
+What your scans actually ran with:
+
+```bash
+curl -sk -b cookies https://localhost:8443/api/missions/1/scans \
+  | python3 -c 'import json,sys; [print(f"scan #{s[\"id\"]} {s[\"kind\"]:<13} allow_l2_active={s[\"options\"].get(\"allow_l2_active\")}") for s in json.load(sys.stdin)]'
+```
+
+```
+scan #6 discovery     allow_l2_active=False
+scan #5 segmentation  allow_l2_active=False
+```
+
+And the server will not be talked into it. Asking for a layer-2 technique
+without the flag is refused:
+
+```json
+{"error":"technique \"dtp-trunk\" changes the switch port configuration:
+          enable the layer-2 option explicitly to use it","code":"invalid"}
+```
+
+#### Checking the machine itself
+
+The honest check is not what NETY says but what the machine looks like. Before
+you start, record it:
+
+```bash
+ip -br link        # interfaces and their MACs
+ip -br addr        # addresses
+ip route           # routes
+```
+
+Run your scans, then compare. A clean run leaves all three identical. If you
+ever do enable the layer-2 techniques, the things to look for afterwards are a
+leftover `ethX.<vlan>` interface and a route with metric 2048:
+
+```bash
+ip -br link | grep '@'            # sub-interfaces, parent after the @
+ip route | grep 'metric 2048'     # anything NETY installed and did not remove
+```
+
+Both should come back empty. If they do not, NETY was killed with SIGKILL
+before it could clean up; remove them by hand with `ip link del` and
+`ip route del`.
+
 ### So: shared VM or dedicated one?
 
 **Sharing an existing VM is fine as long as you leave the layer-2 techniques
