@@ -92,7 +92,7 @@ echo
 if [ "$FIRST_RUN" = 1 ]; then
   echo "First start. The administrator password was printed once, here:"
   echo
-  journalctl -u nety -n 40 --no-pager | grep -A 6 "username:" || \
+  journalctl -u nety -n 60 --no-pager | grep -B 2 -A 4 "username:" || \
     journalctl -u nety -n 40 --no-pager | tail -20
   echo
 fi

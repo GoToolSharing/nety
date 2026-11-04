@@ -329,11 +329,11 @@ func bootstrapAdmin(ctx context.Context, st *store.Store, authSvc *auth.Service,
 		return fmt.Errorf("create the first account: %w", err)
 	}
 	if generated {
-		fmt.Fprintf(os.Stderr, "\n"+strings.Repeat("─", 64)+"\n"+
+		fmt.Fprintf(os.Stderr, "\n"+strings.Repeat("-", 64)+"\n"+
 			"  First start: an administrator account has been created.\n\n"+
 			"    username: %s\n    password: %s\n\n"+
 			"  This password is shown once and must be changed at first login.\n"+
-			strings.Repeat("─", 64)+"\n\n", username, password)
+			strings.Repeat("-", 64)+"\n\n", username, password)
 	}
 	log.Info("created the first administrator account", "username", username)
 	return nil
