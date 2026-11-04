@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -102,6 +103,14 @@ type Runner struct {
 	sem    chan struct{}
 	wg     sync.WaitGroup
 
+	// segMu serialises the segmentation phase process-wide. The segmentation
+	// engine creates sub-interfaces, addresses and routes on the one machine
+	// we are running on, and tracks them for cleanup per call; two concurrent
+	// callers would tear down each other's state, leaking interfaces and —
+	// worse — turning a reachable service into a "filtered" cell in the
+	// matrix handed to the client.
+	segMu sync.Mutex
+
 	closed atomic.Bool
 }
 
@@ -167,7 +176,15 @@ func (r *Runner) Start(ctx context.Context, scanID int64) error {
 	case model.ScanRunning:
 		return errors.New("jobs: scan is already running")
 	case model.ScanCompleted:
-		return errors.New("jobs: scan is already completed")
+		// Completed is not a dead end: "retry failed units" puts work back in
+		// the queue, and that work has to be runnable.
+		pending, err := r.st.PendingWorkCount(ctx, sc.ID)
+		if err != nil {
+			return err
+		}
+		if pending == 0 {
+			return errors.New("jobs: scan is already completed")
+		}
 	}
 
 	r.mu.Lock()
@@ -198,9 +215,23 @@ func (r *Runner) Start(ctx context.Context, scanID int64) error {
 			<-r.sem
 			cancel()
 		}()
-		if p := recover(); p != nil { // never let a scan take the server down
-			r.log.Error("scan panicked", "scan", scanID, "panic", p)
-		}
+		// A panic anywhere in a scan must never take the server down with it:
+		// the operator would lose the web interface and, worse, the deferred
+		// network cleanup would never run. Mark the scan failed and carry on.
+		defer func() {
+			if p := recover(); p != nil {
+				r.log.Error("scan panicked", "scan", scanID, "panic", p,
+					"stack", string(debug.Stack()))
+				bg, cancelBG := context.WithTimeout(context.Background(), 15*time.Second)
+				defer cancelBG()
+				_, _ = r.st.ReleaseRunningWork(bg, scanID)
+				_ = r.st.SetScanStatus(bg, scanID, model.ScanFailed,
+					fmt.Sprintf("internal error: %v", p))
+				if sc, err := r.st.Scan(bg, scanID); err == nil {
+					r.bus.PublishData(model.EvtScanStatus, sc.MissionID, sc.ID, sc)
+				}
+			}
+		}()
 		r.run(runCtx, ctl, scanID)
 	}()
 	return nil
@@ -350,6 +381,22 @@ func (r *Runner) runPhase(ctx context.Context, ctl *control, sc model.Scan, st *
 	workers := r.phaseWorkers(phase, sc)
 	st.setPhase(phase)
 
+	// The segmentation phase reconfigures this machine's interfaces and
+	// routes, so only one may run at a time across the whole process.
+	if phase == model.PhaseSegment {
+		if pending, err := r.st.PendingWorkCount(ctx, sc.ID); err == nil && pending > 0 {
+			r.logScan(ctx, sc, "debug", "waiting for exclusive access to the network configuration")
+		}
+		r.segMu.Lock()
+		defer r.segMu.Unlock()
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if ctl.pause.Load() {
+			return errPaused
+		}
+	}
+
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -419,7 +466,8 @@ func (r *Runner) phaseWorkers(phase model.WorkPhase, sc model.Scan) int {
 		// several units at once would multiply the real packet rate.
 		return 1
 	case model.PhaseSegment:
-		return 2
+		// One unit at a time: see Runner.segMu.
+		return 1
 	default:
 		n := sc.Options.Concurrency
 		if n <= 0 {

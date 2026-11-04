@@ -3,6 +3,7 @@ package netif
 import (
 	"errors"
 	"log/slog"
+	"net/netip"
 	"sync"
 )
 
@@ -77,6 +78,62 @@ func forgetKeyed(key string) {
 	if ok {
 		forgetChange(id)
 	}
+}
+
+// Keys under which the creating functions register their undo action. They
+// live here, not in the Linux-only file, because the keyed-undo helpers below
+// are part of the portable API.
+
+func vlanKey(name string) string { return "vlan|" + name }
+
+func addrKey(iface string, p netip.Prefix) string {
+	return "addr|" + iface + "|" + p.String()
+}
+
+func routeKey(dst netip.Prefix, via netip.Addr, iface string) string {
+	return "route|" + dst.String() + "|" + via.String() + "|" + iface
+}
+
+// undoKeyed runs the undo action registered under key, if there is one, and
+// drops it. When there is none — because the thing already existed and NETY
+// did not create it — it does nothing and reports no error.
+//
+// This is the safe way for a caller to unwind: it reverts exactly what NETY
+// made and never touches a sub-interface, address or route that was already
+// on the operator's machine.
+func undoKeyed(key string) error {
+	tracker.mu.Lock()
+	id, ok := tracker.keys[key]
+	if ok {
+		delete(tracker.keys, key)
+	}
+	var undo func() error
+	if ok {
+		for i := range tracker.changes {
+			if tracker.changes[i].id == id {
+				undo = tracker.changes[i].undo
+				tracker.changes = append(tracker.changes[:i], tracker.changes[i+1:]...)
+				break
+			}
+		}
+	}
+	tracker.mu.Unlock()
+
+	if undo == nil {
+		return nil
+	}
+	return undo()
+}
+
+// UndoVLAN deletes the sub-interface only if NETY created it.
+func UndoVLAN(name string) error { return undoKeyed(vlanKey(name)) }
+
+// UndoAddr removes the address only if NETY added it.
+func UndoAddr(iface string, p netip.Prefix) error { return undoKeyed(addrKey(iface, p)) }
+
+// UndoRoute removes the route only if NETY added it.
+func UndoRoute(dst netip.Prefix, via netip.Addr, iface string) error {
+	return undoKeyed(routeKey(dst, via, iface))
 }
 
 // PendingChanges lists the system changes NETY has made and not yet undone,

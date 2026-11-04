@@ -355,11 +355,17 @@ func (s *Store) FailWork(ctx context.Context, id int64, cause string, requeue bo
 // ReleaseRunningWork puts every leased unit of a scan back in the pending
 // queue. Called when a scan is paused, and at startup for scans that were
 // running when the process died — nothing is lost, nothing is redone twice.
+//
+// The attempt counter is rolled back too: being interrupted is not a failed
+// attempt, and counting it as one would burn the unit's retry budget after a
+// few pauses, failing it permanently on the first transient error.
 func (s *Store) ReleaseRunningWork(ctx context.Context, scanID int64) (int64, error) {
 	var n int64
 	err := s.tx(ctx, func(tx *sql.Tx) error {
 		res, err := tx.ExecContext(ctx,
-			`UPDATE scan_work SET status = 'pending', leased_at = NULL
+			`UPDATE scan_work
+			 SET status = 'pending', leased_at = NULL,
+			     attempts = CASE WHEN attempts > 0 THEN attempts - 1 ELSE 0 END
 			 WHERE scan_id = ? AND status = 'running'`, scanID)
 		if err != nil {
 			return err

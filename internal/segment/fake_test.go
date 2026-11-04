@@ -75,6 +75,21 @@ func (f *fakeApplier) assertClean(t *testing.T) {
 
 func (f *fakeApplier) HasRoute(netip.Addr) bool { return f.hasRoute }
 
+func (f *fakeApplier) UndoVLAN(name string) error { return f.DeleteVLAN(name) }
+
+func (f *fakeApplier) UndoAddr(iface string, p netip.Prefix) error { return f.DelAddr(iface, p) }
+
+func (f *fakeApplier) UndoRoute(dst netip.Prefix, via netip.Addr, iface string) error {
+	return f.DelRoute(dst, via, iface)
+}
+
+func (f *fakeApplier) ReleaseDHCP(iface string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, "ReleaseDHCP("+iface+")")
+	return nil
+}
+
 func (f *fakeApplier) AddRoute(dst netip.Prefix, via netip.Addr, iface string) error {
 	if f.failRoute != nil {
 		f.record("AddRoute:failed", 0, "")

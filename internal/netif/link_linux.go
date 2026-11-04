@@ -51,7 +51,7 @@ func AddVLAN(parent string, vlanID int) (string, error) {
 	if err := netlink.LinkAdd(link); err != nil {
 		return "", fmt.Errorf("netif: create %q on %q: %w", name, parent, mapPermErr(err))
 	}
-	trackKeyed("vlan|"+name, "delete vlan interface "+name, func() error { return DeleteVLAN(name) })
+	trackKeyed(vlanKey(name), "delete vlan interface "+name, func() error { return DeleteVLAN(name) })
 
 	if err := netlink.LinkSetUp(link); err != nil {
 		return name, fmt.Errorf("netif: link up %q: %w", name, err)
@@ -239,13 +239,30 @@ func buildRoute(dst netip.Prefix, via netip.Addr, iface string) (*netlink.Route,
 	return r, nil
 }
 
-// HasRoute reports whether the main routing table already covers ip.
+// HasRoute reports whether the routing table already has a route to ip that
+// is more specific than the default route.
+//
+// The distinction matters: RouteGet resolves successfully for any address as
+// soon as a default route exists, which is essentially always. Treating that
+// as "a route already exists" made the route-based segmentation techniques
+// skip installing their route and silently degrade into a plain direct test,
+// while still being reported under their own technique name.
 func HasRoute(ip netip.Addr) bool {
 	routes, err := netlink.RouteGet(ip.Unmap().AsSlice())
 	if err != nil || len(routes) == 0 {
 		return false
 	}
-	return true
+	for _, r := range routes {
+		if r.Dst == nil {
+			continue // default route
+		}
+		ones, bits := r.Dst.Mask.Size()
+		if bits == 0 || ones == 0 {
+			continue // 0.0.0.0/0 or ::/0, also the default route
+		}
+		return true
+	}
+	return false
 }
 
 // mapPermErr turns EPERM/EACCES into engine.ErrNeedPrivileges so the UI can
@@ -255,12 +272,4 @@ func mapPermErr(err error) error {
 		return fmt.Errorf("%w (%v)", errNeedPrivileges, err)
 	}
 	return err
-}
-
-func routeKey(dst netip.Prefix, via netip.Addr, iface string) string {
-	return "route|" + dst.String() + "|" + via.String() + "|" + iface
-}
-
-func addrKey(iface string, p netip.Prefix) string {
-	return "addr|" + iface + "|" + p.String()
 }

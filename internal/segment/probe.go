@@ -268,6 +268,13 @@ func icmpEcho(ctx context.Context, s probeSpec) probeResult {
 		}
 		switch body := m.Body.(type) {
 		case *icmp.Echo:
+			// The reply must come from the host we are testing. On a raw ICMP
+			// socket every reply on the machine is delivered to every socket,
+			// so without this a concurrent probe's reply could be credited to
+			// this target and put a false "reachable" in the client's matrix.
+			if !peerIs(peer, s.IP) {
+				continue
+			}
 			if !matchesEcho(m, body, magic, seq, v6) {
 				continue
 			}
@@ -298,12 +305,38 @@ func icmpEcho(ctx context.Context, s probeSpec) probeResult {
 	}
 }
 
+// peerIs reports whether an ICMP reply came from the address under test.
+func peerIs(peer net.Addr, want netip.Addr) bool {
+	var got netip.Addr
+	switch a := peer.(type) {
+	case *net.IPAddr:
+		got, _ = netip.AddrFromSlice(a.IP)
+	case *net.UDPAddr:
+		got, _ = netip.AddrFromSlice(a.IP)
+	default:
+		parsed, err := netip.ParseAddr(peerString(peer))
+		if err != nil {
+			return false
+		}
+		got = parsed
+	}
+	if !got.IsValid() {
+		return false
+	}
+	return got.Unmap() == want.Unmap()
+}
+
+// matchesEcho decides whether an echo reply answers the probe we sent. The
+// caller has already checked that it comes from the right host.
 func matchesEcho(m *icmp.Message, body *icmp.Echo, magic []byte, seq int, v6 bool) bool {
 	// A datagram ICMP socket has its own ID rewritten by the kernel, so the
-	// payload is the reliable discriminator.
+	// 16 random payload bytes are the reliable discriminator.
 	if len(body.Data) >= len(magic) && string(body.Data[:len(magic)]) == string(magic) {
 		return true
 	}
+	// Some middleboxes and a few embedded stacks truncate or rewrite the
+	// payload. Falling back to the sequence number is acceptable only because
+	// the reply has already been matched to the target address.
 	if body.Seq == seq {
 		return true
 	}

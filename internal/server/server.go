@@ -45,10 +45,11 @@ func New(cfg config.Config, api http.Handler, log *slog.Logger) (*Server, error)
 	if log == nil {
 		log = slog.Default()
 	}
-	spa, err := spaHandler(cfg)
+	root, err := webRoot()
 	if err != nil {
 		return nil, err
 	}
+	spa := spaHandler(root)
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/", api)
@@ -56,7 +57,7 @@ func New(cfg config.Config, api http.Handler, log *slog.Logger) (*Server, error)
 
 	srv := &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           securityHeaders(cfg, mux),
+		Handler:           securityHeaders(cfg, inlineScriptHashes(root), mux),
 		ReadHeaderTimeout: 15 * time.Second,
 		ReadTimeout:       cfg.ReadTimeout,
 		WriteTimeout:      0, // streaming exports and WebSockets must not be cut
@@ -215,20 +216,22 @@ func (s *Server) ensureSelfSigned(certFile, keyFile string) error {
 // static assets
 // ---------------------------------------------------------------------------
 
-// spaHandler serves the embedded SPA, falling back to index.html so client
-// side routes survive a reload. An override directory can be set for
-// development with NETY_WEB_DIR.
-func spaHandler(cfg config.Config) (http.Handler, error) {
-	var root fs.FS
+// webRoot is the filesystem the SPA is served from: the embedded build, or a
+// directory set with NETY_WEB_DIR during development.
+func webRoot() (fs.FS, error) {
 	if dir := os.Getenv("NETY_WEB_DIR"); dir != "" {
-		root = os.DirFS(dir)
-	} else {
-		sub, err := fs.Sub(dist, "dist")
-		if err != nil {
-			return nil, fmt.Errorf("embedded assets: %w", err)
-		}
-		root = sub
+		return os.DirFS(dir), nil
 	}
+	sub, err := fs.Sub(dist, "dist")
+	if err != nil {
+		return nil, fmt.Errorf("embedded assets: %w", err)
+	}
+	return sub, nil
+}
+
+// spaHandler serves the SPA, falling back to index.html so client-side routes
+// survive a reload.
+func spaHandler(root fs.FS) http.Handler {
 	fileServer := http.FileServer(http.FS(root))
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -255,7 +258,7 @@ func spaHandler(cfg config.Config) (http.Handler, error) {
 			w.Header().Set("Cache-Control", "no-cache")
 		}
 		fileServer.ServeHTTP(w, r)
-	}), nil
+	})
 }
 
 func serveIndex(w http.ResponseWriter, r *http.Request, root fs.FS) {
@@ -271,10 +274,16 @@ func serveIndex(w http.ResponseWriter, r *http.Request, root fs.FS) {
 
 // securityHeaders applies the headers an internal tool should still set: the
 // console often holds a client's whole network inventory.
-func securityHeaders(cfg config.Config, next http.Handler) http.Handler {
+func securityHeaders(cfg config.Config, inlineHashes []string, next http.Handler) http.Handler {
+	// The SPA's theme bootstrap is inline; allow exactly its hash rather than
+	// opening the policy to all inline scripts.
+	scriptSrc := "script-src 'self'"
+	if len(inlineHashes) > 0 {
+		scriptSrc += " " + strings.Join(inlineHashes, " ")
+	}
 	csp := strings.Join([]string{
 		"default-src 'self'",
-		"script-src 'self'",
+		scriptSrc,
 		// Vite injects a style element; hashing it per build is not worth it.
 		"style-src 'self' 'unsafe-inline'",
 		"img-src 'self' data: blob:",

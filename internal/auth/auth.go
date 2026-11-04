@@ -15,6 +15,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 	"unicode"
@@ -328,21 +329,45 @@ func ValidRole(r model.Role) bool {
 	return false
 }
 
-// GeneratePassword returns a readable random password for bootstrapping.
+// GeneratePassword returns a readable random password for bootstrapping and
+// administrative resets.
+//
+// The alphabet omits the characters people misread when copying a password off
+// a terminal (0/O, 1/l/I). Characters are drawn with rejection sampling rather
+// than a modulo, which would bias the distribution, and the draw is repeated
+// until it satisfies the policy instead of forcing fixed characters into known
+// positions — that would hand an attacker two characters for free.
 func GeneratePassword() (string, error) {
 	const alphabet = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-	b := make([]byte, 20)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
+	const length = 20
+
+	for range 100 {
+		out := make([]byte, length)
+		for i := range out {
+			c, err := randomByte(alphabet)
+			if err != nil {
+				return "", err
+			}
+			out[i] = c
+		}
+		pw := string(out)
+		if ValidatePassword(pw) == nil {
+			return pw, nil
+		}
 	}
-	out := make([]byte, len(b))
-	for i, v := range b {
-		out[i] = alphabet[int(v)%len(alphabet)]
+	// With this alphabet and length the policy is satisfied overwhelmingly
+	// often; failing a hundred draws in a row means something is very wrong.
+	return "", errors.New("auth: could not generate a compliant password")
+}
+
+// randomByte picks one character of the alphabet uniformly.
+func randomByte(alphabet string) (byte, error) {
+	n := big.NewInt(int64(len(alphabet)))
+	v, err := rand.Int(rand.Reader, n)
+	if err != nil {
+		return 0, fmt.Errorf("auth: random: %w", err)
 	}
-	// Guarantee the policy is met regardless of the draw.
-	out[0] = 'N'
-	out[1] = '7'
-	return string(out), nil
+	return alphabet[v.Int64()], nil
 }
 
 func truncate(s string, n int) string {

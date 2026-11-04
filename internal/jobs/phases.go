@@ -225,19 +225,38 @@ func (r *Runner) resolveTargets(ctx context.Context, sc model.Scan, net model.Ne
 		return nil, nil, err
 	}
 
-	exSpecs := append([]string{}, sc.Options.Excludes...)
-	if m, err := r.st.Mission(ctx, sc.MissionID); err == nil {
-		exSpecs = append(exSpecs, m.ExcludeCIDRs...)
-	}
-	// Never scan ourselves.
-	if net.LocalIP != "" {
-		exSpecs = append(exSpecs, net.LocalIP)
-	}
-	excludes, err := ParseTargets(exSpecs)
+	excludes, err := r.exclusions(ctx, sc, net)
 	if err != nil {
-		return nil, nil, fmt.Errorf("exclusions: %w", err)
+		return nil, nil, err
 	}
 	return targets, excludes, nil
+}
+
+// exclusions gathers everything that must never be probed: the scan's own
+// exclusion list, the mission-wide one, and the operator's own address.
+func (r *Runner) exclusions(ctx context.Context, sc model.Scan, net model.Network) ([]netip.Prefix, error) {
+	specs := append([]string{}, sc.Options.Excludes...)
+	if m, err := r.st.Mission(ctx, sc.MissionID); err == nil {
+		specs = append(specs, m.ExcludeCIDRs...)
+	}
+	if net.LocalIP != "" {
+		specs = append(specs, net.LocalIP)
+	}
+	out, err := ParseTargets(specs)
+	if err != nil {
+		return nil, fmt.Errorf("exclusions: %w", err)
+	}
+	return out, nil
+}
+
+// exclusionFilter builds the in-scope test for a scan.
+func (r *Runner) exclusionFilter(ctx context.Context, sc model.Scan) (ExcludeFilter, error) {
+	net, _ := r.st.Network(ctx, sc.NetworkID)
+	excludes, err := r.exclusions(ctx, sc, net)
+	if err != nil {
+		return ExcludeFilter{}, err
+	}
+	return NewExcludeFilter(excludes), nil
 }
 
 // planSegment builds the segmentation work units: every service discovered on
@@ -251,6 +270,26 @@ func (r *Runner) planSegment(ctx context.Context, sc model.Scan) error {
 	wanted := map[int64]bool{}
 	for _, id := range sc.Options.SourceNetworkIDs {
 		wanted[id] = true
+	}
+
+	// Exclusions are a scope boundary, not a discovery detail: an address the
+	// client told us to stay away from must not be probed from here either,
+	// even though it was inventoried before the exclusion was added.
+	filter, err := r.exclusionFilter(ctx, sc)
+	if err != nil {
+		return err
+	}
+	skipped := 0
+	inScope := func(ip string) bool {
+		addr, err := netip.ParseAddr(ip)
+		if err != nil {
+			return false
+		}
+		if filter.Allows(addr) {
+			return true
+		}
+		skipped++
+		return false
 	}
 
 	var serviceIDs []int64
@@ -267,6 +306,9 @@ func (r *Runner) planSegment(ctx context.Context, sc model.Scan) error {
 			return err
 		}
 		for _, sv := range services {
+			if !inScope(sv.IP) {
+				continue
+			}
 			serviceIDs = append(serviceIDs, sv.ID)
 		}
 		hosts, err := r.st.ListHosts(ctx, sc.MissionID, n.ID)
@@ -274,11 +316,18 @@ func (r *Runner) planSegment(ctx context.Context, sc model.Scan) error {
 			return err
 		}
 		for _, h := range hosts {
+			if !inScope(h.IP) {
+				continue
+			}
 			hostIDs = append(hostIDs, h.ID)
 		}
 	}
+	if skipped > 0 {
+		r.logScan(ctx, sc, "info",
+			fmt.Sprintf("%d inventoried targets skipped: they are outside the scope (exclusions)", skipped))
+	}
 	if len(serviceIDs) == 0 && len(hostIDs) == 0 {
-		return fmt.Errorf("nothing to test: run a discovery scan on at least one other network first")
+		return fmt.Errorf("nothing to test: run a discovery scan on at least one other network first, and check the exclusion list")
 	}
 
 	var units []segmentPayload

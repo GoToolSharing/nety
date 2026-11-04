@@ -167,8 +167,26 @@ func (a *API) authenticated(h handlerFunc) http.Handler {
 		if !a.checkCSRF(w, r) {
 			return
 		}
+		// An account created or reset by an administrator must change its
+		// password before it can do anything else. Enforced here rather than
+		// trusted to the client, which an operator can bypass trivially.
+		if user.MustChangePW && !passwordChangeExempt(r.URL.Path) {
+			a.fail(w, http.StatusForbidden, "password_change_required",
+				"this account must change its password before continuing")
+			return
+		}
 		h(w, r.WithContext(context.WithValue(r.Context(), userKey, user)), user)
 	})
+}
+
+// passwordChangeExempt lists the few routes an account still needs while it is
+// locked out pending a password change.
+func passwordChangeExempt(path string) bool {
+	switch path {
+	case "/api/auth/password", "/api/auth/logout", "/api/auth/me", "/api/status":
+		return true
+	}
+	return false
 }
 
 // writable additionally requires a role that may change things.

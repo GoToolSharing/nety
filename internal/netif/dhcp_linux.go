@@ -70,9 +70,8 @@ func DHCPAcquire(ctx context.Context, iface string, cfg DHCPConfig) (Lease, erro
 			lease.Source = "dhcp-client"
 			if cfg.Release && lease.Server.IsValid() {
 				srv, cli := lease.Server, lease.Address
-				trackChange(fmt.Sprintf("release DHCP lease %s on %s", cli, iface), func() error {
-					return dhcpRelease(iface, mac, cli, srv)
-				})
+				armDHCPRelease(iface, fmt.Sprintf("release DHCP lease %s on %s", cli, iface),
+					func() error { return dhcpRelease(iface, mac, cli, srv) })
 			}
 			return lease, nil
 		}

@@ -73,7 +73,7 @@ func (t *Tester) runRouteGroup(ctx context.Context, opts engine.SegmentOptions, 
 			return
 		}
 		cl.push(fmt.Sprintf("remove route %s via %s", g.prefix, g.via), func() error {
-			return t.sys.DelRoute(g.prefix, g.via, opts.Interface)
+			return t.sys.UndoRoute(g.prefix, g.via, opts.Interface)
 		})
 		note = fmt.Sprintf("route %s via %s installed for the test: ", g.prefix, g.via)
 		log.Info("segment: temporary route installed", "prefix", g.prefix, "via", g.via, "technique", g.tech)
@@ -121,7 +121,7 @@ func (t *Tester) runVLANGroup(ctx context.Context, opts engine.SegmentOptions, g
 			fmt.Sprintf("could not create a sub-interface for VLAN %d on %s: %v", g.vlanID, parent, err), em)
 		return
 	}
-	cl.push("delete sub-interface "+name, func() error { return t.sys.DeleteVLAN(name) })
+	cl.push("delete sub-interface "+name, func() error { return t.sys.UndoVLAN(name) })
 	log.Info("segment: sub-interface created", "iface", name, "vlan", g.vlanID)
 
 	addr, gw, how, err := t.addressSubif(ctx, name, g, opts)
@@ -130,8 +130,11 @@ func (t *Tester) runVLANGroup(ctx context.Context, opts engine.SegmentOptions, g
 			fmt.Sprintf("VLAN %d sub-interface %s has no usable address: %v", g.vlanID, name, err), em)
 		return
 	}
+	// Pushed after the sub-interface was created, so it runs before the
+	// interface is deleted: a DHCPRELEASE needs the interface to leave on.
+	cl.push("release the DHCP lease on "+name, func() error { return t.sys.ReleaseDHCP(name) })
 	cl.push(fmt.Sprintf("remove address %s from %s", addr, name), func() error {
-		return t.sys.DelAddr(name, addr)
+		return t.sys.UndoAddr(name, addr)
 	})
 	note += fmt.Sprintf("tested from %s on VLAN %d (%s): ", addr.Addr(), g.vlanID, how)
 
@@ -143,7 +146,7 @@ func (t *Tester) runVLANGroup(ctx context.Context, opts engine.SegmentOptions, g
 				"prefix", g.prefix, "iface", name, "err", err)
 		} else {
 			cl.push(fmt.Sprintf("remove route %s dev %s", g.prefix, name), func() error {
-				return t.sys.DelRoute(g.prefix, gw, name)
+				return t.sys.UndoRoute(g.prefix, gw, name)
 			})
 		}
 	}

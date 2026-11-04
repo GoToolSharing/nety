@@ -32,6 +32,15 @@ type sysApplier interface {
 	// DHCP obtains a lease on iface and applies the address. It returns the
 	// configured prefix and the lease's router.
 	DHCP(ctx context.Context, iface string, timeout time.Duration) (netip.Prefix, netip.Addr, error)
+	// ReleaseDHCP gives back a lease taken on iface. It must be called while
+	// the interface still exists, and is a no-op when no lease was taken.
+	ReleaseDHCP(iface string) error
+	// The Undo* calls revert a change only if this process made it, so a
+	// sub-interface, address or route that was already on the operator's
+	// machine is never removed by our cleanup.
+	UndoVLAN(name string) error
+	UndoAddr(iface string, p netip.Prefix) error
+	UndoRoute(dst netip.Prefix, via netip.Addr, iface string) error
 
 	// RequestTrunk asks the switch port to form an 802.1Q trunk over DTP and
 	// waits for it to converge.
@@ -72,6 +81,18 @@ func (netifApplier) DHCP(ctx context.Context, iface string, timeout time.Duratio
 		return netip.Prefix{}, netip.Addr{}, err
 	}
 	return lease.CIDR(), lease.Router, nil
+}
+
+func (netifApplier) ReleaseDHCP(iface string) error { return netif.ReleaseDHCP(iface) }
+
+func (netifApplier) UndoVLAN(name string) error { return netif.UndoVLAN(name) }
+
+func (netifApplier) UndoAddr(iface string, p netip.Prefix) error {
+	return netif.UndoAddr(iface, p)
+}
+
+func (netifApplier) UndoRoute(dst netip.Prefix, via netip.Addr, iface string) error {
+	return netif.UndoRoute(dst, via, iface)
 }
 
 func (netifApplier) RequestTrunk(ctx context.Context, iface, domain string, settle time.Duration) error {

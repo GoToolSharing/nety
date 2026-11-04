@@ -548,3 +548,54 @@ func TestInvalidBodyIsRejected(t *testing.T) {
 		t.Fatalf("unknown fields must be refused, got %d", got)
 	}
 }
+
+// TestPasswordChangeIsEnforcedServerSide checks that an account flagged for a
+// password change really cannot do anything else: the flag is a security
+// control, not a hint for the client.
+func TestPasswordChangeIsEnforcedServerSide(t *testing.T) {
+	e := newEnv(t)
+	u := e.newUser("newcomer", model.RoleOperator)
+	u.MustChangePW = true
+	if err := e.store.UpdateUser(context.Background(), u); err != nil {
+		t.Fatalf("flag user: %v", err)
+	}
+
+	c := e.login("newcomer")
+	if !c.user.MustChangePW {
+		t.Fatal("the session should report that a password change is due")
+	}
+	for _, path := range []string{"/api/missions", "/api/scan-profiles"} {
+		status, body, _ := c.raw("GET", path)
+		if status != http.StatusForbidden {
+			t.Fatalf("%s should be blocked, got %d", path, status)
+		}
+		if !strings.Contains(string(body), "password_change_required") {
+			t.Fatalf("%s: the client needs a machine-readable code, got %s", path, body)
+		}
+	}
+	// The way out stays open.
+	if got := c.do("GET", "/api/auth/me", nil, nil); got != http.StatusOK {
+		t.Fatalf("/api/auth/me must stay reachable, got %d", got)
+	}
+	if got := c.do("POST", "/api/auth/password", map[string]string{
+		"current_password": testPassword, "new_password": "brand-new-pass-7B",
+	}, nil); got != http.StatusOK {
+		t.Fatalf("changing the password must be allowed, got %d", got)
+	}
+
+	// After the change the account works normally.
+	c2 := e.anonymous()
+	var resp sessionResponse
+	if got := c2.do("POST", "/api/auth/login", map[string]string{
+		"username": "newcomer", "password": "brand-new-pass-7B",
+	}, &resp); got != http.StatusOK {
+		t.Fatalf("login with the new password: %d", got)
+	}
+	c2.csrf = resp.CSRFToken
+	if resp.User.MustChangePW {
+		t.Fatal("the flag should be cleared after the change")
+	}
+	if got := c2.do("GET", "/api/missions", nil, nil); got != http.StatusOK {
+		t.Fatalf("the account should work normally now, got %d", got)
+	}
+}
