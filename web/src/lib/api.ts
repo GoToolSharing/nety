@@ -186,8 +186,9 @@ export const api = {
   patchMission: (id: number, body: Partial<MissionInput>) =>
     request<Mission>(`api/missions/${id}`, { method: 'PATCH', body }),
   deleteMission: (id: number) => request<void>(`api/missions/${id}`, { method: 'DELETE' }),
+  // The handler answers {"user_ids": [...]}, not a bare array.
   missionMembers: async (id: number) =>
-    list(await request<number[] | null>(`api/missions/${id}/members`)),
+    list((await request<{ user_ids: number[] | null }>(`api/missions/${id}/members`)).user_ids),
   setMissionMembers: (id: number, user_ids: number[]) =>
     request<void>(`api/missions/${id}/members`, { method: 'PUT', body: { user_ids } }),
   missionSummary: (id: number) => request<MissionSummary>(`api/missions/${id}/summary`),

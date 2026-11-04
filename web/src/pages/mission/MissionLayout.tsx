@@ -7,7 +7,10 @@ import { cn } from '@/lib/cn'
 import { formatNumber } from '@/lib/format'
 import { lastMissionId, rememberMission } from '@/lib/lastMission'
 import { Badge } from '@/components/ui/Badge'
-import { ErrorState, Skeleton } from '@/components/ui/Feedback'
+import { EmptyState, ErrorState, Skeleton } from '@/components/ui/Feedback'
+import PageContainer from '@/components/layout/PageContainer'
+import { LinkButton } from '@/components/ui/Button'
+import { ApiError } from '@/lib/api'
 import {
   AssetIcon,
   AuditIcon,
@@ -219,6 +222,49 @@ export default function MissionLayout() {
 
   if (!valid) {
     return <ErrorState title="Invalid mission" error="That mission id is not a number." />
+  }
+
+  // Without this the shell renders for any id, so a mission you cannot see,
+  // or one that does not exist, looked like an empty but real mission.
+  if (mission.isLoading) {
+    return (
+      <div className="flex h-full min-h-0">
+        <div className="w-60 shrink-0 border-r border-border bg-surface p-4">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="mt-6 h-4 w-full" />
+          <Skeleton className="mt-2 h-4 w-full" />
+          <Skeleton className="mt-2 h-4 w-3/4" />
+        </div>
+        <div className="min-w-0 flex-1 p-8">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="mt-3 h-4 w-96" />
+        </div>
+      </div>
+    )
+  }
+
+  if (mission.isError || !mission.data) {
+    const notFound =
+      mission.error instanceof ApiError &&
+      (mission.error.status === 404 || mission.error.code === 'not_found')
+    return (
+      <PageContainer>
+        <EmptyState
+          icon={<OverviewIcon width={20} height={20} />}
+          title={notFound ? 'This mission is not available to you' : 'Could not load the mission'}
+          description={
+            notFound
+              ? 'Either it does not exist, or your account is not a member of it. Ask an administrator to add you under Overview, Team.'
+              : String(mission.error ?? 'Unknown error')
+          }
+          action={
+            <LinkButton to="/missions" variant="primary">
+              Back to the missions
+            </LinkButton>
+          }
+        />
+      </PageContainer>
+    )
   }
 
   return (

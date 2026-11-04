@@ -9,6 +9,7 @@ import {
   useScans,
 } from '@/lib/queries'
 import { useMissionId } from '@/lib/hooks'
+import MissionTeam from '@/components/MissionTeam'
 import { useAuth } from '@/state/auth'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, CardBody, CardHeader, PageHeader, Stat } from '@/components/ui/Card'
@@ -23,6 +24,10 @@ import { NetworkIcon, PlusIcon, ScanIcon, TrunkIcon } from '@/components/icons'
 
 export default function OverviewPage() {
   const missionId = useMissionId()
+  // This page is the index route of missions/:missionId. A relative "../x"
+  // would resolve against that route and land on /missions/x, which is the
+  // 404 page, so every link here is built from the mission id.
+  const base = `/missions/${missionId}`
   const { canWrite } = useAuth()
   const mission = useMission(missionId)
   const summary = useMissionSummary(missionId)
@@ -83,10 +88,10 @@ export default function OverviewPage() {
         actions={
           canWrite && (
             <>
-              <LinkButton to="../networks" variant="secondary" icon={<NetworkIcon />}>
+              <LinkButton to={`${base}/networks`} variant="secondary" icon={<NetworkIcon />}>
                 Networks
               </LinkButton>
-              <LinkButton to="../scans/new" variant="primary" icon={<PlusIcon />}>
+              <LinkButton to={`${base}/scans/new`} variant="primary" icon={<PlusIcon />}>
                 New scan
               </LinkButton>
             </>
@@ -108,7 +113,7 @@ export default function OverviewPage() {
             description="A network records the segment you are attached to - its interface, addressing, gateway, DNS and the passive L2 recon of the switch port. Everything else in the mission hangs off it."
             action={
               canWrite && (
-                <LinkButton to="../networks" variant="primary" icon={<PlusIcon />}>
+                <LinkButton to={`${base}/networks`} variant="primary" icon={<PlusIcon />}>
                   Create a network
                 </LinkButton>
               )
@@ -127,7 +132,7 @@ export default function OverviewPage() {
               {trunkNetworks.map((n) => n.name).join(', ')} - a port that offers DTP lets an
               attacker become a trunk and reach every VLAN it carries. This is a finding in
               itself.{' '}
-              <Link to="../networks" className="underline underline-offset-2">
+              <Link to={`${base}/networks`} className="underline underline-offset-2">
                 Review the L2 recon
               </Link>
             </InlineAlert>
@@ -164,7 +169,7 @@ export default function OverviewPage() {
               title="Findings by network"
               description="Which VLAN carries the exposure, worst first. Each bar is one network, stacked critical first and scaled against the busiest network."
               actions={
-                <LinkButton to="../findings" size="sm">
+                <LinkButton to={`${base}/findings`} size="sm">
                   All findings
                 </LinkButton>
               }
@@ -182,7 +187,7 @@ export default function OverviewPage() {
                     : 'Nothing running right now'
                 }
                 actions={
-                  <LinkButton to="../scans" size="sm">
+                  <LinkButton to={`${base}/scans`} size="sm">
                     All scans
                   </LinkButton>
                 }
@@ -194,7 +199,7 @@ export default function OverviewPage() {
                   description="Launch a discovery scan on the network you are plugged into to map hosts, ports and services."
                   action={
                     canWrite && (
-                      <LinkButton to="../scans/new" variant="primary" size="sm">
+                      <LinkButton to={`${base}/scans/new`} variant="primary" size="sm">
                         Launch a discovery scan
                       </LinkButton>
                     )
@@ -210,7 +215,7 @@ export default function OverviewPage() {
                       return (
                         <li key={s.id}>
                           <Link
-                            to={`../scans/${s.id}`}
+                            to={`${base}/scans/${s.id}`}
                             className="block px-4 py-2.5 hover:bg-elevated"
                           >
                             <div className="flex items-center justify-between gap-3">
@@ -260,7 +265,7 @@ export default function OverviewPage() {
                 title="Networks"
                 description="Each VLAN or attachment point you declared"
                 actions={
-                  <LinkButton to="../networks" size="sm">
+                  <LinkButton to={`${base}/networks`} size="sm">
                     Manage
                   </LinkButton>
                 }
@@ -285,7 +290,7 @@ export default function OverviewPage() {
                       return (
                         <tr key={n.id}>
                           <td className="font-medium">
-                            <Link to={`../networks#network-${n.id}`} className="hover:underline">
+                            <Link to={`${base}/networks#network-${n.id}`} className="hover:underline">
                               {n.name}
                             </Link>
                           </td>
@@ -320,7 +325,7 @@ export default function OverviewPage() {
               title="Most severe findings"
               description="Highest severity first, newest first within a severity"
               actions={
-                <LinkButton to="../findings" size="sm">
+                <LinkButton to={`${base}/findings`} size="sm">
                   All findings
                 </LinkButton>
               }
@@ -351,7 +356,7 @@ export default function OverviewPage() {
                           <SeverityBadge severity={f.severity} />
                         </td>
                         <td className="max-w-md truncate font-medium" title={f.title}>
-                          <Link to="../findings" className="hover:underline">
+                          <Link to={`${base}/findings`} className="hover:underline">
                             {f.title}
                           </Link>
                         </td>
@@ -369,6 +374,10 @@ export default function OverviewPage() {
               </div>
             )}
           </Card>
+
+          <div className="mt-4">
+            <MissionTeam missionId={missionId} />
+          </div>
         </>
       )}
     </PageContainer>

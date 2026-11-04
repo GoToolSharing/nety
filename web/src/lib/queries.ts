@@ -22,6 +22,7 @@ export const qk = {
   missions: ['missions'] as const,
   mission: (id: number) => ['mission', id] as const,
   summary: (missionId: number) => ['summary', missionId] as const,
+  members: (missionId: number) => ['members', missionId] as const,
 
   networks: (missionId: number) => ['networks', missionId] as const,
   interfaces: ['interfaces'] as const,
@@ -314,6 +315,25 @@ export const useReach = (missionId: number, sourceNetworkId?: number) =>
 // ---------------------------------------------------------------------------
 // Admin
 // ---------------------------------------------------------------------------
+
+/** Who can see a mission. Readable by any member; only an admin may change it. */
+export const useMissionMembers = (missionId: number, enabled = true) =>
+  useQuery({
+    queryKey: qk.members(missionId),
+    queryFn: () => api.missionMembers(missionId),
+    enabled: enabled && missionId > 0,
+  })
+
+export function useSetMissionMembers(missionId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userIds: number[]) => api.setMissionMembers(missionId, userIds),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.members(missionId) })
+      void qc.invalidateQueries({ queryKey: qk.missions })
+    },
+  })
+}
 
 export const useUsers = (enabled = true) =>
   useQuery({ queryKey: qk.users, queryFn: api.users, enabled })
