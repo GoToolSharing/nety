@@ -19,6 +19,7 @@ const FORMAT_BLURB: Record<string, string> = {
   'csv-findings': 'One row per finding, with severity, evidence and remediation.',
   'csv-reach': 'One row per reachability test: source, target, technique, status.',
   'csv-assets': 'One row per asset with its addresses and identity keys.',
+  'csv-matrix': 'The source × target grid: how many services each network could reach in the next.',
   'nmap-xml': 'Nmap XML, for tools that already ingest nmap output.',
   gnmap: 'Grepable nmap output.',
   'targets-txt': 'Plain list of live addresses — feed it to your next tool.',
@@ -53,9 +54,11 @@ function FormatCard({
           <span className="text-sm font-semibold text-fg">{format.title || format.id}</span>
           <Badge tone="neutral">{format.extension || format.id}</Badge>
         </span>
-        <span className="mt-1 block text-xs text-muted">
-          {FORMAT_BLURB[format.id] ?? format.content_type}
-        </span>
+        {FORMAT_BLURB[format.id] && (
+          // No blurb means no second line: falling back to the content type
+          // here would simply repeat the line below it.
+          <span className="mt-1 block text-xs text-muted">{FORMAT_BLURB[format.id]}</span>
+        )}
         <span className="mt-1.5 block text-[11px] text-faint">
           <Mono>{format.content_type}</Mono>
         </span>
@@ -95,7 +98,7 @@ export default function ExportsPage() {
               <select
                 value={networkId}
                 onChange={(e) => setNetworkId(Number(e.target.value))}
-                className="input-base h-9 w-auto py-0"
+                className="select-base"
               >
                 <option value={0}>The whole mission</option>
                 {(networks.data ?? []).map((n) => (

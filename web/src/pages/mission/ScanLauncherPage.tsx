@@ -443,7 +443,10 @@ export default function ScanLauncherPage() {
                         : 'border-border bg-elevated hover:border-border-strong',
                     )}
                   >
-                    <span className="text-sm font-semibold capitalize">
+                    {/* The server already provides a human title such as
+                        "Low and slow"; capitalising every word mangles it. The
+                        fallback is the bare id, so only that needs a capital. */}
+                    <span className={cn('text-sm font-semibold', !info?.title && 'capitalize')}>
                       {info?.title ?? id}
                     </span>
                     <p className="mt-1 text-xs text-muted">

@@ -166,7 +166,19 @@
   /* Horizontal scroll instead of a broken layout on narrow laptop screens. */
   .table-scroll {
     @apply w-full overflow-x-auto;
-    scrollbar-gutter: stable;
+  }
+
+  /* Bare <select> elements used outside a labelled SelectField still need the
+     same chrome, otherwise they render with the platform's native control and
+     sit a few pixels off from the inputs beside them. */
+  .select-base {
+    /* Chrome's intrinsic width for an appearance:none select under-measures
+       the longest option by a few pixels, so the label slides under the
+       chevron. The extra right padding is the buffer. */
+    @apply input-base h-9 w-auto min-w-[5.5rem] appearance-none py-0 pr-9;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='%23888'><path d='M2.5 4.5 6 8l3.5-3.5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
   }
 
   .data-table {

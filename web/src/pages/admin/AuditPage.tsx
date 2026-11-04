@@ -68,7 +68,7 @@ export default function AuditPage() {
           <select
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
-            className="input-base h-9 w-auto py-0"
+            className="select-base"
           >
             {[100, 200, 500, 1000].map((n) => (
               <option key={n} value={n}>

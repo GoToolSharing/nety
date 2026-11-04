@@ -157,7 +157,6 @@ type ScanStats struct {
 	PortsOpen     int64 `json:"ports_open"`
 	Services      int64 `json:"services"`
 	Findings      int64 `json:"findings"`
-	ProbesSent    int64 `json:"probes_sent"`
 	ReachTested   int64 `json:"reach_tested"`
 	ReachOK       int64 `json:"reach_ok"`
 	NewAssets     int64 `json:"new_assets"`

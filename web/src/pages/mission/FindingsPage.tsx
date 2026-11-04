@@ -192,7 +192,7 @@ export default function FindingsPage() {
           <select
             value={networkId}
             onChange={(e) => setNetworkId(Number(e.target.value))}
-            className="input-base h-9 w-auto py-0"
+            className="select-base"
           >
             <option value={0}>All networks</option>
             {(networks.data ?? []).map((n) => (

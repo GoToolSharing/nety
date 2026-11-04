@@ -43,6 +43,20 @@ function Chips({ values, tone }: { values: string[]; tone?: 'neutral' | 'accent'
 }
 
 /** Everything the fingerprinter learned about one service. */
+/**
+ * Banners are stored with their control characters escaped, so nothing hostile
+ * from a scanned host can reach a terminal, a CSV or this page. That keeps the
+ * data safe but turns a multi-line HTTP response into one unreadable line, so
+ * the escapes are turned back into real whitespace for display only.
+ */
+function readableBanner(banner: string): string {
+  return banner
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '    ')
+}
+
 export default function ServiceDetail({ service }: { service: Service }) {
   const s = service
   const title = [s.product, s.version].filter(Boolean).join(' ')
@@ -91,7 +105,7 @@ export default function ServiceDetail({ service }: { service: Service }) {
       {s.banner && (
         <Section title="Banner">
           <pre className="log-pane max-h-48 overflow-auto whitespace-pre-wrap break-all text-fg">
-            {s.banner}
+            {readableBanner(s.banner)}
           </pre>
         </Section>
       )}

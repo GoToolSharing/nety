@@ -76,7 +76,7 @@ export default function ServicesPage() {
           <select
             value={networkId}
             onChange={(e) => setNetworkId(Number(e.target.value))}
-            className="input-base h-9 w-auto py-0"
+            className="select-base"
           >
             <option value={0}>All</option>
             {(networks.data ?? []).map((n) => (
@@ -91,7 +91,7 @@ export default function ServicesPage() {
           <select
             value={protocol}
             onChange={(e) => setProtocol(e.target.value)}
-            className="input-base h-9 w-auto py-0"
+            className="select-base"
           >
             <option value="">Any</option>
             <option value="tcp">TCP</option>

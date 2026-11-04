@@ -182,7 +182,10 @@ export function SortHeader<K extends string>({
         type="button"
         onClick={() => onSort(column)}
         className={cn(
-          'inline-flex items-center gap-1 rounded hover:text-fg',
+          // Browsers reset text-transform on form controls, so without this
+          // the sortable headers lose the uppercase of the plain <th>s beside
+          // them and the header row ends up in mixed case.
+          'inline-flex items-center gap-1 rounded [text-transform:inherit] [letter-spacing:inherit] hover:text-fg',
           active && 'text-fg',
           numeric && 'justify-end',
         )}

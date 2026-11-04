@@ -117,6 +117,16 @@ function ChangePasswordModal({ open, onClose }: { open: boolean; onClose: () => 
   )
 }
 
+/**
+ * A development build has no tag, so `git describe --always` hands us a bare
+ * commit hash. Prefixing that with "v" reads like a broken version string, so
+ * only do it when the value actually looks like one.
+ */
+function displayVersion(v: string): string {
+  if (!v) return ''
+  return /^\d/.test(v) ? `v${v}` : v
+}
+
 export default function AppShell() {
   const { user, logout } = useAuth()
   const { theme, toggle } = useTheme()
@@ -149,7 +159,7 @@ export default function AppShell() {
                   : undefined
               }
             >
-              v{status.data.version}
+              {displayVersion(status.data.version)}
             </span>
           )}
 

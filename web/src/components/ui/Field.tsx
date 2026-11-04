@@ -109,7 +109,7 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
           ref={ref}
           id={id}
           required={required}
-          className={cn('input-base appearance-none pr-8', error && 'border-crit', className)}
+          className={cn('input-base appearance-none pr-9', error && 'border-crit', className)}
           style={{
             backgroundImage:
               "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='%23888'><path d='M2.5 4.5 6 8l3.5-3.5z'/></svg>\")",
@@ -206,6 +206,8 @@ export function Toggle({
 }) {
   const autoId = useId()
   const id = idProp ?? autoId
+  const labelId = `${id}-label`
+  const hintId = hint ? `${id}-hint` : undefined
   return (
     <div className="flex items-start gap-3">
       <button
@@ -213,6 +215,10 @@ export function Toggle({
         id={id}
         role="switch"
         aria-checked={checked}
+        // A <label for> does not name a button, so the switch has to point at
+        // its own text or it reaches a screen reader as an unnamed control.
+        aria-labelledby={labelId}
+        aria-describedby={hintId}
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
@@ -232,10 +238,18 @@ export function Toggle({
         />
       </button>
       <div className="min-w-0">
-        <label htmlFor={id} className="cursor-pointer select-none text-sm font-medium text-fg">
+        <label
+          id={labelId}
+          htmlFor={id}
+          className="cursor-pointer select-none text-sm font-medium text-fg"
+        >
           {label}
         </label>
-        {hint && <div className="mt-0.5 text-xs text-muted">{hint}</div>}
+        {hint && (
+          <div id={hintId} className="mt-0.5 text-xs text-muted">
+            {hint}
+          </div>
+        )}
       </div>
     </div>
   )

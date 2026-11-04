@@ -201,7 +201,6 @@ export interface ScanStats {
   ports_open: number
   services: number
   findings: number
-  probes_sent: number
   reach_tested: number
   reach_ok: number
   new_assets: number
