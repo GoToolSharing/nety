@@ -35,7 +35,7 @@ export default function OverviewPage() {
   const findingList = findings.data ?? []
 
   const severityCounts = useMemo(() => {
-    const fromSummary = summary.data?.severity
+    const fromSummary = summary.data?.by_severity
     if (fromSummary && Object.keys(fromSummary).length > 0) {
       return fromSummary as Partial<Record<Severity, number>>
     }
@@ -264,7 +264,7 @@ export default function OverviewPage() {
                   </thead>
                   <tbody>
                     {nets.map((n) => {
-                      const perNet = summary.data?.networks?.find((x) => x.network_id === n.id)
+                      const perNet = summary.data?.per_network?.[String(n.id)]
                       const hostsHere =
                         perNet?.hosts ??
                         (hosts.data ?? []).filter((h) => h.network_id === n.id).length

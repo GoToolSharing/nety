@@ -249,13 +249,15 @@ export const api = {
       offset?: number
     } = {},
   ): Promise<ServicePage> => {
-    const raw = await request<ServicePage | Service[] | null>(
-      `api/missions/${missionId}/services`,
-      { query: params },
-    )
-    if (Array.isArray(raw)) return { items: raw, total: raw.length }
-    if (!raw) return { items: [], total: 0 }
-    return raw
+    const limit = params.limit ?? 0
+    const offset = params.offset ?? 0
+    const raw = await request<Service[] | null>(`api/missions/${missionId}/services`, {
+      query: params,
+    })
+    const items = list(raw)
+    // The handler returns a bare slice, so a full page means "there may be
+    // more"; a short page is the last one.
+    return { items, has_more: limit > 0 && items.length >= limit, limit, offset }
   },
   findings: async (missionId: number, networkId?: number) =>
     list(
@@ -291,12 +293,6 @@ export const api = {
 
   // --- misc ----------------------------------------------------------------
   status: () => request<ServerStatus>('api/status'),
-  audit: async (params: { limit?: number; offset?: number; mission_id?: number } = {}) => {
-    const raw = await request<AuditEntry[] | { items: AuditEntry[] | null } | null>(
-      'api/audit',
-      { query: params },
-    )
-    if (Array.isArray(raw)) return raw
-    return list(raw?.items)
-  },
+  audit: async (params: { limit?: number; mission_id?: number } = {}) =>
+    list(await request<AuditEntry[] | null>('api/audit', { query: params })),
 }

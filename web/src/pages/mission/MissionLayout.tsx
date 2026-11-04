@@ -126,13 +126,13 @@ function MissionSidebar({ missionId }: { missionId: number }) {
       to: 'networks',
       label: 'Networks',
       icon: <NetworkIcon />,
-      count: networks.data?.length ?? s?.networks?.length,
+      count: networks.data?.length ?? (s?.networks ?? []).length,
     },
     {
       to: 'scans',
       label: 'Scans',
       icon: <ScanIcon />,
-      count: scans.data?.length ?? s?.scans,
+      count: scans.data?.length,
       badge:
         running > 0 ? (
           <Badge tone="accent" className="px-1 py-0 text-[10px]">

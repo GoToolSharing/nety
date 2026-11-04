@@ -47,7 +47,7 @@ export default function ServicesPage() {
 
   const services = useServices(missionId, params)
   const items = services.data?.items ?? []
-  const total = services.data?.total
+  const hasMore = services.data?.has_more ?? false
 
   const netName = useMemo(() => {
     const m = new Map<number, string>()
@@ -110,9 +110,9 @@ export default function ServicesPage() {
             className="input-base h-9 w-24 py-0 font-mono text-[12.5px]"
           />
         </label>
-        {typeof total === 'number' && (
-          <span className="tabular text-xs text-faint">{formatNumber(total)} services</span>
-        )}
+        <span className="tabular text-xs text-faint">
+          {formatNumber(items.length)} shown{hasMore ? '+' : ''}
+        </span>
       </div>
 
       <Card className="mt-4">
@@ -239,7 +239,8 @@ export default function ServicesPage() {
               <Pagination
                 offset={offset}
                 limit={PAGE_SIZE}
-                total={total}
+                count={items.length}
+                hasMore={hasMore}
                 onChange={(o) => {
                   setExpanded(null)
                   setOffset(o)

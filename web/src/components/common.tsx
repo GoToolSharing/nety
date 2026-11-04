@@ -211,35 +211,40 @@ export function useSort<K extends string>(initialKey: K, initialDir: SortDirecti
   return { sort, onSort, setSort }
 }
 
+/**
+ * Window pager. The services endpoint applies limit/offset and returns a bare
+ * slice, so there is no total: a full page means there may be more.
+ */
 export function Pagination({
   offset,
   limit,
-  total,
+  count,
+  hasMore,
   onChange,
   className,
 }: {
   offset: number
   limit: number
-  total?: number
+  /** Rows on the current page. */
+  count: number
+  hasMore: boolean
   onChange: (offset: number) => void
   className?: string
 }) {
-  const knownTotal = typeof total === 'number'
-  const from = total === 0 ? 0 : offset + 1
-  const to = knownTotal ? Math.min(offset + limit, total) : offset + limit
+  const from = count === 0 ? 0 : offset + 1
+  const to = offset + count
   const canPrev = offset > 0
-  const canNext = knownTotal ? offset + limit < total : true
+  const canNext = hasMore
 
   return (
     <div className={cn('flex items-center justify-between gap-3 px-3 py-2 text-xs', className)}>
       <span className="tabular text-muted">
-        {knownTotal ? (
-          <>
-            {formatNumber(from)}–{formatNumber(to)} of {formatNumber(total)}
-          </>
+        {count === 0 ? (
+          'No rows'
         ) : (
           <>
-            from {formatNumber(from)}
+            Rows {formatNumber(from)}–{formatNumber(to)}
+            {hasMore ? ' (more available)' : ''}
           </>
         )}
       </span>

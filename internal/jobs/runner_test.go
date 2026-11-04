@@ -86,10 +86,20 @@ func (f *fakePortScanner) Scan(ctx context.Context, opts engine.PortScanOptions,
 	return nil
 }
 
-type fakeFingerprinter struct{ calls atomic.Int64 }
+type fakeFingerprinter struct {
+	calls atomic.Int64
+	delay time.Duration
+}
 
 func (f *fakeFingerprinter) Fingerprint(ctx context.Context, ip netip.Addr, port uint16, proto model.Protocol, opts engine.FingerprintOptions) (model.Service, error) {
 	f.calls.Add(1)
+	if f.delay > 0 {
+		select {
+		case <-time.After(f.delay):
+		case <-ctx.Done():
+			return model.Service{}, ctx.Err()
+		}
+	}
 	return model.Service{
 		State: model.PortOpen, Name: "http", Product: "nginx", Version: "1.24.0",
 		Confidence: 90, Method: "probe-match",
@@ -525,5 +535,90 @@ func TestLocalAddressIsNeverScanned(t *testing.T) {
 	}
 	if len(seen) != 7 {
 		t.Fatalf("expected 7 addresses, got %d: %v", len(seen), seen)
+	}
+}
+
+// TestResumeDoesNotRegenerateWork guards requirement R2 from its subtler side:
+// resuming walks every phase again, including the ones that already completed
+// before the pause, and must not append a second set of work units for the
+// phases they feed.
+func TestResumeDoesNotRegenerateWork(t *testing.T) {
+	fp := &fakeFingerprinter{delay: 30 * time.Millisecond}
+	h := newHarness(t, Engines{
+		Discoverer:    &fakeDiscoverer{perUnit: 4},
+		PortScanner:   &fakePortScanner{openPorts: []uint16{80, 443}},
+		Fingerprinter: fp,
+	})
+	ctx := context.Background()
+	opts := defaultOptions()
+	opts.Targets = []string{"10.0.0.0/27"}
+	opts.Checks = false
+	opts.Concurrency = 1
+	sc := h.newScan(t, opts)
+
+	if err := h.runner.Start(ctx, sc.ID); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+
+	// Wait until the fingerprint phase is under way, then pause: discovery and
+	// the port phases are complete, so a resume will walk over them again.
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		cur, err := h.st.Scan(ctx, sc.ID)
+		if err != nil {
+			t.Fatalf("scan: %v", err)
+		}
+		if cur.Status != model.ScanRunning && cur.Status != model.ScanQueued {
+			t.Skipf("scan reached %q before the fingerprint phase could be paused", cur.Status)
+		}
+		if model.WorkPhase(cur.Phase) == model.PhaseFingerprint && fp.calls.Load() > 0 {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if err := h.runner.Pause(sc.ID); err != nil {
+		t.Fatalf("pause: %v", err)
+	}
+	paused := h.waitStatus(t, sc.ID, 15*time.Second, model.ScanPaused, model.ScanCompleted)
+	if paused.Status == model.ScanCompleted {
+		t.Skip("scan finished before the pause took effect")
+	}
+
+	unitsPerPhase := func() map[model.WorkPhase]int64 {
+		t.Helper()
+		phases, err := h.st.PhaseProgress(ctx, sc.ID)
+		if err != nil {
+			t.Fatalf("phases: %v", err)
+		}
+		out := map[model.WorkPhase]int64{}
+		for _, p := range phases {
+			out[p.Phase] = p.Total
+		}
+		return out
+	}
+	before := unitsPerPhase()
+	if before[model.PhaseFingerprint] == 0 {
+		t.Fatalf("the fingerprint phase should have units by now: %+v", before)
+	}
+
+	if err := h.runner.Start(ctx, sc.ID); err != nil {
+		t.Fatalf("resume: %v", err)
+	}
+	done := h.waitStatus(t, sc.ID, 30*time.Second, model.ScanCompleted, model.ScanFailed)
+	if done.Status != model.ScanCompleted {
+		t.Fatalf("resumed scan failed: %s", done.Error)
+	}
+
+	after := unitsPerPhase()
+	for phase, n := range before {
+		if after[phase] != n {
+			t.Fatalf("phase %s went from %d to %d work units across the resume: work was regenerated",
+				phase, n, after[phase])
+		}
+	}
+	// Every service was fingerprinted exactly once across both runs.
+	if got := fp.calls.Load(); got != before[model.PhaseFingerprint] {
+		t.Fatalf("fingerprinted %d times for %d services: work was repeated or skipped",
+			got, before[model.PhaseFingerprint])
 	}
 }

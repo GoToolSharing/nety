@@ -12,7 +12,15 @@ import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/Feedback'
 import { PageHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { RelativeTime, SearchInput } from '@/components/common'
-import { AssetIcon, FindingIcon, HostIcon, NetworkIcon, PlusIcon, ScanIcon } from '@/components/icons'
+import {
+  AssetIcon,
+  FindingIcon,
+  HostIcon,
+  NetworkIcon,
+  PlusIcon,
+  ScanIcon,
+  ServiceIcon,
+} from '@/components/icons'
 import { formatNumber } from '@/lib/format'
 import type { Mission, MissionSummary } from '@/types/api'
 
@@ -161,8 +169,11 @@ function MissionCard({
   onArchiveToggle: (m: Mission) => void
   canWrite: boolean
 }) {
-  const severity = summary?.severity ?? {}
+  const severity = summary?.by_severity ?? {}
   const criticalish = (severity.critical ?? 0) + (severity.high ?? 0)
+  const running = (summary?.recent_scans ?? []).filter(
+    (s) => s.status === 'running' || s.status === 'queued',
+  ).length
 
   return (
     <div className="card flex flex-col transition-colors hover:border-border-strong">
@@ -184,10 +195,10 @@ function MissionCard({
                 {formatNumber(criticalish)} high+
               </Badge>
             )}
-            {(summary?.running_scans ?? 0) > 0 && (
+            {running > 0 && (
               <Badge tone="accent">
                 <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
-                {summary?.running_scans} running
+                {running} running
               </Badge>
             )}
           </div>
@@ -201,13 +212,13 @@ function MissionCard({
           <CountChip
             icon={<NetworkIcon width={13} height={13} />}
             label="networks"
-            value={summary?.networks?.length}
+            value={(summary?.networks ?? []).length}
           />
           <CountChip icon={<HostIcon width={13} height={13} />} label="hosts" value={summary?.hosts} />
           <CountChip
-            icon={<ScanIcon width={13} height={13} />}
-            label="scans"
-            value={summary?.scans}
+            icon={<ServiceIcon width={13} height={13} />}
+            label="services"
+            value={summary?.services}
           />
           <CountChip
             icon={<FindingIcon width={13} height={13} />}

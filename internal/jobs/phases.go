@@ -306,7 +306,22 @@ func (r *Runner) planSegment(ctx context.Context, sc model.Scan) error {
 
 // generate creates the work units of the phase that follows the one that just
 // finished, from the results stored so far.
+//
+// A phase only reaches this point once it has fully completed, but `execute`
+// walks every phase again on a resume, so a phase that was already complete
+// before the pause would get here a second time. Generating again would append
+// a duplicate set of units and redo work the scan had already done, which is
+// exactly what requirement R2 forbids — hence the guard below.
 func (r *Runner) generate(ctx context.Context, sc model.Scan, finished model.WorkPhase) error {
+	if generated, ok := generatedPhases[finished]; ok {
+		already, err := r.phaseHasWork(ctx, sc.ID, generated...)
+		if err != nil {
+			return err
+		}
+		if already {
+			return nil
+		}
+	}
 	switch finished {
 	case model.PhaseDiscovery:
 		if !sc.Options.HostDiscovery {
@@ -373,6 +388,35 @@ func (r *Runner) generate(ctx context.Context, sc model.Scan, finished model.Wor
 		return r.addHostUnits(ctx, sc, model.PhaseChecks, "checks")
 	}
 	return nil
+}
+
+// generatedPhases maps a finished phase to the phases whose units it creates.
+// Host discovery feeds both port-scan phases, so both must be considered when
+// deciding whether generation already happened.
+var generatedPhases = map[model.WorkPhase][]model.WorkPhase{
+	model.PhaseDiscovery:   {model.PhasePortsTCP, model.PhasePortsUDP},
+	model.PhasePortsUDP:    {model.PhaseFingerprint},
+	model.PhaseFingerprint: {model.PhaseIdentity},
+	model.PhaseIdentity:    {model.PhaseChecks},
+}
+
+// phaseHasWork reports whether any of the given phases already has work units.
+func (r *Runner) phaseHasWork(ctx context.Context, scanID int64, want ...model.WorkPhase) (bool, error) {
+	phases, err := r.st.PhaseProgress(ctx, scanID)
+	if err != nil {
+		return false, err
+	}
+	for _, p := range phases {
+		if p.Total == 0 {
+			continue
+		}
+		for _, w := range want {
+			if p.Phase == w {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 func (r *Runner) addHostUnits(ctx context.Context, sc model.Scan, phase model.WorkPhase, label string) error {

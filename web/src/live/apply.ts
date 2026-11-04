@@ -4,11 +4,13 @@ import type {
   Asset,
   Finding,
   Host,
+  HostDetail,
   LiveEvent,
   LogLine,
   Network,
   ReachResult,
   Scan,
+  ScanProgressEvent,
   Service,
   ServicePage,
 } from '@/types/api'
@@ -114,8 +116,8 @@ export function applyEvent(ctx: ApplyContext, ev: LiveEvent): void {
 
   switch (ev.type) {
     case 'scan.status':
-    case 'scan.phase':
-    case 'scan.progress': {
+    case 'scan.phase': {
+      // These carry the whole scan object.
       const scan = ev.data as Scan
       if (!scan?.id) return
       qc.setQueryData(qk.scan(scan.id), (old: Scan | undefined) =>
@@ -135,6 +137,28 @@ export function applyEvent(ctx: ApplyContext, ev: LiveEvent): void {
           invalidator.schedule(qk.scans(missionId))
         }
       }
+      return
+    }
+
+    case 'scan.progress': {
+      // A partial update: {scan_id, phase, progress, stats, phases}.
+      const p = ev.data as ScanProgressEvent
+      const id = p?.scan_id || scanId
+      if (!id) return
+      const patch = (old: Scan | undefined): Scan | undefined =>
+        old
+          ? {
+              ...old,
+              phase: p.phase ?? old.phase,
+              progress: typeof p.progress === 'number' ? p.progress : old.progress,
+              stats: p.stats ?? old.stats,
+              phases: p.phases ?? old.phases,
+            }
+          : old
+      qc.setQueryData(qk.scan(id), patch)
+      qc.setQueryData(qk.scans(missionId), (old: Scan[] | undefined) =>
+        old?.map((s) => (s.id === id ? (patch(s) as Scan) : s)),
+      )
       return
     }
 
@@ -170,7 +194,7 @@ export function applyEvent(ctx: ApplyContext, ev: LiveEvent): void {
       if (!svc?.id) return
       const patched = patchServicePages(qc, missionId, svc)
       if (!patched) invalidator.schedule(qk.servicesRoot(missionId))
-      qc.setQueryData(qk.host(svc.host_id), (old: { host: Host; services: Service[] | null } | undefined) =>
+      qc.setQueryData(qk.host(svc.host_id), (old: HostDetail | undefined) =>
         old ? { ...old, services: upsert(old.services ?? [], svc) } : old,
       )
       if (scanId) store.addService(scanId, svc)

@@ -48,34 +48,27 @@ export interface MissionInput {
   archived?: boolean
 }
 
-/**
- * GET /api/missions/{id}/summary — "counts per network, severity totals,
- * matrix size". The handler is still settling, so every field is optional and
- * the UI degrades gracefully when one is absent.
- */
-export interface MissionSummary {
-  mission_id?: number
-  networks?: NetworkSummary[]
+/** Per-network counters of a mission summary, keyed by network id. */
+export interface NetworkCounts {
   hosts?: number
   services?: number
   findings?: number
-  assets?: number
-  scans?: number
-  running_scans?: number
-  severity?: Partial<Record<Severity, number>>
-  matrix?: { networks?: number; cells?: number; tested?: number; reachable?: number }
-  last_scan_at?: string
 }
 
-export interface NetworkSummary {
-  network_id: number
-  name?: string
-  hosts?: number
-  services?: number
-  findings?: number
-  assets?: number
-  scans?: number
-  last_scan_at?: string
+/** GET /api/missions/{id}/summary */
+export interface MissionSummary {
+  mission: Mission
+  networks: Network[] | null
+  per_network: Record<string, NetworkCounts> | null
+  hosts: number
+  services: number
+  assets: number
+  findings: number
+  by_severity: Partial<Record<Severity, number>> | null
+  matrix_cells: number
+  /** Network pairs where at least one service was reachable. */
+  crossed: number
+  recent_scans: Scan[] | null
 }
 
 // ---------------------------------------------------------------------------
@@ -417,18 +410,24 @@ export interface Service {
   last_scan_id: number
 }
 
-/** GET /api/hosts/{id} — host plus its services. */
+/** GET /api/hosts/{id} — host plus its services, asset and findings. */
 export interface HostDetail {
   host: Host
   services: Service[] | null
+  asset: Asset | null
+  findings: Finding[] | null
 }
 
-/** Paginated service listing. The handler may also return a bare array. */
+/**
+ * A window of the service listing. The server applies limit/offset and
+ * returns a bare array, so the total is unknown: `has_more` is inferred from
+ * a full page coming back.
+ */
 export interface ServicePage {
-  items: Service[] | null
-  total?: number
-  limit?: number
-  offset?: number
+  items: Service[]
+  has_more: boolean
+  limit: number
+  offset: number
 }
 
 // ---------------------------------------------------------------------------
@@ -657,32 +656,33 @@ export interface ExportFormat {
 // Status & audit
 // ---------------------------------------------------------------------------
 
+/** GET /api/status — the fields past `platform` need a session. */
 export interface ServerStatus {
-  version?: string
-  commit?: string
-  build_date?: string
+  version: string
+  commit: string
+  build_date: string
+  go: string
+  platform: string
   uptime_seconds?: number
-  started_at?: string
-  privileged?: boolean
+  /** Whether the server can open raw sockets (SYN scan, ARP, L2 techniques). */
   raw_sockets?: boolean
   running_scans?: number
-  counters?: Record<string, number>
+  event_subscribers?: number
+  engines?: Record<string, boolean>
+  database?: Record<string, number>
 }
 
-/** Audit trail entry (admin view). Field names are permissive: the handler is
- * owned by another package and only the common subset is relied upon. */
+/** store.AuditEntry — GET /api/audit (admin only). */
 export interface AuditEntry {
   id: number
-  time?: string
-  created_at?: string
-  user_id?: number
-  username?: string
+  time: string
+  user_id: number
+  username: string
+  mission_id: number
   action: string
-  target?: string
-  mission_id?: number
-  detail?: string
-  ip?: string
-  status?: string
+  detail: string
+  /** Remote address the action came from. */
+  remote: string
 }
 
 // ---------------------------------------------------------------------------
@@ -704,6 +704,7 @@ export interface ApiErrorBody {
 // ---------------------------------------------------------------------------
 
 export type EventType =
+  | 'hello'
   | 'scan.status'
   | 'scan.phase'
   | 'scan.progress'
@@ -728,9 +729,23 @@ export interface EventEnvelope<T = unknown> {
   data: T
 }
 
+/**
+ * `scan.progress` carries a partial update, not a whole Scan: the runner
+ * publishes only what changed (see internal/jobs/runner.go).
+ */
+export interface ScanProgressEvent {
+  scan_id: number
+  phase: string
+  progress: number
+  stats: ScanStats
+  phases: PhaseProgress[] | null
+}
+
 /** Discriminated union of everything the bus can push. */
 export type LiveEvent =
-  | (EventEnvelope<Scan> & { type: 'scan.status' | 'scan.phase' | 'scan.progress' })
+  | (EventEnvelope<unknown> & { type: 'hello' })
+  | (EventEnvelope<Scan> & { type: 'scan.status' | 'scan.phase' })
+  | (EventEnvelope<ScanProgressEvent> & { type: 'scan.progress' })
   | (EventEnvelope<LogLine> & { type: 'scan.log' })
   | (EventEnvelope<Host> & { type: 'host' })
   | (EventEnvelope<Service> & { type: 'service' })
