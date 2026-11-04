@@ -25,7 +25,7 @@ import (
 
 const (
 	httpUserAgent  = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
-	maxHTTPBody    = 1 << 20
+	maxHTTPBody    = 512 << 10 // hard cap on the body we read and hash
 	maxFaviconBody = 512 << 10
 	maxHeaderVal   = 512
 	maxHeaders     = 48
@@ -151,6 +151,13 @@ func rawHead(resp *http.Response) []byte {
 	sort.Strings(keys)
 	for _, k := range keys {
 		for _, v := range resp.Header[k] {
+			if k == "Set-Cookie" {
+				// Never keep a session value: the cookie NAME is the only
+				// part worth reporting.
+				name, _, _ := strings.Cut(v, "=")
+				fmt.Fprintf(&b, "%s: %s=<redacted>\r\n", k, strings.TrimSpace(name))
+				continue
+			}
 			fmt.Fprintf(&b, "%s: %s\r\n", k, v)
 		}
 	}

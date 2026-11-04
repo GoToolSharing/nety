@@ -23,6 +23,7 @@ type change struct {
 var tracker = struct {
 	mu      sync.Mutex
 	changes []change
+	keys    map[string]uint64
 	nextID  uint64
 }{}
 
@@ -50,6 +51,31 @@ func forgetChange(id uint64) {
 			tracker.changes = append(tracker.changes[:i], tracker.changes[i+1:]...)
 			return
 		}
+	}
+}
+
+// trackKeyed registers an undo action under a stable key so that an explicit
+// revert (DelRoute after AddRoute) can drop it from the registry.
+func trackKeyed(key, desc string, undo func() error) {
+	id := trackChange(desc, undo)
+	tracker.mu.Lock()
+	defer tracker.mu.Unlock()
+	if tracker.keys == nil {
+		tracker.keys = map[string]uint64{}
+	}
+	tracker.keys[key] = id
+}
+
+// forgetKeyed drops the undo registered under key, if any.
+func forgetKeyed(key string) {
+	tracker.mu.Lock()
+	id, ok := tracker.keys[key]
+	if ok {
+		delete(tracker.keys, key)
+	}
+	tracker.mu.Unlock()
+	if ok {
+		forgetChange(id)
 	}
 }
 
@@ -81,6 +107,7 @@ func restoreAll(log *slog.Logger) error {
 	tracker.mu.Lock()
 	pending := tracker.changes
 	tracker.changes = nil
+	tracker.keys = nil
 	tracker.mu.Unlock()
 
 	var errs []error

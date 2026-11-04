@@ -3,7 +3,6 @@ package fingerprint
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
 	"net/http"
 	"slices"
 	"strconv"
@@ -174,85 +173,6 @@ func TestPrintable(t *testing.T) {
 	}
 }
 
-func TestSNMPDecode(t *testing.T) {
-	// GetResponse for sysDescr.0 = "Linux host 5.15"
-	vb := berSeq(berOID(1, 3, 6, 1, 2, 1, 1, 1, 0), berOctets("Linux host 5.15.0 x86_64"))
-	pdu := berTLVBytes(0xa2, berIntBytes(42), berIntBytes(0), berIntBytes(0), berSeq(vb))
-	resp := berSeq(berIntBytes(1), berOctets("public"), pdu)
-	id := decodeSNMP(resp)
-	if id == nil || id.name != "snmp" || id.version != "v2c" || id.os != "Linux" ||
-		id.extra["sysDescr"] != "Linux host 5.15.0 x86_64" {
-		t.Fatalf("%+v", id)
-	}
-	// the request we send must itself be valid BER
-	req := snmpGet(1, "public")
-	if m, rest, err := parseBER(req); err != nil || len(rest) != 0 || m.tag != 0x10 {
-		t.Fatalf("bad request: %v", err)
-	}
-	if decodeSNMP([]byte("garbage")) != nil {
-		t.Fatal("garbage decoded")
-	}
-}
-
-func TestNBSTATDecode(t *testing.T) {
-	var b []byte
-	b = append(b, 0x12, 0x34, 0x84, 0x00, 0, 0, 0, 1, 0, 0, 0, 0)
-	b = append(b, 0x20)
-	b = append(b, bytes.Repeat([]byte{'A'}, 32)...)
-	b = append(b, 0)
-	b = append(b, 0x00, 0x21, 0x00, 0x01, 0, 0, 0, 0)
-	names := []struct {
-		n      string
-		suffix byte
-		group  bool
-	}{{"WS01", 0x00, false}, {"CORP", 0x00, true}, {"WS01", 0x20, false}, {"ALICE", 0x03, false}}
-	var rd []byte
-	rd = append(rd, byte(len(names)))
-	for _, n := range names {
-		nm := []byte(n.n + strings.Repeat(" ", 15-len(n.n)))
-		rd = append(rd, nm...)
-		rd = append(rd, n.suffix)
-		if n.group {
-			rd = append(rd, 0x84, 0x00)
-		} else {
-			rd = append(rd, 0x04, 0x00)
-		}
-	}
-	rd = append(rd, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55)
-	b = binary.BigEndian.AppendUint16(b, uint16(len(rd)))
-	b = append(b, rd...)
-	id := decodeNBSTAT(b)
-	if id == nil || id.hostname != "WS01" || id.extra["workgroup"] != "CORP" || id.extra["user"] != "ALICE" ||
-		id.extra["mac"] != "00:11:22:33:44:55" || id.os != "Windows" {
-		t.Fatalf("%+v", id)
-	}
-}
-
-func TestDNSDecode(t *testing.T) {
-	// Build a response to our own query using miekg/dns through the probe.
-	q := probeDNS.payload(mustAddr("127.0.0.1"))
-	if len(q) < 12 {
-		t.Fatal("short query")
-	}
-	if probeDNS.decode(q) != nil {
-		t.Fatal("a query is not a response")
-	}
-}
-
-func TestBERRoundTrip(t *testing.T) {
-	for _, v := range []int64{0, 1, 127, 128, 255, 256, -1, -129, 1 << 40} {
-		el, _, err := parseBER(berIntBytes(v))
-		if err != nil || berInt(el.value) != v {
-			t.Fatalf("int %d: %v %d", v, err, berInt(el.value))
-		}
-	}
-	long := berOctets(strings.Repeat("a", 300))
-	el, rest, err := parseBER(long)
-	if err != nil || len(el.value) != 300 || len(rest) != 0 {
-		t.Fatal("long form length")
-	}
-}
-
 func TestServiceNameFallback(t *testing.T) {
 	svc := model.Service{}
 	finalize(&svc, 445, model.TCP)
@@ -260,3 +180,7 @@ func TestServiceNameFallback(t *testing.T) {
 		t.Fatalf("%+v", svc)
 	}
 }
+
+// The SNMP, NetBIOS, DNS and BER decoders live in
+// internal/fingerprint/udpprobe and are tested there, against byte fixtures,
+// without a socket.

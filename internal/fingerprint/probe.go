@@ -77,7 +77,10 @@ func (d *dialer) sendProbe(ctx context.Context, payload []byte, useTLS bool, wai
 	}
 	defer func() { _ = c.Close() }()
 
-	if len(payload) > 0 {
+	// A UDP probe must emit a datagram even when its payload is empty, or the
+	// peer never hears from us at all; over TCP an empty payload is the NULL
+	// probe and nothing should be written.
+	if len(payload) > 0 || d.proto == "udp" {
 		if err := c.SetWriteDeadline(time.Now().Add(wait)); err != nil {
 			return nil, err
 		}

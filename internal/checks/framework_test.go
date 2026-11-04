@@ -34,7 +34,7 @@ func quietLogger() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard
 func TestFrameworkRun(t *testing.T) {
 	var running, maxRunning int32
 	slow := &Check{
-		Info: engine.CheckInfo{ID: "test-slow", Title: "Slow", Severity: model.SevLow, Description: "d"},
+		Info:    engine.CheckInfo{ID: "test-slow", Title: "Slow", Severity: model.SevLow, Description: "d"},
 		Applies: func(t *Target) bool { return t.Service.Port < 1000 },
 		Run: func(ctx context.Context, t *Target) []model.Finding {
 			n := atomic.AddInt32(&running, 1)

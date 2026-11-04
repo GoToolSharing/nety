@@ -51,16 +51,17 @@ const (
 	MethodPortTable    = "port-table"
 )
 
-// Confidence attached to each method (0..100).
+// Confidence attached to each detection method (0..100). Exported so the
+// runner and the UI can reason about how much a result is worth.
 const (
-	confSSH        = 95
-	confHTTP       = 90
-	confProbeMatch = 90
-	confFPX        = 85
-	confSoftMatch  = 60
-	confTLSOnly    = 55
-	confBanner     = 50
-	confPortTable  = 20
+	ConfSSH          = 95
+	ConfHTTP         = 90
+	ConfProbeMatch   = 90
+	ConfFingerprintX = 85
+	ConfSoftMatch    = 60
+	ConfTLSOnly      = 55
+	ConfBanner       = 50
+	ConfPortTable    = 20
 )
 
 // confidentEnough stops the layer chain.
@@ -101,7 +102,7 @@ func (f *fingerprinter) Fingerprint(
 	if !ip.IsValid() || port == 0 {
 		return svc, fmt.Errorf("fingerprint: invalid target %s:%d", ip, port)
 	}
-	applyPortTable(&svc, port, proto)
+	finalize(&svc, port, proto)
 
 	if proto != model.TCP && proto != model.UDP {
 		return svc, fmt.Errorf("fingerprint: unsupported protocol %q", proto)
@@ -160,7 +161,7 @@ func (f *fingerprinter) fingerprintTCP(
 			svc.Tunnel = "ssl"
 			banner = d.peekConn(conn)
 			_ = conn.Close()
-			svc.Confidence = confTLSOnly
+			svc.Confidence = ConfTLSOnly
 			svc.Method = MethodTLS
 		} else {
 			f.log.Debug("tls handshake failed", "target", d.addr(), "err", err)
@@ -183,6 +184,7 @@ func (f *fingerprinter) fingerprintTCP(
 	if ctx.Err() == nil && (len(banner) == 0 || looksHTTP(banner) || alpnIsHTTP(svc.TLS)) {
 		if res, err := d.probeHTTP(ctx, useTLS); err == nil && res != nil {
 			f.fillHTTP(svc, res, useTLS)
+			f.refineHTTP(ctx, d, svc, useTLS)
 			return nil
 		} else if err != nil {
 			f.log.Debug("http probe failed", "target", d.addr(), "tls", useTLS, "err", err)
@@ -201,11 +203,9 @@ func (f *fingerprinter) fingerprintTCP(
 
 	// Layer 5 — nmap service probes (runtime data file).
 	if ctx.Err() == nil {
-		if r := f.probeNmap(ctx, d, svc, banner, useTLS, intensity); r != nil {
-			applyNmapResult(svc, r)
-			if svc.Confidence >= confidentEnough {
-				return nil
-			}
+		applyProbeOutcome(svc, f.probeNmap(ctx, d, banner, useTLS, intensity))
+		if svc.Confidence >= confidentEnough {
+			return nil
 		}
 	}
 
@@ -219,14 +219,14 @@ func (f *fingerprinter) fillSSH(ctx context.Context, d *dialer, svc *model.Servi
 	svc.SSH = info
 	svc.Name = "ssh"
 	svc.Banner = printable([]byte(info.Banner))
-	product, version, extra, ostype, cpes := parseSSHIdent(info.Banner)
-	svc.Product, svc.Version, svc.OSType = product, version, ostype
-	if extra != "" {
-		svc.ExtraInfo = extra
+	id := parseSSHIdent(info.Banner)
+	svc.Product, svc.Version, svc.OSType = id.Product, id.Version, id.OS
+	if id.Extra != "" {
+		svc.ExtraInfo = id.Extra
 	}
-	svc.CPEs = mergeUnique(svc.CPEs, cpes)
+	svc.CPEs = mergeUnique(svc.CPEs, id.CPEs)
 	svc.Method = MethodSSH
-	svc.Confidence = confSSH
+	svc.Confidence = ConfSSH
 	if len(info.HostKeys) > 0 {
 		setExtra(svc, "ssh.hostkey."+strings.ToLower(info.HostKeys[0].Type), info.HostKeys[0].SHA256)
 	}
@@ -239,7 +239,7 @@ func (f *fingerprinter) fillHTTP(svc *model.Service, res *httpResult, useTLS boo
 	svc.HTTP = res.info
 	svc.Name = "http"
 	svc.Method = MethodHTTP
-	svc.Confidence = confHTTP
+	svc.Confidence = ConfHTTP
 	if len(res.banner) > 0 {
 		svc.Banner = printable(res.banner)
 	}
@@ -282,9 +282,12 @@ func (f *fingerprinter) fillHTTP(svc *model.Service, res *httpResult, useTLS boo
 }
 
 func (f *fingerprinter) fillFallback(svc *model.Service, d *dialer, banner []byte) {
-	if len(banner) > 0 {
+	// The banner rules describe TCP services that speak first; applying them
+	// to a UDP datagram would be guesswork (a NetBIOS reply starting with
+	// 0xFF would read as a telnet IAC), so UDP relies on its own decoders.
+	if len(banner) > 0 && d.proto == string(model.TCP) {
 		if rule, version, ok := bannerMatch(printable(banner)); ok && rule.name != "unknown" {
-			if svc.Confidence < confBanner {
+			if svc.Confidence < ConfBanner {
 				svc.Name = rule.name
 				svc.Product = rule.product
 				svc.Version = version
@@ -298,15 +301,15 @@ func (f *fingerprinter) fillFallback(svc *model.Service, d *dialer, banner []byt
 					svc.CPEs = mergeUnique(svc.CPEs, []string{rule.cpe})
 				}
 				svc.Method = MethodBanner
-				svc.Confidence = confBanner
+				svc.Confidence = ConfBanner
 			}
 			return
 		}
 	}
-	if svc.Confidence >= confPortTable && svc.Name != "" {
+	if svc.Confidence >= ConfPortTable && svc.Name != "" {
 		return
 	}
-	applyPortTable(svc, d.port, model.Protocol(d.proto))
+	finalize(svc, d.port, model.Protocol(d.proto))
 }
 
 // ---------------------------------------------------------------------------
@@ -321,15 +324,15 @@ func alpnIsHTTP(t *model.TLSInfo) bool {
 	return t != nil && (t.ALPN == "http/1.1" || t.ALPN == "h2")
 }
 
-func applyPortTable(svc *model.Service, port uint16, proto model.Protocol) {
+func finalize(svc *model.Service, port uint16, proto model.Protocol) {
 	name := ports.ServiceName(port, proto)
 	if name == "" {
 		return
 	}
 	svc.Name = name
-	if svc.Method == "" || svc.Confidence < confPortTable {
+	if svc.Method == "" || svc.Confidence < ConfPortTable {
 		svc.Method = MethodPortTable
-		svc.Confidence = confPortTable
+		svc.Confidence = ConfPortTable
 	}
 }
 

@@ -279,61 +279,111 @@ var sshIdentRules = []sshIdentRule{
 	{regexp.MustCompile(`^Huawei`), "Huawei VRP sshd", "", "VRP"},
 }
 
-// sshIdentRe splits "SSH-2.0-<software> <comments>".
+// sshIdent is what an SSH identification string discloses.
+type sshIdent struct {
+	Product string
+	Version string
+	Extra   string // nmap-style extrainfo, e.g. "Ubuntu Linux; protocol 2.0"
+	OS      string
+	CPEs    []string
+}
+
+// sshIdentRe splits "SSH-<protoversion>-<software> <comments>".
 var sshIdentRe = regexp.MustCompile(`^SSH-([\d.]+)-(\S*)(?:\s+(.*))?$`)
 
+// distroHints maps a vendor comment to the label and OS nmap would report.
+var distroHints = []struct{ needle, label, os string }{
+	{"ubuntu", "Ubuntu Linux", "Linux"},
+	{"debian", "Debian", "Linux"},
+	{"raspbian", "Raspbian Linux", "Linux"},
+	{"el7", "Red Hat Enterprise Linux", "Linux"},
+	{"el8", "Red Hat Enterprise Linux", "Linux"},
+	{"el9", "Red Hat Enterprise Linux", "Linux"},
+	{"centos", "CentOS Linux", "Linux"},
+	{"fc", "Fedora Linux", "Linux"},
+	{"suse", "SUSE Linux", "Linux"},
+	{"freebsd", "FreeBSD", "FreeBSD"},
+	{"openbsd", "OpenBSD", "OpenBSD"},
+	{"netbsd", "NetBSD", "NetBSD"},
+	{"sunssh", "Solaris", "Solaris"},
+	{"cisco", "Cisco", "IOS"},
+}
+
 // parseSSHIdent derives product, version, extra info, OS and CPEs from an SSH
-// identification string.
-func parseSSHIdent(ident string) (product, version, extra, ostype string, cpes []string) {
-	m := sshIdentRe.FindStringSubmatch(strings.TrimSpace(ident))
+// identification string, following nmap's conventions: the vendor comment is
+// folded into the version and summarised in the extra info, so
+// "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6" yields product "OpenSSH",
+// version "8.9p1 Ubuntu-3ubuntu0.6" and extra "Ubuntu Linux; protocol 2.0".
+func parseSSHIdent(ident string) sshIdent {
+	var out sshIdent
+	m := sshIdentRe.FindStringSubmatch(strings.TrimSpace(cleanText(ident)))
 	if m == nil {
-		return "", "", "", "", nil
+		return out
 	}
-	software, comment := m[2], strings.TrimSpace(m[3])
-	extra = comment
-	if m[1] != "" {
-		if extra != "" {
-			extra = "protocol " + m[1] + "; " + extra
-		} else {
-			extra = "protocol " + m[1]
-		}
-	}
+	protoVer, software, comment := m[1], m[2], strings.TrimSpace(m[3])
+
 	for _, r := range sshIdentRules {
 		sm := r.re.FindStringSubmatch(software)
 		if sm == nil {
 			continue
 		}
-		product = r.product
+		out.Product = r.product
 		if len(sm) > 1 {
-			version = sm[1]
+			out.Version = sm[1]
 		}
-		ostype = r.ostype
+		out.OS = r.ostype
 		if r.cpe != "" {
 			c := r.cpe
-			if version != "" {
-				c += ":" + version
+			if out.Version != "" {
+				c += ":" + out.Version
 			}
-			cpes = append(cpes, c)
+			out.CPEs = append(out.CPEs, c)
 		}
 		break
 	}
-	if product == "" {
-		// Unknown implementation: keep the raw software token.
-		if name, ver, ok := strings.Cut(software, "_"); ok {
-			product, version = name, ver
+	if out.Product == "" {
+		// Unknown implementation: keep the software token as-is.
+		if name, ver, ok := strings.Cut(software, "_"); ok && ver != "" {
+			out.Product, out.Version = name, ver
 		} else {
-			product = software
+			out.Product = software
 		}
 	}
-	if ostype == "" {
+
+	var label string
+	if comment != "" {
+		low := strings.ToLower(comment)
+		for _, h := range distroHints {
+			if strings.Contains(low, h.needle) {
+				label = h.label
+				if out.OS == "" {
+					out.OS = h.os
+				}
+				break
+			}
+		}
+		if out.Version != "" {
+			out.Version += " " + comment
+		} else {
+			out.Version = comment
+		}
+	}
+	if out.OS == "" {
 		low := strings.ToLower(ident)
 		for _, h := range osHints {
 			if strings.Contains(low, h.needle) {
-				ostype = h.os
+				out.OS = h.os
 				break
 			}
 		}
 	}
-	return truncate(cleanText(product), 128), truncate(cleanText(version), 64),
-		truncate(cleanText(extra), 200), ostype, cpes
+
+	out.Extra = "protocol " + protoVer
+	if label != "" {
+		out.Extra = label + "; " + out.Extra
+	}
+	out.Product = truncate(cleanText(out.Product), 128)
+	out.Version = truncate(cleanText(out.Version), 96)
+	out.Extra = truncate(cleanText(out.Extra), 200)
+	return out
 }

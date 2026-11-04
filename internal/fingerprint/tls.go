@@ -60,6 +60,10 @@ var tlsLadder = []uint16{
 // caller owns it and must close it. The connection is bound to ctx.
 func (d *dialer) probeTLS(ctx context.Context, alpn []string) (*model.TLSInfo, *tls.Conn, error) {
 	var firstErr error
+	// A peer that simply drops the connection may be version-intolerant, but
+	// it is far more often not a TLS service at all: allow a single retry on
+	// that evidence, and the full ladder only for an explicit TLS alert.
+	softRetries := 1
 	for _, max := range tlsLadder {
 		if err := ctx.Err(); err != nil {
 			return nil, nil, err
@@ -87,6 +91,12 @@ func (d *dialer) probeTLS(ctx context.Context, alpn []string) (*model.TLSInfo, *
 		}
 		if !retryLowerTLS(err) {
 			break
+		}
+		if !isTLSAlert(err) {
+			if softRetries == 0 {
+				break
+			}
+			softRetries--
 		}
 	}
 	if firstErr == nil {
@@ -224,4 +234,11 @@ func tlsVersionName(v uint16) string {
 	default:
 		return fmt.Sprintf("0x%04x", v)
 	}
+}
+
+// isTLSAlert reports whether err carries an alert sent by the peer, i.e. the
+// peer really did speak TLS and refused what we offered.
+func isTLSAlert(err error) bool {
+	var a tls.AlertError
+	return errors.As(err, &a)
 }

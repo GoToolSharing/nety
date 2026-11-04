@@ -15,7 +15,7 @@ import (
 
 func init() {
 	register(&Check{
-		Info: partAInfo("tls-weak-protocols", "Deprecated SSL/TLS protocol versions accepted", model.SevMedium,
+		Info: checkInfo("tls-weak-protocols", "Deprecated SSL/TLS protocol versions accepted", model.SevMedium,
 			[]string{"https", "ssl", "tls"},
 			"The service accepts SSLv3, TLS 1.0 and/or TLS 1.1. These protocol versions are deprecated (RFC 8996) and affected by known weaknesses (POODLE, BEAST, weak MAC/PRF constructions)."),
 		Remediation: "Disable SSLv3, TLS 1.0 and TLS 1.1 on the service; allow only TLS 1.2 and TLS 1.3 with AEAD cipher suites.",
@@ -24,7 +24,7 @@ func init() {
 		Run:         runTLSWeakProtocols,
 	})
 	register(&Check{
-		Info: partAInfo("tls-weak-ciphers", "Weak SSL/TLS cipher suites accepted", model.SevMedium,
+		Info: checkInfo("tls-weak-ciphers", "Weak SSL/TLS cipher suites accepted", model.SevMedium,
 			[]string{"https", "ssl", "tls"},
 			"The service negotiates weak cipher suites (RC4, 3DES/DES, NULL, EXPORT or anonymous key exchange) that provide insufficient confidentiality or no server authentication (SWEET32, RC4 biases, FREAK/Logjam)."),
 		Remediation: "Remove RC4, DES/3DES, NULL, EXPORT and anonymous (ADH/AECDH) suites from the server configuration; prefer ECDHE with AES-GCM or ChaCha20-Poly1305.",
@@ -33,7 +33,7 @@ func init() {
 		Run:         runTLSWeakCiphers,
 	})
 	register(&Check{
-		Info: partAInfo("tls-cert-expired", "Expired TLS certificate", model.SevLow,
+		Info: checkInfo("tls-cert-expired", "Expired TLS certificate", model.SevLow,
 			[]string{"https", "ssl", "tls"},
 			"The certificate presented by the service is expired. Users get used to ignoring certificate warnings, which makes man-in-the-middle attacks easier."),
 		Remediation: "Renew the certificate and deploy it on the service; monitor expiry dates.",
@@ -42,7 +42,7 @@ func init() {
 		Run:         runTLSCertExpired,
 	})
 	register(&Check{
-		Info: partAInfo("tls-cert-self-signed", "Self-signed TLS certificate", model.SevInfo,
+		Info: checkInfo("tls-cert-self-signed", "Self-signed TLS certificate", model.SevInfo,
 			[]string{"https", "ssl", "tls"},
 			"The service presents a self-signed certificate that clients cannot validate, allowing undetected man-in-the-middle attacks when users accept the warning."),
 		Remediation: "Deploy a certificate issued by the internal PKI (or a public CA) and distribute the trust anchor to clients.",

@@ -456,6 +456,14 @@ func mergeNeighbor(old, new model.L2Neighbor) model.L2Neighbor {
 	return out
 }
 
+// LastDTP returns the most recent DTP advertisement decoded. The dtp-trunk
+// technique uses the VTP domain and encapsulation it announces.
+func (c *L2Collector) LastDTP() DTPInfo {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.DTP
+}
+
 // Info returns the aggregated result. capturedAt is stamped only when at least
 // one control frame was decoded.
 func (c *L2Collector) Info(capturedAt time.Time) model.L2Info {

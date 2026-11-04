@@ -52,21 +52,21 @@ func (l Lease) CIDR() netip.Prefix {
 // LeaseGlobs are the well-known lease file locations, most specific first.
 // "%s" is replaced by the interface name, "%d" by its ifindex.
 var LeaseGlobs = []string{
-	"/run/systemd/netif/leases/%d",                      // systemd-networkd (key=value)
-	"/var/lib/NetworkManager/*-%s-*.lease",              // NetworkManager internal DHCP (key=value)
-	"/var/lib/NetworkManager/dhclient-*-%s.lease",       // NetworkManager + dhclient (ISC)
-	"/var/lib/dhcp/dhclient.%s.leases",                  // Debian/Ubuntu ISC dhclient
-	"/var/lib/dhcp/dhclient.leases",                     //
-	"/var/lib/dhclient/dhclient-%s.leases",              // RHEL ISC dhclient
-	"/var/lib/dhclient/dhclient.leases",                 //
-	"/var/lib/dhcpcd/%s.lease",                          // dhcpcd (raw DHCP packet)
-	"/var/lib/dhcpcd5/dhcpcd-%s.lease",                  //
-	"/var/db/dhcpcd-%s.lease",                           //
-	"/var/lib/dhcpcd/dhcpcd-%s.lease",                   //
-	"/run/systemd/netif/leases/%s",                      // defensive
-	"/var/lib/udhcpc/udhcpc.%s.leases",                  // busybox udhcpc (key=value via script)
-	"/run/NetworkManager/dhclient-*-%s.lease",           //
-	"/var/lib/dhcp/dhclient-*-%s.lease",                 //
+	"/run/systemd/netif/leases/%d",                // systemd-networkd (key=value)
+	"/var/lib/NetworkManager/*-%s-*.lease",        // NetworkManager internal DHCP (key=value)
+	"/var/lib/NetworkManager/dhclient-*-%s.lease", // NetworkManager + dhclient (ISC)
+	"/var/lib/dhcp/dhclient.%s.leases",            // Debian/Ubuntu ISC dhclient
+	"/var/lib/dhcp/dhclient.leases",               //
+	"/var/lib/dhclient/dhclient-%s.leases",        // RHEL ISC dhclient
+	"/var/lib/dhclient/dhclient.leases",           //
+	"/var/lib/dhcpcd/%s.lease",                    // dhcpcd (raw DHCP packet)
+	"/var/lib/dhcpcd5/dhcpcd-%s.lease",            //
+	"/var/db/dhcpcd-%s.lease",                     //
+	"/var/lib/dhcpcd/dhcpcd-%s.lease",             //
+	"/run/systemd/netif/leases/%s",                // defensive
+	"/var/lib/udhcpc/udhcpc.%s.leases",            // busybox udhcpc (key=value via script)
+	"/run/NetworkManager/dhclient-*-%s.lease",     //
+	"/var/lib/dhcp/dhclient-*-%s.lease",           //
 }
 
 // FindLease looks for a DHCP lease for iface under root ("/" in production,

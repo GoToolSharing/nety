@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/dlclark/regexp2"
@@ -106,7 +107,7 @@ func (m *nmapMatch) compiled() (*regexp2.Regexp, error) {
 		if m.dotall {
 			opt |= regexp2.Singleline
 		}
-		m.re, m.err = regexp2.Compile(m.pattern, opt)
+		m.re, m.err = regexp2.Compile(stripPossessive(m.pattern), opt)
 		if m.re != nil {
 			m.re.MatchTimeout = regexMatchTimeout
 		}
@@ -125,32 +126,60 @@ var (
 
 // loadProbeDB loads and caches the nmap probe database (nil when absent).
 func loadProbeDB(log *slog.Logger) *probeDB {
-	probeDBOnce.Do(func() {
-		paths := nmapProbePaths
-		if env := os.Getenv(EnvNmapProbes); env != "" {
-			paths = append([]string{env}, paths...)
-		}
-		for _, p := range paths {
-			f, err := os.Open(p)
-			if err != nil {
-				continue
-			}
-			start := time.Now()
-			db, err := parseProbeDB(f)
-			_ = f.Close()
-			if err != nil {
-				log.Warn("fingerprint: cannot parse nmap-service-probes", "path", p, "err", err)
-				continue
-			}
-			log.Info("fingerprint: loaded nmap-service-probes", "path", p,
-				"probes", len(db.probes), "matches", db.nMatches, "took", time.Since(start))
-			probeDBGlobal = db
-			return
-		}
-		log.Info("fingerprint: nmap-service-probes not found, probe-match layer disabled",
-			"env", EnvNmapProbes)
-	})
+	probeDBOnce.Do(func() { probeDBGlobal = loadProbeDBFrom(log, probeSearchPaths()) })
 	return probeDBGlobal
+}
+
+// probesOverride is set by SetProbesPath.
+var probesOverride atomic.Pointer[string]
+
+// SetProbesPath points the probe-match layer at an nmap-service-probes file,
+// taking precedence over $NETY_NMAP_PROBES and the system locations. It is
+// meant to be called once at start-up (cmd/nety wires it from the
+// configuration) and has no effect once the file has been loaded, since the
+// database is parsed at most once per process.
+func SetProbesPath(path string) {
+	if path == "" {
+		probesOverride.Store(nil)
+		return
+	}
+	probesOverride.Store(&path)
+}
+
+// probeSearchPaths lists where the nmap data file is looked for: the
+// configured override, then $NETY_NMAP_PROBES, then the system locations.
+func probeSearchPaths() []string {
+	paths := nmapProbePaths
+	if env := os.Getenv(EnvNmapProbes); env != "" {
+		paths = append([]string{env}, paths...)
+	}
+	if p := probesOverride.Load(); p != nil {
+		paths = append([]string{*p}, paths...)
+	}
+	return paths
+}
+
+// loadProbeDBFrom reads the first readable, parsable file in paths.
+func loadProbeDBFrom(log *slog.Logger, paths []string) *probeDB {
+	for _, p := range paths {
+		f, err := os.Open(p)
+		if err != nil {
+			continue
+		}
+		start := time.Now()
+		db, err := parseProbeDB(f)
+		_ = f.Close()
+		if err != nil {
+			log.Warn("fingerprint: cannot parse nmap-service-probes", "path", p, "err", err)
+			continue
+		}
+		log.Info("fingerprint: loaded nmap-service-probes", "path", p,
+			"probes", len(db.probes), "matches", db.nMatches, "took", time.Since(start))
+		return db
+	}
+	log.Info("fingerprint: nmap-service-probes not found, probe-match layer disabled",
+		"env", EnvNmapProbes)
+	return nil
 }
 
 // parseProbeDB parses the nmap-service-probes format. Malformed match lines
@@ -481,4 +510,117 @@ func runesToBytes(r []rune) []byte {
 		}
 	}
 	return b.Bytes()
+}
+
+// stripPossessive rewrites PCRE possessive quantifiers ("a++", "a*+", "a?+",
+// "a{2,3}+") into their greedy equivalents. regexp2 implements .NET syntax,
+// which has no possessive form; nmap's database uses it in a few dozen
+// patterns. Dropping the possessive marker only makes the match backtrack
+// where PCRE would not, and the compiled regexps carry a match timeout, so
+// the worst case stays bounded.
+//
+// A quantifier is only recognised at a position where one is legal: an
+// escaped "\+" or a "+" inside a character class is left untouched.
+func stripPossessive(pat string) string {
+	var b strings.Builder
+	b.Grow(len(pat))
+	inClass, quantifiable := false, false
+	for i := 0; i < len(pat); i++ {
+		c := pat[i]
+		switch {
+		case c == '\\':
+			b.WriteByte(c)
+			if i+1 < len(pat) {
+				i++
+				b.WriteByte(pat[i])
+			}
+			quantifiable = !inClass
+			continue
+		case inClass:
+			b.WriteByte(c)
+			if c == ']' {
+				inClass = false
+				quantifiable = true
+			}
+			continue
+		case c == '[':
+			b.WriteByte(c)
+			inClass = true
+			// "[]abc]" and "[^]abc]": a leading ] is a literal.
+			if i+1 < len(pat) && pat[i+1] == '^' {
+				i++
+				b.WriteByte(pat[i])
+			}
+			if i+1 < len(pat) && pat[i+1] == ']' {
+				i++
+				b.WriteByte(pat[i])
+			}
+			continue
+		}
+
+		isQuant := false
+		switch c {
+		case '*', '+', '?':
+			isQuant = quantifiable
+		case '{':
+			if n, ok := braceQuantifier(pat[i:]); ok && quantifiable {
+				b.WriteString(pat[i : i+n])
+				i += n - 1
+				isQuant = true
+				c = 0 // already written
+			}
+		}
+		if c != 0 {
+			b.WriteByte(c)
+		}
+		if !isQuant {
+			// A group opener or an alternation cannot be quantified; anything
+			// else (a literal, a class, a closing paren) can.
+			quantifiable = c != '(' && c != '|' && c != 0
+			if c == 0 {
+				quantifiable = true
+			}
+			continue
+		}
+		// Consume the quantifier's modifier: "?" is lazy (kept), "+" is
+		// possessive (dropped).
+		if i+1 < len(pat) {
+			switch pat[i+1] {
+			case '+':
+				i++ // drop it
+			case '?':
+				i++
+				b.WriteByte('?')
+			}
+		}
+		quantifiable = false
+	}
+	return b.String()
+}
+
+// braceQuantifier reports the length of a leading "{n}", "{n,}" or "{n,m}".
+func braceQuantifier(s string) (int, bool) {
+	if len(s) < 3 || s[0] != '{' {
+		return 0, false
+	}
+	digits, comma := 0, false
+	for i := 1; i < len(s); i++ {
+		switch {
+		case s[i] >= '0' && s[i] <= '9':
+			digits++
+		case s[i] == ',' && !comma && digits > 0:
+			comma = true
+		case s[i] == '}':
+			if digits == 0 {
+				return 0, false
+			}
+			return i + 1, true
+		default:
+			return 0, false
+		}
+		if i > 16 {
+			return 0, false
+		}
+	}
+	return 0, false
 }

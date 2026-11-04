@@ -86,7 +86,25 @@ func (s *Scanner) synScan(ctx context.Context, j *job) error {
 	}
 	neigh := rawnet.NewNeighbors(j.log)
 
-	plan, egs, err := s.planSYN(ctx, j, router, neigh, limiter)
+	plan, egs, viaConnect, err := s.planSYN(ctx, j, router, neigh, limiter)
+	if err == nil && len(viaConnect) > 0 {
+		// Hosts behind non-Ethernet interfaces (VPN tun/wg, loopback,
+		// PPP) cannot be reached with crafted Ethernet frames: scan them
+		// with connect() once the SYN pass is over.
+		defer func() {
+			if ctx.Err() != nil {
+				return
+			}
+			j.log.Info("scanning hosts behind non-Ethernet interfaces with connect()", "hosts", len(viaConnect))
+			sub := *j
+			sub.hosts = viaConnect
+			sub.retries = retries(j.opts.Retries, DefaultConnectRetries)
+			sub.opts.Timeout = 0
+			if err := s.connectScan(ctx, &sub); err != nil && ctx.Err() == nil {
+				j.log.Warn("connect fallback failed", "err", err)
+			}
+		}()
+	}
 	defer func() {
 		for _, e := range egs {
 			if e.h != nil {
@@ -98,7 +116,9 @@ func (s *Scanner) synScan(ctx context.Context, j *job) error {
 		return err
 	}
 	if len(egs) == 0 {
-		j.log.Warn("syn scan: no reachable host")
+		if len(viaConnect) == 0 {
+			j.log.Warn("syn scan: no reachable host")
+		}
 		return nil
 	}
 
@@ -291,8 +311,9 @@ send:
 // MAC. On-link hosts are resolved with a rate-limited ARP/NDP sweep (hosts
 // that do not answer cannot receive our SYNs and are skipped); routed hosts
 // use their gateway's MAC.
-func (s *Scanner) planSYN(ctx context.Context, j *job, router *rawnet.Router, neigh *rawnet.Neighbors, lim *rawnet.Limiter) ([]synHost, []*egress, error) {
+func (s *Scanner) planSYN(ctx context.Context, j *job, router *rawnet.Router, neigh *rawnet.Neighbors, lim *rawnet.Limiter) ([]synHost, []*egress, []netip.Addr, error) {
 	plan := make([]synHost, len(j.hosts))
+	var viaConnect []netip.Addr
 	var egs []*egress
 	egByIfi := map[int]int{}
 	type sweepSet struct {
@@ -307,7 +328,7 @@ func (s *Scanner) planSYN(ctx context.Context, j *job, router *rawnet.Router, ne
 
 	for i, h := range j.hosts {
 		if ctx.Err() != nil {
-			return plan, egs, ctx.Err()
+			return plan, egs, nil, ctx.Err()
 		}
 		path, err := router.Lookup(h)
 		if err != nil {
@@ -318,10 +339,7 @@ func (s *Scanner) planSYN(ctx context.Context, j *job, router *rawnet.Router, ne
 			continue
 		}
 		if len(path.Ifi.HardwareAddr) != 6 {
-			routeErrs++
-			if routeErrs <= 5 {
-				j.log.Warn("syn scan: egress interface has no Ethernet address (use connect mode)", "host", h, "iface", path.Ifi.Name)
-			}
+			viaConnect = append(viaConnect, h)
 			continue
 		}
 		ei, ok := egByIfi[path.Ifi.Index]
@@ -373,7 +391,7 @@ func (s *Scanner) planSYN(ctx context.Context, j *job, router *rawnet.Router, ne
 		m, err := neigh.Resolve(ctx, path.Ifi, path.Src, gw, 3*time.Second)
 		if err != nil {
 			if ctx.Err() != nil {
-				return plan, egs, ctx.Err()
+				return plan, egs, nil, ctx.Err()
 			}
 			gwFail[gw] = true
 			j.log.Warn("syn scan: cannot resolve gateway MAC", "gateway", gw, "err", err)
@@ -401,7 +419,7 @@ func (s *Scanner) planSYN(ctx context.Context, j *job, router *rawnet.Router, ne
 			},
 		})
 		if err != nil {
-			return plan, egs, fmt.Errorf("portscan: neighbour sweep on %s: %w", ss.ifi.Name, err)
+			return plan, egs, nil, fmt.Errorf("portscan: neighbour sweep on %s: %w", ss.ifi.Name, err)
 		}
 		for _, hi := range members {
 			if m, ok := neigh.Lookup(j.hosts[hi]); ok {
@@ -411,7 +429,7 @@ func (s *Scanner) planSYN(ctx context.Context, j *job, router *rawnet.Router, ne
 		}
 	}
 	if ctx.Err() != nil {
-		return plan, egs, ctx.Err()
+		return plan, egs, nil, ctx.Err()
 	}
 
 	// Open one filtered packet socket per egress interface.
@@ -446,9 +464,9 @@ func (s *Scanner) planSYN(ctx context.Context, j *job, router *rawnet.Router, ne
 					o.h = nil
 				}
 			}
-			return plan, nil, err
+			return plan, nil, nil, err
 		}
 		e.h = h
 	}
-	return plan, egs, nil
+	return plan, egs, viaConnect, nil
 }

@@ -171,15 +171,15 @@ func buildLogin7SSPI(server string, sspi []byte) []byte {
 		binary.LittleEndian.PutUint16(b[field+2:], uint16(len(u)/2))
 		data = append(data, u...)
 	}
-	str(36, "NETY")   // HostName
-	str(40, "")       // UserName
-	str(44, "")       // Password
-	str(48, "nety")   // AppName
-	str(52, server)   // ServerName
-	str(56, "")       // Extension (unused)
-	str(60, "nety")   // CltIntName
-	str(64, "")       // Language
-	str(68, "")       // Database
+	str(36, "NETY") // HostName
+	str(40, "")     // UserName
+	str(44, "")     // Password
+	str(48, "nety") // AppName
+	str(52, server) // ServerName
+	str(56, "")     // Extension (unused)
+	str(60, "nety") // CltIntName
+	str(64, "")     // Language
+	str(68, "")     // Database
 	binary.LittleEndian.PutUint16(b[78:], uint16(fixed+len(data)))
 	binary.LittleEndian.PutUint16(b[80:], uint16(len(sspi)))
 	data = append(data, sspi...)

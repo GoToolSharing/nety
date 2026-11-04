@@ -30,15 +30,21 @@ import (
 // errUnsupported is engine.ErrUnsupported, returned by the !linux stubs.
 var errUnsupported = engine.ErrUnsupported
 
+// errNeedPrivileges is engine.ErrNeedPrivileges, returned when a netlink or
+// AF_PACKET operation fails with EPERM/EACCES.
+var errNeedPrivileges = engine.ErrNeedPrivileges
+
 // Inspector implements engine.NetInspector. Use New.
 type Inspector struct {
 	log *slog.Logger
 }
 
 // New returns a NetInspector. A nil logger is replaced by a discarding one.
-func New(log *slog.Logger) *Inspector {
+func New(log *slog.Logger) engine.NetInspector {
 	return &Inspector{log: orDiscard(log)}
 }
+
+var _ engine.NetInspector = (*Inspector)(nil)
 
 func orDiscard(log *slog.Logger) *slog.Logger {
 	if log != nil {

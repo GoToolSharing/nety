@@ -143,7 +143,7 @@ func Names() []string {
 // Decode interprets resp as the answer to the probe named probeName. It
 // returns nil when resp does not look like a valid answer to that probe, when
 // probeName is unknown, or when the probe has no decoder (generic-udp).
-func Decode(probeName string, resp []byte) (res *Result) {
+func Decode(probeName string, resp []byte) *Result {
 	if len(resp) == 0 {
 		return nil
 	}

@@ -36,7 +36,9 @@ var httpCredApps = []httpCredApp{
 	{"tomcat", httpCredIsTomcat, httpCredTomcat},
 	{"grafana", func(fp string, s model.Service) bool { return strings.Contains(fp, "grafana") }, httpCredGrafana},
 	{"rabbitmq", func(fp string, s model.Service) bool { return strings.Contains(fp, "rabbitmq") || s.Port == 15672 }, httpCredRabbitMQ},
-	{"idrac", func(fp string, s model.Service) bool { return strings.Contains(fp, "idrac") || strings.Contains(fp, "integrated dell remote access") }, httpCredIDRAC},
+	{"idrac", func(fp string, s model.Service) bool {
+		return strings.Contains(fp, "idrac") || strings.Contains(fp, "integrated dell remote access")
+	}, httpCredIDRAC},
 }
 
 func httpCredIsTomcat(fp string, s model.Service) bool {

@@ -17,7 +17,7 @@ import (
 
 func init() {
 	register(&Check{
-		Info: partAInfo("ldap-anonymous-bind", "LDAP directory readable anonymously", model.SevMedium,
+		Info: checkInfo("ldap-anonymous-bind", "LDAP directory readable anonymously", model.SevMedium,
 			[]string{"ldap", "ldaps", "globalcatln", "globalcatldap", "globalcatldapssl"},
 			"The LDAP server accepts anonymous binds and returns directory entries below the naming context to unauthenticated clients. Attackers can enumerate users, groups, computers and attributes (sometimes including passwords in description fields) without credentials."),
 		Remediation: "Disable anonymous read access to the directory: on Active Directory keep dsHeuristics without the anonymous flag (7th char) and remove ANONYMOUS LOGON ACEs; on OpenLDAP use 'disallow bind_anon' and restrict 'access to * by anonymous auth'.",

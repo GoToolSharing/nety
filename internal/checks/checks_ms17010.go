@@ -10,7 +10,7 @@ import (
 
 func init() {
 	register(&Check{
-		Info: partAInfo("ms17-010", "MS17-010 (EternalBlue) remote code execution", model.SevCritical,
+		Info: checkInfo("ms17-010", "MS17-010 (EternalBlue) remote code execution", model.SevCritical,
 			[]string{"microsoft-ds", "netbios-ssn"},
 			"The SMBv1 server is missing the MS17-010 security update. Unauthenticated attackers can execute arbitrary code as SYSTEM (EternalBlue / EternalRomance, used by WannaCry and NotPetya). Detection is non-intrusive: a PeekNamedPipe transaction on FID 0 over an anonymous IPC$ session returns STATUS_INSUFF_SERVER_RESOURCES on unpatched systems (same logic as nmap smb-vuln-ms17-010)."),
 		Remediation: "Apply the MS17-010 security update (KB4012598 and later cumulative updates) immediately and disable SMBv1.",

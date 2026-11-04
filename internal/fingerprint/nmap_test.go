@@ -5,10 +5,14 @@ import (
 	"log/slog"
 	"net"
 	"net/netip"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dlclark/regexp2"
 
 	"github.com/vaadata/nety/internal/engine"
 	"github.com/vaadata/nety/internal/model"
@@ -239,5 +243,85 @@ func TestFingerprintCancelled(t *testing.T) {
 	fp := New(nil)
 	if _, err := fp.Fingerprint(ctx, mustAddr("127.0.0.1"), 1, model.TCP, engine.FingerprintOptions{}); err == nil {
 		t.Fatal("expected context error")
+	}
+}
+
+func TestProbeSearchPathsAndLoadFrom(t *testing.T) {
+	// The nmap data file is never embedded: it is read from disk at runtime.
+	dir := t.TempDir()
+	file := filepath.Join(dir, "nmap-service-probes")
+	if err := os.WriteFile(file, []byte(syntheticProbes), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(EnvNmapProbes, file)
+	paths := probeSearchPaths()
+	if len(paths) == 0 || paths[0] != file {
+		t.Fatalf("search paths = %v", paths)
+	}
+	// An explicit configuration wins over the environment.
+	other := filepath.Join(dir, "configured")
+	SetProbesPath(other)
+	t.Cleanup(func() { SetProbesPath("") })
+	if p := probeSearchPaths(); p[0] != other || p[1] != file {
+		t.Fatalf("override not honoured: %v", p)
+	}
+	SetProbesPath("")
+	if !slices.Contains(paths, "/usr/share/nmap/nmap-service-probes") {
+		t.Fatalf("system path missing from %v", paths)
+	}
+
+	log := slog.New(slog.DiscardHandler)
+	db := loadProbeDBFrom(log, paths)
+	if db == nil || db.nullTCP == nil || len(db.probes) != 5 {
+		t.Fatalf("db = %+v", db)
+	}
+	// A missing file must degrade to nil, not panic or error out.
+	if loadProbeDBFrom(log, []string{filepath.Join(dir, "absent")}) != nil {
+		t.Fatal("absent file produced a database")
+	}
+	// A file that is not in the probe format must be rejected.
+	bad := filepath.Join(dir, "bad")
+	if err := os.WriteFile(bad, []byte("Probe TCP\nmatch\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if loadProbeDBFrom(log, []string{bad}) != nil {
+		t.Fatal("malformed file produced a database")
+	}
+}
+
+func TestStripPossessive(t *testing.T) {
+	cases := map[string]string{
+		`^220 FRITZ!Box(\d++\w*) ready`: `^220 FRITZ!Box(\d+\w*) ready`,
+		`a*+b`:                          `a*b`,
+		`a?+b`:                          `a?b`,
+		`x{2,3}+y`:                      `x{2,3}y`,
+		`x{2}+y`:                        `x{2}y`,
+		`(\w+)++`:                       `(\w+)+`,
+		` *+[\d:]++`:                    ` *[\d:]+`,
+		// A lazy quantifier must survive untouched.
+		`(\d[-.\w ]+?) +ready`: `(\d[-.\w ]+?) +ready`,
+		// An escaped plus is a literal, not a quantifier.
+		`\++`:    `\++`,
+		`a\+\+b`: `a\+\+b`,
+		// Inside a character class nothing is a quantifier.
+		`[+*?]+`:  `[+*?]+`,
+		`[]+]++`:  `[]+]+`,
+		`[^]+]++`: `[^]+]+`,
+		// Not a quantifier: a brace that is not {n[,m]}.
+		`a{foo}+b`: `a{foo}+b`,
+		// Nothing to do.
+		`^HTTP/1\.[01] \d\d\d`: `^HTTP/1\.[01] \d\d\d`,
+		``:                     ``,
+	}
+	for in, want := range cases {
+		if got := stripPossessive(in); got != want {
+			t.Errorf("stripPossessive(%q) = %q, want %q", in, got, want)
+		}
+	}
+	// Whatever we produce must still compile.
+	for in := range cases {
+		if _, err := regexp2.Compile(stripPossessive(in), regexp2.None); err != nil {
+			t.Errorf("stripPossessive(%q) does not compile: %v", in, err)
+		}
 	}
 }

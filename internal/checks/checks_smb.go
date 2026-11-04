@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/vaadata/nety/internal/engine"
 	"github.com/vaadata/nety/internal/identity/ntlm"
 	"github.com/vaadata/nety/internal/identity/smb"
 	"github.com/vaadata/nety/internal/model"
@@ -35,7 +34,7 @@ func smbApplies(t *Target) bool {
 
 func init() {
 	register(&Check{
-		Info: partAInfo("smb-signing-not-required", "SMB signing not required", model.SevMedium,
+		Info: checkInfo("smb-signing-not-required", "SMB signing not required", model.SevMedium,
 			[]string{"microsoft-ds", "netbios-ssn"},
 			"The SMB server does not require message signing. An attacker in a man-in-the-middle position can relay captured NTLM authentications to this host (NTLM relay, e.g. ntlmrelayx) and execute commands or access data with the relayed user's privileges."),
 		Remediation: "Enable 'Microsoft network server: Digitally sign communications (always)' via GPO on every Windows host (RequireSecuritySignature=1), or 'server signing = mandatory' on Samba.",
@@ -44,7 +43,7 @@ func init() {
 		Run:         runSMBSigning,
 	})
 	register(&Check{
-		Info: partAInfo("smbv1-enabled", "SMBv1 protocol enabled", model.SevMedium,
+		Info: checkInfo("smbv1-enabled", "SMBv1 protocol enabled", model.SevMedium,
 			[]string{"microsoft-ds", "netbios-ssn"},
 			"The server accepts the obsolete SMBv1 (NT LM 0.12) dialect. SMBv1 lacks modern security features and is the attack surface of critical wormable vulnerabilities (MS17-010 EternalBlue, MS08-067 era bugs)."),
 		Remediation: "Disable SMBv1 on the server (Set-SmbServerConfiguration -EnableSMB1Protocol $false, or 'server min protocol = SMB2' on Samba) after checking legacy client dependencies.",
@@ -53,7 +52,7 @@ func init() {
 		Run:         runSMBv1,
 	})
 	register(&Check{
-		Info: partAInfo("smb-null-session", "SMB null session allows enumeration", model.SevMedium,
+		Info: checkInfo("smb-null-session", "SMB null session allows enumeration", model.SevMedium,
 			[]string{"microsoft-ds", "netbios-ssn"},
 			"An anonymous (null) SMB session can be established and used to enumerate information (shares through the srvsvc RPC interface) without any credentials."),
 		Remediation: "Restrict anonymous access: set RestrictAnonymous=1/RestrictNullSessAccess=1, 'Network access: Do not allow anonymous enumeration of SAM accounts and shares' = Enabled, and remove entries from NullSessionShares/NullSessionPipes. On Samba set 'restrict anonymous = 2' and 'map to guest = never'.",
@@ -62,7 +61,7 @@ func init() {
 		Run:         func(ctx context.Context, t *Target) []model.Finding { return runSMBSessionCheck(ctx, t, nil) },
 	})
 	register(&Check{
-		Info: partAInfo("smb-guest-access", "SMB guest access allowed", model.SevMedium,
+		Info: checkInfo("smb-guest-access", "SMB guest access allowed", model.SevMedium,
 			[]string{"microsoft-ds", "netbios-ssn"},
 			"The server accepts guest logons (the Guest account with an empty password, or unknown user names mapped to guest). Anyone on the network can open an SMB session and use resources granted to Everyone/Guests."),
 		Remediation: "Disable the Guest account, disable insecure guest logons (AllowInsecureGuestAuth=0) and set 'map to guest = never' on Samba.",
@@ -71,7 +70,7 @@ func init() {
 		Run:         runSMBGuest,
 	})
 	register(&Check{
-		Info: partAInfo("smb-anonymous-share-access", "SMB share readable without credentials", model.SevHigh,
+		Info: checkInfo("smb-anonymous-share-access", "SMB share readable without credentials", model.SevHigh,
 			[]string{"microsoft-ds", "netbios-ssn"},
 			"At least one disk share can be opened and listed without valid credentials (null or guest session). Its content is readable by anyone on the network and frequently contains sensitive files (scripts, backups, credentials)."),
 		Remediation: "Remove Everyone/Guest/ANONYMOUS LOGON permissions from the share and NTFS ACLs, disable guest access, and review the share content for exposed secrets.",
@@ -79,12 +78,6 @@ func init() {
 		Applies:     func(*Target) bool { return false }, // findings are raised by smb-null-session / smb-guest-access
 		Run:         func(context.Context, *Target) []model.Finding { return nil },
 	})
-}
-
-// partAInfo is a small constructor for engine.CheckInfo values.
-func partAInfo(id, title string, sev model.Severity, services []string, desc string) (info engine.CheckInfo) {
-	info.ID, info.Title, info.Severity, info.Services, info.Description = id, title, sev, services, desc
-	return info
 }
 
 func runSMBSigning(ctx context.Context, t *Target) []model.Finding {

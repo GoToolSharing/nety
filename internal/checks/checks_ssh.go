@@ -10,7 +10,7 @@ import (
 
 func init() {
 	register(&Check{
-		Info: partAInfo("ssh-weak-algorithms", "SSH server supports weak algorithms", model.SevLow,
+		Info: checkInfo("ssh-weak-algorithms", "SSH server supports weak algorithms", model.SevLow,
 			[]string{"ssh"},
 			"The SSH server offers deprecated key exchange, encryption or MAC algorithms (SHA-1 based or small Diffie-Hellman groups, CBC mode / RC4 / 3DES ciphers, MD5 or truncated MACs) that weaken the confidentiality and integrity of sessions."),
 		Remediation: "Restrict KexAlgorithms, Ciphers and MACs in sshd_config to modern algorithms (curve25519-sha256, sntrup761x25519-sha512, chacha20-poly1305, aes*-gcm, aes*-ctr, hmac-sha2-*-etm) and upgrade the SSH server.",
@@ -19,7 +19,7 @@ func init() {
 		Run:         runSSHWeakAlgos,
 	})
 	register(&Check{
-		Info: partAInfo("ssh-protocol-v1", "SSH protocol version 1 supported", model.SevMedium,
+		Info: checkInfo("ssh-protocol-v1", "SSH protocol version 1 supported", model.SevMedium,
 			[]string{"ssh"},
 			"The SSH server supports protocol version 1, which has fundamental cryptographic flaws (CRC-32 integrity, session hijacking and credential interception attacks)."),
 		Remediation: "Disable SSH protocol 1 (Protocol 2 in sshd_config) or upgrade the SSH server.",
@@ -28,7 +28,7 @@ func init() {
 		Run:         runSSHv1,
 	})
 	register(&Check{
-		Info: partAInfo("ssh-password-auth", "SSH password authentication enabled", model.SevInfo,
+		Info: checkInfo("ssh-password-auth", "SSH password authentication enabled", model.SevInfo,
 			[]string{"ssh"},
 			"The SSH server accepts password (or keyboard-interactive) authentication, exposing accounts to password guessing; public key authentication is preferable for administrative access."),
 		Remediation: "Prefer public-key authentication (PasswordAuthentication no, KbdInteractiveAuthentication no) and enforce rate limiting / fail2ban where passwords are required.",

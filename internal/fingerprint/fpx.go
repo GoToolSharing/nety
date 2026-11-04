@@ -12,8 +12,51 @@ import (
 	"time"
 
 	"github.com/praetorian-inc/fingerprintx/pkg/plugins"
-	// Blank import: every protocol plugin registers itself in an init().
-	_ "github.com/praetorian-inc/fingerprintx/pkg/scan"
+
+	"github.com/vaadata/nety/internal/model"
+
+	// Blank imports: every fingerprintx protocol plugin registers itself in an
+	// init(). We list them one by one instead of importing pkg/scan so that
+	// its HTTP plugin -- the only one pulling a third-party wappalyzer
+	// dependency, and the one layer NETY implements itself anyway -- stays out
+	// of the build.
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/dhcp"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/dns"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/echo"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/ftp"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/imap"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/ipmi"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/ipsec"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/javarmi"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/jdwp"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/kafka/kafkaNew"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/kafka/kafkaOld"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/ldap"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/linuxrpc"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/modbus"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/mongodb"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/mqtt/mqtt3"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/mqtt/mqtt5"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/mssql"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/mysql"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/netbios"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/ntp"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/openvpn"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/oracledb"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/pop3"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/postgresql"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/rdp"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/redis"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/rsync"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/rtsp"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/smb"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/smtp"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/snmp"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/snpp"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/ssh"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/stun"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/telnet"
+	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/vnc"
 )
 
 // fingerprintx is used as a LIBRARY: we drive its protocol plugins ourselves
@@ -232,7 +275,7 @@ func fillFromFPX(svc *model.Service, s *plugins.Service) {
 		svc.Tunnel = "ssl"
 	}
 	svc.Method = MethodFingerprintX
-	svc.Confidence = confFPX
+	svc.Confidence = ConfFingerprintX
 }
 
 // fpxProductName gives a human product label for the protocols fingerprintx

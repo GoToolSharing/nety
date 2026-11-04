@@ -15,7 +15,7 @@ import (
 
 func init() {
 	register(&Check{
-		Info: partAInfo("ipmi-cipher-zero", "IPMI 2.0 cipher suite zero accepted", model.SevHigh,
+		Info: checkInfo("ipmi-cipher-zero", "IPMI 2.0 cipher suite zero accepted", model.SevHigh,
 			[]string{"asf-rmcp", "ipmi"},
 			"The BMC accepts RMCP+ sessions using cipher suite 0 (no authentication, no integrity, no confidentiality). An attacker who knows a valid user name can execute arbitrary IPMI commands (power control, user management) with any password."),
 		Remediation: "Disable cipher suite 0 on the BMC (e.g. 'ipmitool lan set <ch> cipher_privs' with 'X' for suite 0), restrict IPMI to a dedicated management VLAN and update the BMC firmware.",
@@ -24,7 +24,7 @@ func init() {
 		Run:         runIPMICipherZero,
 	})
 	register(&Check{
-		Info: partAInfo("ipmi-rakp-hash-disclosure", "IPMI 2.0 RAKP password hash disclosure", model.SevHigh,
+		Info: checkInfo("ipmi-rakp-hash-disclosure", "IPMI 2.0 RAKP password hash disclosure", model.SevHigh,
 			[]string{"asf-rmcp", "ipmi"},
 			"The IPMI 2.0 RAKP protocol returns a salted HMAC-SHA1 of the user's password to unauthenticated clients that supply a valid user name. The hash can be cracked offline (hashcat mode 7300) to recover BMC credentials. This is a design flaw of IPMI 2.0."),
 		Remediation: "Restrict IPMI (UDP 623) to an isolated management network, use long random BMC passwords, disable unused default accounts, and disable IPMI-over-LAN when not required.",

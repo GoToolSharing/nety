@@ -142,12 +142,12 @@ func (c *collector) probeHTTPNTLM(ctx context.Context, sink *evidenceSink, ip st
 	}
 	host := net.JoinHostPort(ip, strconv.Itoa(s.Port))
 	tr := &http.Transport{
-		Proxy:                 nil,
-		DialContext:           (&net.Dialer{Timeout: c.ioTimeout}).DialContext,
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // fingerprinting only
-		TLSHandshakeTimeout:   c.ioTimeout,
-		ResponseHeaderTimeout: c.ioTimeout,
-		DisableKeepAlives:     true,
+		Proxy:                  nil,
+		DialContext:            (&net.Dialer{Timeout: c.ioTimeout}).DialContext,
+		TLSClientConfig:        &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // fingerprinting only
+		TLSHandshakeTimeout:    c.ioTimeout,
+		ResponseHeaderTimeout:  c.ioTimeout,
+		DisableKeepAlives:      true,
 		MaxResponseHeaderBytes: 64 << 10,
 	}
 	defer tr.CloseIdleConnections()

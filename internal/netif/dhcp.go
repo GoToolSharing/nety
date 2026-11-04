@@ -12,6 +12,43 @@ import (
 // raw-socket client (dhcp_linux.go) and by the lease-file parser, since
 // dhcpcd stores the raw ACK packet on disk.
 
+// DHCPConfig tunes DHCPAcquire.
+type DHCPConfig struct {
+	// Timeout is the overall budget for the DISCOVER/REQUEST exchange
+	// (default 8s).
+	Timeout time.Duration
+	// Retries is the number of DISCOVER attempts (default 3).
+	Retries int
+	// ClientMAC overrides the source MAC (default: the interface's own MAC).
+	// Spoofing it is sometimes needed when the client VLAN filters by MAC.
+	ClientMAC net.HardwareAddr
+	// Hostname is sent as option 12.
+	Hostname string
+	// Release sends a DHCPRELEASE for the lease during cleanup.
+	Release bool
+}
+
+func (c DHCPConfig) timeout() time.Duration {
+	if c.Timeout > 0 {
+		return c.Timeout
+	}
+	return 8 * time.Second
+}
+
+func (c DHCPConfig) retries() int {
+	if c.Retries > 0 {
+		return c.Retries
+	}
+	return 3
+}
+
+const (
+	dhcpClientPort = 68
+	dhcpServerPort = 67
+)
+
+var broadcastMAC = net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+
 // DHCP message types (option 53).
 type DHCPMessageType uint8
 

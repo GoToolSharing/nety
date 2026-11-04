@@ -22,7 +22,7 @@ const (
 
 func init() {
 	register(&Check{
-		Info: partAInfo("rdp-nla-not-required", "RDP Network Level Authentication not required", model.SevMedium,
+		Info: checkInfo("rdp-nla-not-required", "RDP Network Level Authentication not required", model.SevMedium,
 			[]string{"ms-wbt-server", "rdp"},
 			"The RDP service accepts connections without Network Level Authentication (CredSSP). Unauthenticated users reach the Windows logon screen, which exposes the host to pre-authentication vulnerabilities (e.g. BlueKeep CVE-2019-0708), resource exhaustion and username disclosure, and weakens protection against man-in-the-middle attacks."),
 		Remediation: "Require NLA: enable 'Require user authentication for remote connections by using Network Level Authentication' (GPO) or set UserAuthentication=1 under RDP-Tcp.",
@@ -31,7 +31,7 @@ func init() {
 		Run:         runRDPNLA,
 	})
 	register(&Check{
-		Info: partAInfo("rdp-standard-security", "RDP accepts legacy Standard RDP Security", model.SevMedium,
+		Info: checkInfo("rdp-standard-security", "RDP accepts legacy Standard RDP Security", model.SevMedium,
 			[]string{"ms-wbt-server", "rdp"},
 			"The RDP service accepts the legacy 'Standard RDP Security' layer (proprietary RC4 encryption without server authentication). Connections can be intercepted and decrypted by a man-in-the-middle attacker."),
 		Remediation: "Set the security layer to SSL/TLS or Negotiate with NLA required (SecurityLayer=2, UserAuthentication=1) via GPO 'Require use of specific security layer for remote (RDP) connections'.",
