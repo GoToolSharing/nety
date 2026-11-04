@@ -51,7 +51,21 @@ Consequences:
 Work units are sized so one unit is seconds-to-a-minute of work (e.g. 4096
 host×port probes, one service to fingerprint, one reachability test).
 
-### R3 - No tooling installed on the operator's workstation
+### R3 - Triage belongs to the operator, not to a scan
+
+A scan reports what is exposed. Working out whether each service is actually a
+problem is manual, one port at a time, and on a week-long engagement that pass
+has to survive everything else. So each service carries a `model.Triage`
+(status plus a free-text note) which:
+
+- is written only through the triage endpoints, never by `UpsertService`, so
+  re-running a scan refreshes the observation and leaves the manual work on
+  top of it intact (there is a test for exactly that);
+- is exported next to the identity of the service in the CSV and the Excel
+  workbook, because that sheet is what ends up in the client's tracker;
+- drives the progress readout and the status filter on the services screen.
+
+### R4 - No tooling installed on the operator's workstation
 All builds, tests and integration labs run in **Docker** (`Dockerfile`,
 `docker-compose.yml`, `make` targets). The repo never requires installing Go,
 Node, nmap or anything else on the host.
