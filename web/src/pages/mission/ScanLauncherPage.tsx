@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   useCreateScan,
   useNetworks,
-  useScanAction,
   useScanProfiles,
   useTechniques,
 } from '@/lib/queries'
@@ -132,6 +131,7 @@ function defaultOptions(profile: string): ScanOptions {
     service_detection: true,
     identity_collection: true,
     checks: true,
+    allow_default_creds: false,
     source_network_ids: [],
     techniques: [],
     allow_l2_active: false,
@@ -153,7 +153,6 @@ export default function ScanLauncherPage() {
   const profiles = useScanProfiles()
   const techniques = useTechniques()
   const createScan = useCreateScan(missionId)
-  const action = useScanAction(missionId)
 
   const [kind, setKind] = useState<ScanKind>('discovery')
   const [networkId, setNetworkId] = useState<number>(0)
@@ -262,19 +261,19 @@ export default function ScanLauncherPage() {
     }
 
     try {
+      // The API creates and starts in one request, so a launch cannot leave
+      // a scan created-but-not-running.
       const scan = await createScan.mutateAsync({
         network_id: networkId,
         kind,
         options: payloadOptions,
+        start: startNow,
       })
-      if (startNow) {
-        try {
-          await action.mutateAsync({ id: scan.id, action: 'start' })
-        } catch (err) {
-          toast.error('The scan was created but could not be started', err)
-        }
+      if (startNow && scan.error) {
+        toast.error('The scan was created but could not be started', scan.error)
+      } else {
+        toast.success(startNow ? 'Scan launched' : 'Scan created')
       }
-      toast.success(startNow ? 'Scan launched' : 'Scan created')
       navigate(`../scans/${scan.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the scan.')
@@ -596,6 +595,25 @@ export default function ScanLauncherPage() {
                   onChange={(e) => set('checks', e.target.checked)}
                 />
               </fieldset>
+
+              <div className="rounded-md border border-warn/50 bg-warn/5 p-3">
+                <Toggle
+                  danger
+                  disabled={!opts.checks}
+                  checked={opts.allow_default_creds}
+                  onChange={(v) => set('allow_default_creds', v)}
+                  label={
+                    <span className="flex items-center gap-2">
+                      Try vendor default credentials
+                      <Badge tone="warn">
+                        <AlertIcon width={11} height={11} />
+                        intrusive
+                      </Badge>
+                    </span>
+                  }
+                  hint="The only check family that authenticates. A short, capped list of vendor defaults is tried, so nothing gets locked out — but these are real login attempts and they land in the target's logs. Off by default; agree it with the client."
+                />
+              </div>
             </CardBody>
           </Card>
         )}
@@ -809,7 +827,7 @@ export default function ScanLauncherPage() {
               variant="primary"
               size="lg"
               icon={<ScanIcon />}
-              loading={createScan.isPending || action.isPending}
+              loading={createScan.isPending}
               onClick={() => void submit(true)}
             >
               Launch scan

@@ -176,6 +176,9 @@ export interface ScanOptions {
   service_detection: boolean
   identity_collection: boolean
   checks: boolean
+  /** The only intrusive check family: a short, capped list of vendor default
+   * credentials. Off by default, opted into per scan. */
+  allow_default_creds: boolean
   // Segmentation only.
   source_network_ids?: number[]
   techniques?: string[]
@@ -263,6 +266,8 @@ export interface ScanInput {
   network_id: number
   kind: ScanKind
   options: ScanOptions
+  /** Create and start in one request, so a scan is never left half-launched. */
+  start?: boolean
 }
 
 /** GET /api/scan-profiles */
