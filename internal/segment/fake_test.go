@@ -14,9 +14,10 @@ import (
 // was reverted. Counters are incremented on "add" and decremented on the
 // matching "remove", so a non-zero counter at the end of a Test call is a leak.
 type fakeApplier struct {
-	mu    sync.Mutex
-	calls []string
-	live  map[string]int
+	wireless bool
+	mu       sync.Mutex
+	calls    []string
+	live     map[string]int
 
 	hasRoute    bool
 	failAddVLAN error
@@ -74,6 +75,8 @@ func (f *fakeApplier) assertClean(t *testing.T) {
 }
 
 func (f *fakeApplier) HasRoute(netip.Addr) bool { return f.hasRoute }
+
+func (f *fakeApplier) IsWireless(string) bool { return f.wireless }
 
 func (f *fakeApplier) UndoVLAN(name string) error { return f.DeleteVLAN(name) }
 

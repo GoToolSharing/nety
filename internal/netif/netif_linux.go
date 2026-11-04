@@ -43,6 +43,8 @@ func (n *Inspector) Interfaces() ([]engine.InterfaceInfo, error) {
 			info.VLANID = v.VlanId
 			info.Parent = byIndex[a.ParentIndex]
 		}
+		info.Kind = linkKind(a.Name, a.Flags, info.IsVLAN)
+		info.Wireless = info.Kind == engine.LinkWireless
 		addrs, err := netlink.AddrList(l, unix.AF_UNSPEC)
 		if err != nil {
 			n.log.Debug("netif: address list failed", "iface", a.Name, "err", err)

@@ -10,6 +10,8 @@ import (
 
 	"github.com/mdlayher/packet"
 	"golang.org/x/sys/unix"
+
+	"github.com/vaadata/nety/internal/engine"
 )
 
 // Active L2 transmission helpers. These are the only functions in this package
@@ -68,6 +70,11 @@ func InterfaceMAC(iface string) (net.HardwareAddr, error) {
 // count frames are sent one second apart, mimicking the IOS advertisement
 // interval; switches ignore a single stray frame.
 func RequestTrunk(ctx context.Context, iface, domain string, count int, settle time.Duration) error {
+	// DTP is a switch-port protocol; there is no switch port on a Wi-Fi
+	// association, and the frame would go nowhere.
+	if IsWireless(iface) {
+		return fmt.Errorf("netif: %q is a Wi-Fi interface: %w", iface, engine.ErrWirelessUnsupported)
+	}
 	mac, err := InterfaceMAC(iface)
 	if err != nil {
 		return err

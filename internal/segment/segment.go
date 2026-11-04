@@ -151,6 +151,24 @@ func (t *Tester) Test(ctx context.Context, opts engine.SegmentOptions, targets [
 			log.Warn("segment: unknown technique ignored", "technique", id)
 		}
 	}
+
+	// Wi-Fi behaves exactly like a cable for everything that rides on IP, but
+	// the switch-port techniques have no meaning on an access point
+	// association: an AP does not forward 802.1Q-tagged frames to a station
+	// and does not speak DTP. Drop them with an explicit reason rather than
+	// letting each one fail against the driver.
+	if t.sys.IsWireless(opts.Interface) {
+		kept := techs[:0]
+		for _, id := range techs {
+			if isL2Active(id) {
+				log.Warn("segment: technique skipped, the interface is wireless",
+					"technique", id, "interface", opts.Interface)
+				continue
+			}
+			kept = append(kept, id)
+		}
+		techs = kept
+	}
 	if len(techs) == 0 {
 		return errors.New("segment: no technique enabled")
 	}

@@ -61,6 +61,11 @@ with their own account and watches the same scan live.
   a fallback banner/port heuristic
 - 44 safe, read-only checks for the usual internal hygiene problems
 
+**Over Wi-Fi as over cable:** everything that rides on IP behaves identically.
+NETY detects a wireless interface and skips only what cannot exist on an access
+point association — the passive switch-port recon and the 802.1Q/DTP
+techniques — saying so plainly instead of failing obscurely.
+
 **Across networks:**
 - replays every service discovered elsewhere from where you are now
 - distinguishes *reachable* from *port closed* from *filtered* from *no route* —

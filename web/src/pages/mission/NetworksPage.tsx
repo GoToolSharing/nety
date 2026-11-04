@@ -83,6 +83,7 @@ function InterfaceOption({ i }: { i: InterfaceInfo }) {
   return (
     <option value={i.name}>
       {i.name}
+      {i.wireless ? ' (Wi-Fi)' : ''}
       {i.is_vlan ? ` (vlan ${i.vlan_id})` : ''}
       {addrs ? ` — ${addrs}` : i.up ? ' — up, no address' : ' — down'}
     </option>
@@ -219,6 +220,15 @@ function NetworkFormModal({
               Detect
             </Button>
           </div>
+          {(interfaces.data ?? []).some((i) => i.name === detectIface && i.wireless) && (
+            <p className="mt-2 rounded border border-border bg-surface px-3 py-2 text-xs text-muted">
+              <span className="font-medium text-fg">Wi-Fi interface.</span> Discovery, port
+              scanning, fingerprinting and the routed segmentation techniques all behave
+              exactly as they do on a cable. Only the switch-port work is skipped: an access
+              point does not carry 802.1Q tags to a station and does not speak CDP, LLDP or
+              DTP, so the passive switch-port recon and the layer-2 techniques do not apply.
+            </p>
+          )}
           {detected && (
             <div className="mt-3 rounded border border-border bg-surface px-3 py-2 text-xs">
               <div className="mb-1 font-medium text-fg">Detected</div>

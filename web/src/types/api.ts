@@ -138,6 +138,15 @@ export interface InterfaceInfo {
   is_vlan: boolean
   vlan_id?: number
   parent?: string
+  /** "ethernet" | "wireless" | "bridge" | "vlan" | "loopback" | "tunnel" | "other" */
+  kind: string
+  /**
+   * Wi-Fi associations scan exactly like a cable. The only difference is that
+   * the switch-port techniques (802.1Q sub-interfaces, DTP, double tagging)
+   * and the passive CDP/LLDP recon do not exist over the air, so the server
+   * skips them and says so.
+   */
+  wireless: boolean
 }
 
 // ---------------------------------------------------------------------------

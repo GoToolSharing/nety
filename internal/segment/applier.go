@@ -41,6 +41,9 @@ type sysApplier interface {
 	UndoVLAN(name string) error
 	UndoAddr(iface string, p netip.Prefix) error
 	UndoRoute(dst netip.Prefix, via netip.Addr, iface string) error
+	// IsWireless reports whether iface is a Wi-Fi association rather than a
+	// wired switch port.
+	IsWireless(iface string) bool
 
 	// RequestTrunk asks the switch port to form an 802.1Q trunk over DTP and
 	// waits for it to converge.
@@ -84,6 +87,8 @@ func (netifApplier) DHCP(ctx context.Context, iface string, timeout time.Duratio
 }
 
 func (netifApplier) ReleaseDHCP(iface string) error { return netif.ReleaseDHCP(iface) }
+
+func (netifApplier) IsWireless(iface string) bool { return netif.IsWireless(iface) }
 
 func (netifApplier) UndoVLAN(name string) error { return netif.UndoVLAN(name) }
 

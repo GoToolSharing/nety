@@ -505,6 +505,16 @@ func (r *Runner) execL2(ctx context.Context, sc model.Scan, _ *runState, u model
 	if dur <= 0 {
 		dur = 45 * time.Second
 	}
+
+	// Over Wi-Fi there is no switch port to learn about: CDP, LLDP, DTP and
+	// STP are wired link protocols and an access point does not relay them to
+	// a station. Say so instead of listening for 45 seconds to find nothing.
+	if r.interfaceIsWireless(p.Interface) {
+		r.logScan(ctx, sc, "info", fmt.Sprintf(
+			"%s is a Wi-Fi interface: skipping the switch-port recon (CDP/LLDP/DTP/STP exist only on a wired port). "+
+				"Everything else in this scan works exactly as it does on a cable.", p.Interface))
+		return nil
+	}
 	r.logScan(ctx, sc, "info", fmt.Sprintf("listening on %s for switch-port information (%s)", p.Interface, dur))
 
 	l2, err := r.eng.NetInspector.SniffL2(ctx, p.Interface, dur)
@@ -947,6 +957,25 @@ func (r *Runner) buildReachTargets(ctx context.Context, sc model.Scan, p segment
 // ---------------------------------------------------------------------------
 // small helpers
 // ---------------------------------------------------------------------------
+
+// interfaceIsWireless reports whether the named interface is a Wi-Fi link.
+// Unknown interfaces are treated as wired, which is the safe default: at worst
+// the recon runs and finds nothing.
+func (r *Runner) interfaceIsWireless(name string) bool {
+	if name == "" || r.eng.NetInspector == nil {
+		return false
+	}
+	ifaces, err := r.eng.NetInspector.Interfaces()
+	if err != nil {
+		return false
+	}
+	for _, i := range ifaces {
+		if i.Name == name {
+			return i.Wireless
+		}
+	}
+	return false
+}
 
 func (r *Runner) rate(sc model.Scan) int {
 	rate := sc.Options.Rate

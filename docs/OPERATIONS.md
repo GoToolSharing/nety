@@ -77,6 +77,41 @@ WantedBy=multi-user.target
 A restart is safe: scans that were running come back as **paused** and
 resumable, with everything collected so far intact.
 
+## Wi-Fi or cable
+
+Both work, and NETY picks the right behaviour on its own.
+
+Over Wi-Fi the kernel presents the association as an ordinary Ethernet link,
+so **host discovery, ARP, SYN and connect port scanning, UDP probing, service
+fingerprinting, identity collection, the checks and the routed segmentation
+techniques all behave exactly as they do on a cable** — same engines, same
+rates, same results.
+
+Three things only exist on a wired switch port, and NETY detects a wireless
+interface and skips them with an explicit message instead of failing against
+the driver:
+
+| Feature | On a cable | Over Wi-Fi |
+|---|---|---|
+| Passive CDP / LLDP / DTP / STP recon | yes | skipped — an access point does not relay these |
+| 802.1Q sub-interface and double tagging | yes | skipped — an AP does not carry tagged frames to a station |
+| DTP trunk negotiation | yes | skipped — there is no switch port to negotiate with |
+
+The interface picker marks wireless NICs with *(Wi-Fi)* and explains this
+inline, the scan log records the decision, and the segmentation matrix is
+unaffected for every technique that does apply.
+
+Practical notes:
+
+- Wi-Fi is slower and loses packets more readily. Lower the rate (the *Low and
+  slow* profile is a good starting point) and add a retry; a SYN scan at
+  20 000 pps over the air will under-report.
+- Client isolation on the AP will make every other station look filtered. That
+  is a real segmentation finding, not a NETY limitation — but say so in the
+  report rather than presenting it as VLAN separation.
+- To test VLAN tagging you need a cable. If the client's assessment covers
+  trunking, ask for a wired port.
+
 ## Sharing it with a colleague
 
 NETY serves HTTPS on every interface, so a colleague on the same VLAN just

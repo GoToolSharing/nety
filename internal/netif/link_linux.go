@@ -11,6 +11,8 @@ import (
 
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
+
+	"github.com/vaadata/nety/internal/engine"
 )
 
 // Netlink-backed system mutations used by the segmentation techniques. Every
@@ -24,6 +26,12 @@ import (
 func AddVLAN(parent string, vlanID int) (string, error) {
 	if !ValidVLANID(vlanID) {
 		return "", fmt.Errorf("netif: invalid VLAN id %d", vlanID)
+	}
+	// A station associated to an access point cannot send 802.1Q-tagged
+	// frames: the AP does not forward them. Say so plainly instead of letting
+	// the driver fail later with an errno the operator cannot act on.
+	if IsWireless(parent) {
+		return "", fmt.Errorf("netif: %q is a Wi-Fi interface: %w", parent, engine.ErrWirelessUnsupported)
 	}
 	pl, err := netlink.LinkByName(parent)
 	if err != nil {

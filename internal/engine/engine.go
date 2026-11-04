@@ -46,7 +46,28 @@ type InterfaceInfo struct {
 	IsVLAN    bool           `json:"is_vlan"` // 802.1Q sub-interface
 	VLANID    int            `json:"vlan_id,omitempty"`
 	Parent    string         `json:"parent,omitempty"`
+	// Kind is "ethernet", "wireless", "bridge", "vlan", "loopback", "tunnel"
+	// or "other". Wireless matters: everything that works over a cable also
+	// works over Wi-Fi except the switch-port techniques, which have no
+	// meaning on an access point association.
+	Kind     string `json:"kind"`
+	Wireless bool   `json:"wireless"`
 }
+
+// LinkKind values for InterfaceInfo.Kind.
+const (
+	LinkEthernet = "ethernet"
+	LinkWireless = "wireless"
+	LinkBridge   = "bridge"
+	LinkVLAN     = "vlan"
+	LinkLoopback = "loopback"
+	LinkTunnel   = "tunnel"
+	LinkOther    = "other"
+)
+
+// ErrWirelessUnsupported is returned by the techniques that only exist on a
+// wired switch port when the attachment is a Wi-Fi association.
+var ErrWirelessUnsupported = errors.New("not applicable on a wireless interface: 802.1Q tagging and switch-port negotiation only exist on a wired switch port")
 
 // NetContext is what the operator's machine sees on the attached network.
 type NetContext struct {

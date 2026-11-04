@@ -453,3 +453,68 @@ func TestNormalizeOptions(t *testing.T) {
 		t.Errorf("interface = %q, want the one from the detected context", got.Interface)
 	}
 }
+
+// TestWirelessDropsSwitchPortTechniques covers the Wi-Fi case: an operator
+// associates to the client's wireless network instead of plugging a cable in.
+// Everything that rides on IP must behave identically; only the switch-port
+// techniques, which have no meaning on an access point association, drop out —
+// and they must drop out cleanly rather than failing against the driver.
+func TestWirelessDropsSwitchPortTechniques(t *testing.T) {
+	for _, wireless := range []bool{false, true} {
+		tester, fa := newTester(t)
+		fa.wireless = wireless
+
+		var got []model.ReachResult
+		opts := engine.SegmentOptions{
+			Interface:     "wlan0",
+			AllowL2Active: true,
+			Techniques: []string{
+				model.TechDirect, model.TechDot1QSubif,
+				model.TechDTPTrunk, model.TechDoubleTag,
+			},
+			Timeout:     50 * time.Millisecond,
+			Concurrency: 1,
+		}
+		targets := []engine.ReachTarget{{
+			TargetNetworkID: 2,
+			IP:              netip.MustParseAddr("10.20.0.5"),
+			Port:            445,
+			Proto:           model.TCP,
+			TargetVLANID:    20,
+			TargetPrefixes:  []netip.Prefix{netip.MustParsePrefix("10.20.0.0/24")},
+		}}
+		if err := tester.Test(context.Background(), opts, targets, func(r model.ReachResult) {
+			got = append(got, r)
+		}); err != nil {
+			t.Fatalf("wireless=%v: %v", wireless, err)
+		}
+
+		usedL2, direct := false, false
+		for _, r := range got {
+			switch r.Technique {
+			case model.TechDot1QSubif, model.TechDTPTrunk, model.TechDoubleTag:
+				usedL2 = true
+			case model.TechDirect:
+				direct = true
+			}
+		}
+		if wireless && usedL2 {
+			t.Fatalf("switch-port techniques must not be attempted over Wi-Fi, got %+v", got)
+		}
+		if !wireless && !usedL2 {
+			t.Fatalf("switch-port techniques should still run on a wired port, got %+v", got)
+		}
+		// Wi-Fi is not a second-class attachment above layer 2.
+		if !direct {
+			t.Fatalf("the direct technique must run regardless of link type (wireless=%v): %+v", wireless, got)
+		}
+		// And nothing must have been attempted on the wireless interface.
+		if wireless {
+			for _, c := range fa.callLog() {
+				if strings.HasPrefix(c, "AddVLAN") || strings.HasPrefix(c, "RequestTrunk") {
+					t.Fatalf("no switch-port call may be made over Wi-Fi, got %q", c)
+				}
+			}
+		}
+	}
+}
