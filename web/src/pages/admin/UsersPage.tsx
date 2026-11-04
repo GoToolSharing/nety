@@ -288,7 +288,7 @@ export default function UsersPage() {
                           </Badge>
                         )}
                       </td>
-                      <td className="text-muted">{u.display_name || '—'}</td>
+                      <td className="text-muted">{u.display_name || '-'}</td>
                       <td>
                         <select
                           aria-label={`Role of ${u.username}`}

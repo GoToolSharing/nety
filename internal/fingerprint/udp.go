@@ -6,8 +6,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/vaadata/nety/internal/fingerprint/udpprobe"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/fingerprint/udpprobe"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 const (

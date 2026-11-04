@@ -43,7 +43,7 @@ func snmpV1Payload() []byte { return snmpGetPayload(0, snmpCommunity, snmpReqIDv
 
 // snmpV3Payload is an SNMPv3 discovery message: USM with an empty engine ID,
 // empty user and no auth/priv, reportable flag set. Any v3 agent answers with a
-// Report PDU carrying its authoritative engine ID, boots and time — regardless
+// Report PDU carrying its authoritative engine ID, boots and time - regardless
 // of credentials. The engine ID is a very stable asset identity key.
 func snmpV3Payload() []byte {
 	globals := encSeq(
@@ -211,7 +211,7 @@ func decodeSNMPCommunity(resp []byte, wantVersion, wantReqID int64) *Result {
 	case 16, 5, 6: // authorizationError, genErr, noAccess
 		r.ExtraInfo = "SNMP agent present, community \"" + snmpCommunity + "\" rejected"
 		r.set("snmp.access", "denied")
-	case 2: // noSuchName — v1 agent that does not expose sysDescr
+	case 2: // noSuchName - v1 agent that does not expose sysDescr
 		r.ExtraInfo = "SNMP agent present, sysDescr not readable"
 		r.set("snmp.access", "limited")
 	default:

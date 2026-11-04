@@ -9,8 +9,8 @@ import (
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 
-	"github.com/vaadata/nety/internal/bus"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/bus"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // handleEvents upgrades to a WebSocket and streams the live events of a

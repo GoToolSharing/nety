@@ -135,7 +135,7 @@ export default function ServicesPage() {
             description={
               query || networkId || protocol || port
                 ? 'Relax the filters: the search covers the service name, product, version and banner.'
-                : 'Run a discovery scan with service detection enabled — services appear here as each port is fingerprinted.'
+                : 'Run a discovery scan with service detection enabled - services appear here as each port is fingerprinted.'
             }
             action={
               !query && (
@@ -202,7 +202,7 @@ export default function ServicesPage() {
                             </span>
                           </td>
                           <td className="max-w-[240px] truncate text-muted" title={describe(s)}>
-                            {describe(s) || '—'}
+                            {describe(s) || '-'}
                           </td>
                           <td className="max-w-[280px] truncate text-xs text-muted">
                             {s.http?.title
@@ -213,7 +213,7 @@ export default function ServicesPage() {
                                   ? s.ssh.banner
                                   : s.banner
                                     ? s.banner.slice(0, 60)
-                                    : '—'}
+                                    : '-'}
                           </td>
                           <td className="text-muted">
                             {netName.get(s.network_id) ?? s.network_id}

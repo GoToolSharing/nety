@@ -4,8 +4,8 @@ import (
 	"net/netip"
 	"testing"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 func svc(ip string, port uint16, proto model.Protocol, hostID, svcID int64) engine.ReachTarget {

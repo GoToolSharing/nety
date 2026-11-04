@@ -8,7 +8,7 @@ import { PauseIcon, PlayIcon, RefreshIcon, StopIcon } from '@/components/icons'
 import type { Scan } from '@/types/api'
 
 /**
- * Start / Resume / Pause / Stop. One click each — the API uses the same
+ * Start / Resume / Pause / Stop. One click each - the API uses the same
  * endpoint for start and resume, and the wording follows the scan's history
  * so a paused scan never reads as if it would restart from scratch.
  */
@@ -35,8 +35,8 @@ export default function ScanControls({
       await action.mutateAsync({ id: scan.id, action: kind })
       const messages = {
         start: scan.started_at ? 'Scan resumed' : 'Scan started',
-        pause: 'Scan paused — nothing is lost',
-        stop: 'Scan stopped — collected data is kept',
+        pause: 'Scan paused - nothing is lost',
+        stop: 'Scan stopped - collected data is kept',
         'retry-failed': 'Failed work units requeued',
       }
       toast.success(messages[kind])
@@ -115,8 +115,8 @@ export default function ScanControls({
         busy={busy}
         body={
           <>
-            Stopping cancels the remaining work units. Everything already discovered — hosts,
-            ports, services, findings — stays in the mission.
+            Stopping cancels the remaining work units. Everything already discovered - hosts,
+            ports, services, findings - stays in the mission.
             <br />
             <br />
             If you only need to free the link for a moment, use{' '}

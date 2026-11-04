@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/vaadata/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/engine"
 )
 
 const synSupported = false

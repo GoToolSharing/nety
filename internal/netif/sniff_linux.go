@@ -14,7 +14,7 @@ import (
 	"golang.org/x/net/bpf"
 	"golang.org/x/sys/unix"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // SniffL2 passively listens on iface for dur and decodes the switch-port
@@ -103,7 +103,7 @@ func (n *Inspector) SniffL2(ctx context.Context, iface string, dur time.Duration
 
 // controlPlaneFilter keeps only what the collector can decode: LLDP, VLAN
 // tagged frames (for ObservedVLANs) and 802.3/LLC frames (CDP, DTP, STP).
-// Everything else — the bulk of the traffic on a busy port — is dropped in the
+// Everything else - the bulk of the traffic on a busy port - is dropped in the
 // kernel.
 func controlPlaneFilter() ([]bpf.RawInstruction, error) {
 	const snaplen = 1 << 16

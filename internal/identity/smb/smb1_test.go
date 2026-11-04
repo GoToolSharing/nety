@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vaadata/nety/internal/identity/ntlm"
+	"github.com/GoToolSharing/nety/internal/identity/ntlm"
 )
 
 func smb1RespHeader(cmd byte, flags2 uint16, status uint32) []byte {

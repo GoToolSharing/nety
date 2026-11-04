@@ -421,7 +421,7 @@ export default function ScanDetailPage() {
           tone="warn"
           className="mt-4"
           icon={<PauseIcon />}
-          title="Paused — nothing is lost"
+          title="Paused - nothing is lost"
         >
           {formatNumber(doneUnits)} of {formatNumber(totalUnits)} work units are
           done and stored. Resuming continues with the pending ones only;
@@ -493,7 +493,7 @@ export default function ScanDetailPage() {
                         work units
                       </>
                     ) : (
-                      "—"
+                      "-"
                     )}
                   </div>
                 </div>
@@ -549,14 +549,14 @@ export default function ScanDetailPage() {
                       {isFresh(h.id) && <NewBadge />}
                     </span>,
                     <span key="mac" className="text-muted">
-                      {h.mac ? <Mono>{h.mac}</Mono> : "—"}
+                      {h.mac ? <Mono>{h.mac}</Mono> : "-"}
                       {h.vendor ? (
                         <span className="ml-1 text-faint">{h.vendor}</span>
                       ) : null}
                     </span>,
-                    h.hostname || "—",
-                    h.os || "—",
-                    (h.discovered_by ?? []).join(", ") || "—",
+                    h.hostname || "-",
+                    h.os || "-",
+                    (h.discovered_by ?? []).join(", ") || "-",
                   ],
                 }))}
               />
@@ -582,7 +582,7 @@ export default function ScanDetailPage() {
                       {s.tunnel && <Badge tone="info">{s.tunnel}</Badge>}
                     </span>,
                     <span key="prod" className="text-muted">
-                      {[s.product, s.version].filter(Boolean).join(" ") || "—"}
+                      {[s.product, s.version].filter(Boolean).join(" ") || "-"}
                     </span>,
                     <span key="conf" className="tabular text-muted">
                       {s.confidence}
@@ -614,7 +614,7 @@ export default function ScanDetailPage() {
                       {isFresh(f.id) && <NewBadge />}
                     </span>,
                     <Mono key="ip">{f.ip}</Mono>,
-                    f.port ? `${f.port}/${f.protocol ?? "tcp"}` : "—",
+                    f.port ? `${f.port}/${f.protocol ?? "tcp"}` : "-",
                   ],
                 }))}
               />
@@ -655,7 +655,7 @@ export default function ScanDetailPage() {
                     </span>,
                     <ReachBadge key="st" status={r.status} />,
                     <span key="d" className="text-muted">
-                      {r.detail || "—"}
+                      {r.detail || "-"}
                     </span>,
                   ],
                 }))}

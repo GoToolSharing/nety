@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 func quietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }

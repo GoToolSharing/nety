@@ -18,8 +18,8 @@ import (
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
 
-	"github.com/vaadata/nety/internal/portscan"
-	"github.com/vaadata/nety/internal/rawnet"
+	"github.com/GoToolSharing/nety/internal/portscan"
+	"github.com/GoToolSharing/nety/internal/rawnet"
 )
 
 // Unprivileged engine tuning.

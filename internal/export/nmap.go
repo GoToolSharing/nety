@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/config"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/config"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // Nmap XML output. The schema is the one every downstream tool already parses
@@ -213,7 +213,7 @@ func writeNmapXML(w io.Writer, d model.MissionData) error {
 				if f.Port == s.Port && f.Protocol == s.Protocol {
 					np.Scripts = append(np.Scripts, nmapScript{
 						ID:     "nety-" + f.CheckID,
-						Output: fmt.Sprintf("[%s] %s — %s", strings.ToUpper(string(f.Severity)), f.Title, oneLine(f.Evidence, 400)),
+						Output: fmt.Sprintf("[%s] %s - %s", strings.ToUpper(string(f.Severity)), f.Title, oneLine(f.Evidence, 400)),
 					})
 				}
 			}

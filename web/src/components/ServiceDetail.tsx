@@ -30,7 +30,7 @@ function Section({
 }
 
 function Chips({ values, tone }: { values: string[]; tone?: 'neutral' | 'accent' }) {
-  if (values.length === 0) return <span className="text-faint">—</span>
+  if (values.length === 0) return <span className="text-faint">-</span>
   return (
     <span className="flex flex-wrap gap-1">
       {values.map((v) => (
@@ -80,7 +80,7 @@ export default function ServiceDetail({ service }: { service: Service }) {
           </KeyValue>
           <KeyValue label="Service">
             {s.name || <span className="text-faint">unknown</span>}
-            {title ? <span className="text-muted"> — {title}</span> : null}
+            {title ? <span className="text-muted"> - {title}</span> : null}
             {s.extra_info ? <span className="text-faint"> ({s.extra_info})</span> : null}
           </KeyValue>
           <KeyValue label="Confidence">
@@ -123,12 +123,12 @@ export default function ServiceDetail({ service }: { service: Service }) {
                 {s.tls.alpn && <Badge tone="neutral">ALPN {s.tls.alpn}</Badge>}
               </span>
             </KeyValue>
-            <KeyValue label="Subject CN">{s.tls.subject_cn || '—'}</KeyValue>
+            <KeyValue label="Subject CN">{s.tls.subject_cn || '-'}</KeyValue>
             <KeyValue label="Subject" mono>
-              {s.tls.subject || '—'}
+              {s.tls.subject || '-'}
             </KeyValue>
             <KeyValue label="Issuer" mono>
-              {s.tls.issuer || '—'}
+              {s.tls.issuer || '-'}
             </KeyValue>
             <KeyValue label="Validity">
               <span className="flex flex-wrap items-center gap-1.5">
@@ -147,11 +147,11 @@ export default function ServiceDetail({ service }: { service: Service }) {
               <Chips values={s.tls.sans ?? []} tone="accent" />
             </KeyValue>
             <KeyValue label="Serial" mono>
-              {s.tls.serial || '—'}
+              {s.tls.serial || '-'}
             </KeyValue>
             <KeyValue label="SHA-256" mono>
               <span className="flex items-center gap-1 break-all">
-                {s.tls.sha256 || '—'}
+                {s.tls.sha256 || '-'}
                 {s.tls.sha256 && <CopyButton value={s.tls.sha256} label="Copy fingerprint" />}
               </span>
             </KeyValue>
@@ -191,15 +191,15 @@ export default function ServiceDetail({ service }: { service: Service }) {
                 {s.http.location && <Mono className="text-muted">→ {s.http.location}</Mono>}
               </span>
             </KeyValue>
-            <KeyValue label="Title">{s.http.title || <span className="text-faint">—</span>}</KeyValue>
+            <KeyValue label="Title">{s.http.title || <span className="text-faint">-</span>}</KeyValue>
             <KeyValue label="Server">
-              {s.http.server || '—'}
+              {s.http.server || '-'}
               {s.http.powered_by ? (
                 <span className="text-muted"> · {s.http.powered_by}</span>
               ) : null}
             </KeyValue>
             <KeyValue label="Content">
-              {s.http.content_type || '—'}
+              {s.http.content_type || '-'}
               {s.http.content_length ? (
                 <span className="text-muted"> · {formatBytes(s.http.content_length)}</span>
               ) : null}
@@ -241,11 +241,11 @@ export default function ServiceDetail({ service }: { service: Service }) {
         <Section title="SSH">
           <dl>
             <KeyValue label="Banner" mono>
-              {s.ssh.banner || '—'}
+              {s.ssh.banner || '-'}
             </KeyValue>
             <KeyValue label="Host keys">
               {(s.ssh.host_keys ?? []).length === 0 ? (
-                <span className="text-faint">—</span>
+                <span className="text-faint">-</span>
               ) : (
                 <div className="space-y-1">
                   {(s.ssh.host_keys ?? []).map((k) => (

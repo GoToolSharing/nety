@@ -12,7 +12,7 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 
-	"github.com/vaadata/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/engine"
 )
 
 // Netlink-backed system mutations used by the segmentation techniques. Every

@@ -31,7 +31,7 @@ func ntpClientPayload() []byte {
 }
 
 // ntpReadvarPayload is an NTPv2 mode-6 control message, opcode 2 (READVAR),
-// association id 0 — the system variables of the daemon, which include the
+// association id 0 - the system variables of the daemon, which include the
 // "version", "system" and "processor" strings.
 func ntpReadvarPayload() []byte {
 	b := make([]byte, 12)

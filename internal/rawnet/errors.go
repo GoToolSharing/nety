@@ -1,6 +1,6 @@
 package rawnet
 
-import "github.com/vaadata/nety/internal/engine"
+import "github.com/GoToolSharing/nety/internal/engine"
 
 // ErrUnsupported and ErrNeedPrivileges are re-exported from package engine so
 // callers can test rawnet failures with errors.Is against either package.

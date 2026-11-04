@@ -35,7 +35,7 @@ func packQuery(id uint16, rd bool, name string, qtype, qclass uint16) []byte {
 }
 
 // dnsVersionBindPayload is a TXT query for version.bind. in class CHAOS with
-// RD=0 — the classic name-server version question.
+// RD=0 - the classic name-server version question.
 func dnsVersionBindPayload() []byte {
 	return packQuery(dnsVersionBindID, false, "version.bind.", dns.TypeTXT, dns.ClassCHAOS)
 }

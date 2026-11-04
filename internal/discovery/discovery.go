@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/rawnet"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/rawnet"
 )
 
 // Method names accepted in engine.DiscoveryOptions.Methods.

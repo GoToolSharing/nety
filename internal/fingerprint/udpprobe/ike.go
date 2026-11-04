@@ -95,7 +95,7 @@ func ikeV1Payload() []byte {
 
 // ikeSynthetic fills n bytes with a deterministic, obviously synthetic pattern.
 // Used for the IKEv2 key-exchange value and nonce: we never complete the
-// handshake, so no real entropy is needed — and a fixed pattern keeps the probe
+// handshake, so no real entropy is needed - and a fixed pattern keeps the probe
 // reproducible and auditable.
 func ikeSynthetic(n int, seed uint32) []byte {
 	if n <= 0 {

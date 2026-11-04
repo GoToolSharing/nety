@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 const missionCols = `id, name, client, description, scope_cidrs, exclude_cidrs,

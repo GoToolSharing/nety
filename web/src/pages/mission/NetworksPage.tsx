@@ -85,7 +85,7 @@ function InterfaceOption({ i }: { i: InterfaceInfo }) {
       {i.name}
       {i.wireless ? ' (Wi-Fi)' : ''}
       {i.is_vlan ? ` (vlan ${i.vlan_id})` : ''}
-      {addrs ? ` — ${addrs}` : i.up ? ' — up, no address' : ' — down'}
+      {addrs ? ` - ${addrs}` : i.up ? ' - up, no address' : ' - down'}
     </option>
   )
 }
@@ -155,7 +155,7 @@ function NetworkFormModal({
     setError(null)
     const body = toInput(form)
     if (!body.name) {
-      setError('Give the network a name — "VLAN 20 — Servers" reads well in the report.')
+      setError('Give the network a name - "VLAN 20 - Servers" reads well in the report.')
       return
     }
     try {
@@ -234,19 +234,19 @@ function NetworkFormModal({
               <div className="mb-1 font-medium text-fg">Detected</div>
               <dl className="grid grid-cols-2 gap-x-6">
                 <KeyValue label="Interface" mono>
-                  {detected.interface || '—'}
+                  {detected.interface || '-'}
                 </KeyValue>
                 <KeyValue label="Local IP / MAC" mono>
-                  {detected.local_ip || '—'} {detected.local_mac ? `· ${detected.local_mac}` : ''}
+                  {detected.local_ip || '-'} {detected.local_mac ? `· ${detected.local_mac}` : ''}
                 </KeyValue>
                 <KeyValue label="Gateway" mono>
-                  {detected.gateway || '—'}
+                  {detected.gateway || '-'}
                 </KeyValue>
                 <KeyValue label="DHCP server" mono>
-                  {detected.dhcp_server || '—'}
+                  {detected.dhcp_server || '-'}
                 </KeyValue>
                 <KeyValue label="Domain search">
-                  {(detected.domain_search ?? []).join(', ') || '—'}
+                  {(detected.domain_search ?? []).join(', ') || '-'}
                 </KeyValue>
                 <KeyValue label="VLAN">{detected.vlan_id || 'untagged'}</KeyValue>
               </dl>
@@ -264,7 +264,7 @@ function NetworkFormModal({
           <TextField
             label="Name"
             required
-            placeholder="VLAN 20 — Servers"
+            placeholder="VLAN 20 - Servers"
             value={form.name}
             onChange={(e) => set('name')(e.target.value)}
           />
@@ -358,7 +358,7 @@ function L2Panel({ network }: { network: Network }) {
             </div>
             <p className="mt-1 text-xs text-fg/90">
               DTP frames were seen on this access port. Anyone plugging in here can negotiate a
-              trunk and gain access to every VLAN the port carries — VLAN segmentation is void
+              trunk and gain access to every VLAN the port carries - VLAN segmentation is void
               at this location. Report it as a finding on its own, and use the L2-active
               segmentation techniques to demonstrate it.
             </p>
@@ -371,14 +371,14 @@ function L2Panel({ network }: { network: Network }) {
           {l2.native_vlan ? (
             <span className="tabular">{l2.native_vlan}</span>
           ) : (
-            <span className="text-faint">—</span>
+            <span className="text-faint">-</span>
           )}
         </KeyValue>
         <KeyValue label="Voice VLAN">
           {l2.voice_vlan ? (
             <Badge tone="info">VLAN {l2.voice_vlan}</Badge>
           ) : (
-            <span className="text-faint">—</span>
+            <span className="text-faint">-</span>
           )}
         </KeyValue>
         <KeyValue label="Observed 802.1Q tags">
@@ -395,13 +395,13 @@ function L2Panel({ network }: { network: Network }) {
           )}
         </KeyValue>
         <KeyValue label="STP root bridge" mono>
-          {l2.stp_root_bridge || <span className="text-faint">—</span>}
+          {l2.stp_root_bridge || <span className="text-faint">-</span>}
         </KeyValue>
         <KeyValue label="Captured">
           {l2.captured_at ? (
             <RelativeTime value={l2.captured_at} />
           ) : (
-            <span className="text-faint">never — run an l2probe scan</span>
+            <span className="text-faint">never - run an l2probe scan</span>
           )}
         </KeyValue>
       </div>
@@ -428,23 +428,23 @@ function L2Panel({ network }: { network: Network }) {
                       {n.protocol.toUpperCase()}
                     </Badge>
                   </td>
-                  <td className="font-medium">{n.device_id || '—'}</td>
+                  <td className="font-medium">{n.device_id || '-'}</td>
                   <td>
-                    <Mono>{n.port_id || '—'}</Mono>
+                    <Mono>{n.port_id || '-'}</Mono>
                   </td>
                   <td
                     className="max-w-[260px] truncate text-muted"
                     title={[n.platform, n.software].filter(Boolean).join(' · ')}
                   >
-                    {n.platform || '—'}
+                    {n.platform || '-'}
                   </td>
                   <td>
-                    <Mono>{n.mgmt_address || '—'}</Mono>
+                    <Mono>{n.mgmt_address || '-'}</Mono>
                   </td>
                   <td className="tabular text-muted">
-                    {n.native_vlan || '—'} / {n.voice_vlan || '—'}
+                    {n.native_vlan || '-'} / {n.voice_vlan || '-'}
                   </td>
-                  <td className="text-muted">{(n.capabilities ?? []).join(', ') || '—'}</td>
+                  <td className="text-muted">{(n.capabilities ?? []).join(', ') || '-'}</td>
                 </tr>
               ))}
             </tbody>
@@ -454,7 +454,7 @@ function L2Panel({ network }: { network: Network }) {
         nothing && (
           <div className="border-t border-border px-4 py-3 text-xs text-muted">
             No CDP, LLDP, DTP or STP frame captured on this port yet. Launch an{' '}
-            <strong className="text-fg">l2probe</strong> scan to listen passively for a minute —
+            <strong className="text-fg">l2probe</strong> scan to listen passively for a minute -
             it is silent and tells you who the switch is, which VLANs it carries and whether the
             port offers trunking.
           </div>
@@ -521,26 +521,26 @@ function NetworkCard({
 
       <div className="grid gap-x-8 gap-y-1 px-4 py-3 sm:grid-cols-2">
         <KeyValue label="Interface" mono>
-          {network.interface || <span className="text-faint">—</span>}
+          {network.interface || <span className="text-faint">-</span>}
         </KeyValue>
         <KeyValue label="Local IP / MAC" mono>
-          {network.local_ip || '—'}
+          {network.local_ip || '-'}
           {network.local_mac ? <span className="text-muted"> · {network.local_mac}</span> : null}
         </KeyValue>
         <KeyValue label="Prefixes" mono>
-          {(network.prefixes ?? []).join(', ') || <span className="text-faint">—</span>}
+          {(network.prefixes ?? []).join(', ') || <span className="text-faint">-</span>}
         </KeyValue>
         <KeyValue label="Gateway" mono>
-          {network.gateway || <span className="text-faint">—</span>}
+          {network.gateway || <span className="text-faint">-</span>}
         </KeyValue>
         <KeyValue label="DNS" mono>
-          {(network.dns_servers ?? []).join(', ') || <span className="text-faint">—</span>}
+          {(network.dns_servers ?? []).join(', ') || <span className="text-faint">-</span>}
           {(network.domain_search ?? []).length > 0 && (
             <span className="text-muted"> · search {(network.domain_search ?? []).join(' ')}</span>
           )}
         </KeyValue>
         <KeyValue label="DHCP server" mono>
-          {network.dhcp_server || <span className="text-faint">—</span>}
+          {network.dhcp_server || <span className="text-faint">-</span>}
         </KeyValue>
         <KeyValue label="Hosts found">
           <Link to="../hosts" className="tabular hover:underline">
@@ -613,7 +613,7 @@ export default function NetworksPage() {
           icon={<TrunkIcon />}
           title="Trunk negotiation offered on an access port"
         >
-          {trunking.map((n) => n.name).join(', ')} — the switch answers DTP here. Enable the
+          {trunking.map((n) => n.name).join(', ')} - the switch answers DTP here. Enable the
           L2-active techniques in a segmentation scan to prove how far a trunk would reach.
         </InlineAlert>
       )}

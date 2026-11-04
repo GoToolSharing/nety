@@ -1,4 +1,4 @@
-# NETY — every target runs inside Docker: nothing is installed on the host.
+# NETY - every target runs inside Docker: nothing is installed on the host.
 #
 #   make build     build the static linux binaries into ./dist
 #   make test      run the Go test suite
@@ -28,9 +28,9 @@ VERSION    ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo d
 COMMIT     ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 DATE       := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS    := -s -w \
-	-X github.com/vaadata/nety/internal/config.Version=$(VERSION) \
-	-X github.com/vaadata/nety/internal/config.Commit=$(COMMIT) \
-	-X github.com/vaadata/nety/internal/config.BuildDate=$(DATE)
+	-X github.com/GoToolSharing/nety/internal/config.Version=$(VERSION) \
+	-X github.com/GoToolSharing/nety/internal/config.Commit=$(COMMIT) \
+	-X github.com/GoToolSharing/nety/internal/config.BuildDate=$(DATE)
 
 # Docker invocation used for every toolchain command. Caches live in .cache/
 # so repeated builds are fast and nothing lands outside the project.
@@ -109,7 +109,7 @@ lab-up: build
 	docker compose -f build/lab/docker-compose.yml up -d --build
 
 ## Exercise the raw-socket, netlink and 802.1Q paths against a real kernel.
-## Runs in its own throwaway container — the lab does not need to be up, and
+## Runs in its own throwaway container - the lab does not need to be up, and
 ## nothing on your machine is reconfigured.
 verify-kernel: toolchain
 	$(DOCKER_RUN) env GOOS=linux GOARCH=$(LAB_ARCH) go build -o dist/labcheck ./cmd/labcheck

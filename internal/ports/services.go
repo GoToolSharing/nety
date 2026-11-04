@@ -1,6 +1,6 @@
 package ports
 
-import "github.com/vaadata/nety/internal/model"
+import "github.com/GoToolSharing/nety/internal/model"
 
 // ServiceName returns the conventional service name registered for port/proto
 // (nmap-services / IANA naming), or "" when unknown. It is a low-confidence

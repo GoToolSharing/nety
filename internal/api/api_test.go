@@ -14,13 +14,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vaadata/nety/internal/auth"
-	"github.com/vaadata/nety/internal/bus"
-	"github.com/vaadata/nety/internal/config"
-	"github.com/vaadata/nety/internal/export"
-	"github.com/vaadata/nety/internal/jobs"
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/store"
+	"github.com/GoToolSharing/nety/internal/auth"
+	"github.com/GoToolSharing/nety/internal/bus"
+	"github.com/GoToolSharing/nety/internal/config"
+	"github.com/GoToolSharing/nety/internal/export"
+	"github.com/GoToolSharing/nety/internal/jobs"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/store"
 )
 
 const testPassword = "correct-horse-9A"

@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/oui"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/oui"
 )
 
 // Confidence of the evidence derived from data the fingerprinter already

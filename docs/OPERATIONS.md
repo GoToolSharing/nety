@@ -43,8 +43,8 @@ sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
 ### Kernel RSTs during a SYN scan
 
 The stateless SYN scanner sends packets the kernel knows nothing about, so the
-kernel answers the SYN-ACKs with a RST. This is harmless — the scanner reads
-the replies off AF_PACKET before the kernel acts — but it is noisy on the wire.
+kernel answers the SYN-ACKs with a RST. This is harmless - the scanner reads
+the replies off AF_PACKET before the kernel acts - but it is noisy on the wire.
 To suppress it, drop outgoing RSTs from the scan source port:
 
 ```bash
@@ -84,7 +84,7 @@ Both work, and NETY picks the right behaviour on its own.
 Over Wi-Fi the kernel presents the association as an ordinary Ethernet link,
 so **host discovery, ARP, SYN and connect port scanning, UDP probing, service
 fingerprinting, identity collection, the checks and the routed segmentation
-techniques all behave exactly as they do on a cable** — same engines, same
+techniques all behave exactly as they do on a cable** - same engines, same
 rates, same results.
 
 Three things only exist on a wired switch port, and NETY detects a wireless
@@ -93,9 +93,9 @@ the driver:
 
 | Feature | On a cable | Over Wi-Fi |
 |---|---|---|
-| Passive CDP / LLDP / DTP / STP recon | yes | skipped — an access point does not relay these |
-| 802.1Q sub-interface and double tagging | yes | skipped — an AP does not carry tagged frames to a station |
-| DTP trunk negotiation | yes | skipped — there is no switch port to negotiate with |
+| Passive CDP / LLDP / DTP / STP recon | yes | skipped - an access point does not relay these |
+| 802.1Q sub-interface and double tagging | yes | skipped - an AP does not carry tagged frames to a station |
+| DTP trunk negotiation | yes | skipped - there is no switch port to negotiate with |
 
 The interface picker marks wireless NICs with *(Wi-Fi)* and explains this
 inline, the scan log records the decision, and the segmentation matrix is
@@ -107,7 +107,7 @@ Practical notes:
   slow* profile is a good starting point) and add a retry; a SYN scan at
   20 000 pps over the air will under-report.
 - Client isolation on the AP will make every other station look filtered. That
-  is a real segmentation finding, not a NETY limitation — but say so in the
+  is a real segmentation finding, not a NETY limitation - but say so in the
   report rather than presenting it as VLAN separation.
 - To test VLAN tagging you need a cable. If the client's assessment covers
   trunking, ask for a wired port.
@@ -150,7 +150,7 @@ nety serve --nmap-probes /usr/share/nmap/nmap-service-probes
 ```
 
 Without it, detection still works through TLS/HTTP/SSH inspection, the
-fingerprintx plugins and banner heuristics — just less precisely on exotic
+fingerprintx plugins and banner heuristics - just less precisely on exotic
 services.
 
 ## Tuning a scan
@@ -168,7 +168,7 @@ can accidentally flood a client network from the web interface.
 
 ## Segmentation testing
 
-1. Map each VLAN with a discovery scan first — segmentation has nothing to
+1. Map each VLAN with a discovery scan first - segmentation has nothing to
    replay otherwise.
 2. Plug into the VLAN you want to test *from*, select it, and start a
    **segmentation** scan.
@@ -184,26 +184,26 @@ any leftover `*.<vlan>` interface by hand.
 
 ## Troubleshooting
 
-**"raw sockets are not available"** — the capabilities are missing. See above.
+**"raw sockets are not available"** - the capabilities are missing. See above.
 Scanning still works, in connect mode.
 
-**A scan is stuck in `running` after a crash** — it is not: restart NETY and
+**A scan is stuck in `running` after a crash** - it is not: restart NETY and
 `Recover` moves it to `paused`, then press Resume. Work units that were in
 flight are returned to the queue.
 
-**A scan failed with "no target to scan"** — the network has no known prefix
+**A scan failed with "no target to scan"** - the network has no known prefix
 and automatic targets was on with no explicit target. Set the prefixes on the
 network, or give targets.
 
-**The browser says the connection is not private** — expected with the
+**The browser says the connection is not private** - expected with the
 self-signed certificate. Compare the fingerprint with the one in the log.
 
-**Events stop updating in the interface** — the WebSocket dropped. The page
+**Events stop updating in the interface** - the WebSocket dropped. The page
 reconnects on its own; if it reports dropped events it refetches the tables.
 Nothing is lost either way: the database is the source of truth, the stream is
 only a notification channel.
 
-**The database is getting large** — it is a single SQLite file in the data
+**The database is getting large** - it is a single SQLite file in the data
 directory. Archive the mission, or copy the file; it is self-contained and safe
 to move once the process is stopped.
 
@@ -214,6 +214,6 @@ client-confidential:
 
 - the data directory is created `0700`, the TLS key `0600`;
 - every action is written to an audit log (who, what, which mission, from
-  where) — readable by administrators under **Admin → Audit**;
+  where) - readable by administrators under **Admin → Audit**;
 - delete the mission, or the whole data directory, at the end of the
   engagement, per your retention policy.

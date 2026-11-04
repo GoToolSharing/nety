@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // sshClientIdent is the identification string NETY presents. It must start

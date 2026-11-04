@@ -59,7 +59,7 @@ const (
 	maxBody    = 64 << 20 // response size cap
 	httpTotal  = 3 * time.Minute
 	httpSingle = 90 * time.Second
-	userAgent  = "nety-oui-gen/1.0 (+https://github.com/vaadata/nety)"
+	userAgent  = "nety-oui-gen/1.0 (+https://github.com/GoToolSharing/nety)"
 )
 
 // ieeeSources are the three public IEEE registry exports. oui.csv is the only

@@ -15,8 +15,8 @@ import (
 	"golang.org/x/net/ipv4"
 	"golang.org/x/sys/unix"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // fragmentProbe sends a TCP SYN split across two IP fragments. A stateless

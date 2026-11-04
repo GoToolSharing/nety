@@ -14,9 +14,9 @@ import (
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/netif"
-	"github.com/vaadata/nety/internal/portscan"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/netif"
+	"github.com/GoToolSharing/nety/internal/portscan"
 )
 
 // The 802.1Q data path check.
@@ -24,7 +24,7 @@ import (
 // The segmentation engine's dot1q-subif technique does two things: it asks the
 // switch for a trunk, and then it talks to another VLAN through a tagged
 // sub-interface. The first half needs a real switch. The second half does not,
-// and it is the half that carries the result into the client's matrix — so it
+// and it is the half that carries the result into the client's matrix - so it
 // is worth proving properly rather than assuming.
 //
 // This builds the data path with no switch at all: a veth pair with one end in
@@ -82,7 +82,7 @@ func runVLANDataPathCheck(hostVeth, peerVeth string) error {
 	}
 
 	// Host side: this is exactly what the dot1q-subif technique does once a
-	// trunk exists — a tagged sub-interface with an address in the far VLAN.
+	// trunk exists - a tagged sub-interface with an address in the far VLAN.
 	hostSub, err := netif.AddVLAN(hostVeth, dpVLAN)
 	if err != nil {
 		return fmt.Errorf("sub-interface on %s: %w", hostVeth, err)
@@ -126,7 +126,7 @@ func runVLANDataPathCheck(hostVeth, peerVeth string) error {
 	ok("NETY's port scanner found %s:%d through the sub-interface", peerAddr, dpPort)
 
 	// 3. A tagged frame NETY builds itself is accepted by a real 802.1Q
-	//    decoder — the frame builder the double-tag technique relies on.
+	//    decoder - the frame builder the double-tag technique relies on.
 	hostAddr := netip.MustParsePrefix(dpHostIP).Addr()
 	if err := checkTaggedFrameAccepted(hostVeth, dpVLAN, hostAddr, peerAddr); err != nil {
 		return fmt.Errorf("tagged frame: %w", err)

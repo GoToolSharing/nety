@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vaadata/nety/internal/identity/ntlm"
+	"github.com/GoToolSharing/nety/internal/identity/ntlm"
 )
 
 // RDP negotiation protocols.

@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // derived holds host-level facts computed from identity evidence and

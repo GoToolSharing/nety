@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/vaadata/nety/internal/identity/ntlm"
-	"github.com/vaadata/nety/internal/identity/smb"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/identity/ntlm"
+	"github.com/GoToolSharing/nety/internal/identity/smb"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 var smbServiceNames = []string{"microsoft-ds", "netbios-ssn", "smb", "cifs", "samba"}

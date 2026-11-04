@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // MaxPort is the highest valid port number.
@@ -21,7 +21,7 @@ const MaxPort = 65535
 // Accepted tokens (comma or whitespace separated, combinable):
 //
 //	top100, top1000, topN (N >= 1, capped to the list length), top-100
-//	all, *, -            -> 1-65535
+//	all, *, -           -> 1-65535
 //	22                   -> single port
 //	8000-8100            -> inclusive range
 //	-1024 / 60000-       -> open ranges (1-1024 / 60000-65535)

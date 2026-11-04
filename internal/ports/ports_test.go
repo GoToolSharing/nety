@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 func TestParseBasic(t *testing.T) {

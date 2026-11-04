@@ -1,6 +1,6 @@
 package main
 
-import "github.com/vaadata/nety/internal/model"
+import "github.com/GoToolSharing/nety/internal/model"
 
 // The invented estate. Four VLANs: offices, servers, telephony, management.
 
@@ -66,10 +66,10 @@ func demoHosts() []demoHost {
 			mac: "3c:d9:2b:7a:10:4e", vendor: "Hewlett Packard",
 			services: []demoService{
 				{port: 80, proto: model.TCP, name: "http", product: "HP Embedded Web Server",
-					title: "HP LaserJet MFP M528 — IMP-COMPTA", server: "HP-ChaiSOE/1.0", techs: []string{"HP EWS"}},
+					title: "HP LaserJet MFP M528 - IMP-COMPTA", server: "HP-ChaiSOE/1.0", techs: []string{"HP EWS"}},
 				{port: 443, proto: model.TCP, name: "http", product: "HP Embedded Web Server",
 					tunnel: "ssl", tlsCN: "IMP-COMPTA", tlsSelf: true,
-					title: "HP LaserJet MFP M528 — IMP-COMPTA", server: "HP-ChaiSOE/1.0"},
+					title: "HP LaserJet MFP M528 - IMP-COMPTA", server: "HP-ChaiSOE/1.0"},
 				{port: 515, proto: model.TCP, name: "printer"},
 				{port: 9100, proto: model.TCP, name: "jetdirect"},
 				{port: 161, proto: model.UDP, name: "snmp", product: "HP LaserJet", extra: "public"},
@@ -80,7 +80,7 @@ func demoHosts() []demoHost {
 			mac: "00:26:73:91:aa:0c", vendor: "Ricoh Company, Ltd.",
 			services: []demoService{
 				{port: 80, proto: model.TCP, name: "http", product: "Ricoh Web Image Monitor",
-					title: "Web Image Monitor — MP C3004", server: "Web-Server/3.0"},
+					title: "Web Image Monitor - MP C3004", server: "Web-Server/3.0"},
 				{port: 9100, proto: model.TCP, name: "jetdirect"},
 				{port: 161, proto: model.UDP, name: "snmp", product: "Ricoh MP C3004", extra: "public"},
 			},
@@ -94,7 +94,7 @@ func demoHosts() []demoHost {
 				{port: 139, proto: model.TCP, name: "netbios-ssn", product: "Samba smbd", version: "4.10.18"},
 				{port: 445, proto: model.TCP, name: "microsoft-ds", product: "Samba smbd", version: "4.10.18"},
 				{port: 5000, proto: model.TCP, name: "http", product: "Synology DiskStation Manager",
-					title: "DiskStation — NAS-BUREAU", server: "nginx", techs: []string{"DSM", "nginx"}},
+					title: "DiskStation - NAS-BUREAU", server: "nginx", techs: []string{"DSM", "nginx"}},
 				{port: 2049, proto: model.TCP, name: "nfs", product: "Linux nfsd", version: "3-4"},
 			},
 			findings: []string{"smb-signing-not-required", "nfs-world-readable-export", "ssh-weak-algorithms"}},
@@ -212,7 +212,7 @@ func demoHosts() []demoHost {
 					title: "ID_EESX_Welcome", server: "VMware/7.0"},
 				{port: 443, proto: model.TCP, name: "http", product: "VMware ESXi SOAP API", version: "7.0.3",
 					tunnel: "ssl", tlsCN: "esxi-01.lumexa.lan", tlsSelf: true,
-					title: "ESXi-01 — VMware ESXi", server: "VMware/7.0", techs: []string{"VMware ESXi"}},
+					title: "ESXi-01 - VMware ESXi", server: "VMware/7.0", techs: []string{"VMware ESXi"}},
 				{port: 902, proto: model.TCP, name: "vmware-auth", product: "VMware Authentication Daemon",
 					version: "1.10", banner: "220 VMware Authentication Daemon Version 1.10"},
 			},
@@ -223,7 +223,7 @@ func demoHosts() []demoHost {
 			services: []demoService{
 				{port: 443, proto: model.TCP, name: "http", product: "VMware ESXi SOAP API", version: "7.0.3",
 					tunnel: "ssl", tlsCN: "esxi-02.lumexa.lan", tlsSelf: true,
-					title: "ESXI-02 — VMware ESXi", server: "VMware/7.0"},
+					title: "ESXI-02 - VMware ESXi", server: "VMware/7.0"},
 				{port: 902, proto: model.TCP, name: "vmware-auth", product: "VMware Authentication Daemon"},
 			},
 			findings: []string{"tls-cert-self-signed"}},
@@ -314,7 +314,7 @@ func demoHosts() []demoHost {
 			services: []demoService{
 				{port: 443, proto: model.TCP, name: "http", product: "Dell iDRAC 9", version: "6.10",
 					tunnel: "ssl", tlsCN: "IDRAC-ESXI-01", tlsSelf: true,
-					title: "iDRAC9 — IDRAC-ESXI-01", server: "Mbedthis-Appweb"},
+					title: "iDRAC9 - IDRAC-ESXI-01", server: "Mbedthis-Appweb"},
 				{port: 623, proto: model.UDP, name: "asf-rmcp", product: "IPMI 2.0"},
 			},
 			findings: []string{"ipmi-cipher-zero", "tls-cert-self-signed"}},
@@ -362,7 +362,7 @@ func findingFor(id, ip string) model.Finding {
 		"smb-null-session": {
 			title: "Session SMB anonyme acceptée", sev: model.SevHigh, port: 445, proto: model.TCP,
 			desc: "Une session SMB sans authentification est acceptée et permet d'énumérer les partages.",
-			ev:   "SESSION_SETUP anonyme accepté — TREE_CONNECT \\\\IPC$ : STATUS_SUCCESS",
+			ev:   "SESSION_SETUP anonyme accepté - TREE_CONNECT \\\\IPC$ : STATUS_SUCCESS",
 			fix:  "Positionner RestrictAnonymous=1 et RestrictAnonymousSAM=1, et retirer « Tout le monde » des autorisations de partage."},
 		"rdp-nla-not-required": {
 			title: "RDP sans authentification réseau (NLA)", sev: model.SevMedium, port: 3389, proto: model.TCP,
@@ -372,7 +372,7 @@ func findingFor(id, ip string) model.Finding {
 		"ldap-anonymous-bind": {
 			title: "Bind LDAP anonyme autorisé", sev: model.SevMedium, port: 389, proto: model.TCP,
 			desc: "Le contrôleur de domaine autorise un bind anonyme, permettant de lire le rootDSE et une partie de l'annuaire.",
-			ev:   "bind anonyme : résultat 0 (success) — defaultNamingContext=DC=lumexa,DC=lan",
+			ev:   "bind anonyme : résultat 0 (success) - defaultNamingContext=DC=lumexa,DC=lan",
 			fix:  "Positionner dsHeuristics pour interdire les binds anonymes."},
 		"redis-no-auth": {
 			title: "Redis accessible sans authentification", sev: model.SevCritical, port: 6379, proto: model.TCP,
@@ -387,7 +387,7 @@ func findingFor(id, ip string) model.Finding {
 		"telnet-cleartext": {
 			title: "Telnet exposé", sev: model.SevHigh, port: 23, proto: model.TCP,
 			desc: "L'administration par Telnet est accessible : identifiants et session transitent en clair sur le réseau.",
-			ev:   "220 bannière reçue — « User Access Verification »",
+			ev:   "220 bannière reçue - « User Access Verification »",
 			fix:  "Désactiver Telnet (transport input ssh) et n'autoriser que SSH depuis le VLAN d'administration."},
 		"ssh-weak-algorithms": {
 			title: "Algorithmes SSH obsolètes proposés", sev: model.SevLow, port: 22, proto: model.TCP,

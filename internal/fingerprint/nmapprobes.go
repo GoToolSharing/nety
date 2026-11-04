@@ -15,7 +15,7 @@ import (
 
 	"github.com/dlclark/regexp2"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // The nmap-service-probes database is loaded at runtime from the local nmap

@@ -705,7 +705,7 @@ func TestRandomResponsesDoNotPanic(t *testing.T) {
 }
 
 // TestStructuredRandomDoesNotPanic keeps the leading bytes of a fixture (so the
-// magic/transaction id matches) and randomises the tail — the nastiest input
+// magic/transaction id matches) and randomises the tail - the nastiest input
 // for a length-driven parser.
 func TestStructuredRandomDoesNotPanic(t *testing.T) {
 	rng := rand.New(rand.NewSource(42))

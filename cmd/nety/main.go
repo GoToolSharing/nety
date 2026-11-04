@@ -20,23 +20,23 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/vaadata/nety/internal/api"
-	"github.com/vaadata/nety/internal/auth"
-	"github.com/vaadata/nety/internal/bus"
-	"github.com/vaadata/nety/internal/checks"
-	"github.com/vaadata/nety/internal/config"
-	"github.com/vaadata/nety/internal/discovery"
-	"github.com/vaadata/nety/internal/export"
-	"github.com/vaadata/nety/internal/fingerprint"
-	"github.com/vaadata/nety/internal/identity"
-	"github.com/vaadata/nety/internal/jobs"
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/netif"
-	"github.com/vaadata/nety/internal/portscan"
-	"github.com/vaadata/nety/internal/rawnet"
-	"github.com/vaadata/nety/internal/segment"
-	"github.com/vaadata/nety/internal/server"
-	"github.com/vaadata/nety/internal/store"
+	"github.com/GoToolSharing/nety/internal/api"
+	"github.com/GoToolSharing/nety/internal/auth"
+	"github.com/GoToolSharing/nety/internal/bus"
+	"github.com/GoToolSharing/nety/internal/checks"
+	"github.com/GoToolSharing/nety/internal/config"
+	"github.com/GoToolSharing/nety/internal/discovery"
+	"github.com/GoToolSharing/nety/internal/export"
+	"github.com/GoToolSharing/nety/internal/fingerprint"
+	"github.com/GoToolSharing/nety/internal/identity"
+	"github.com/GoToolSharing/nety/internal/jobs"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/netif"
+	"github.com/GoToolSharing/nety/internal/portscan"
+	"github.com/GoToolSharing/nety/internal/rawnet"
+	"github.com/GoToolSharing/nety/internal/segment"
+	"github.com/GoToolSharing/nety/internal/server"
+	"github.com/GoToolSharing/nety/internal/store"
 )
 
 func main() {
@@ -69,7 +69,7 @@ func run(args []string) error {
 }
 
 func usage() {
-	fmt.Fprint(os.Stderr, `NETY — internal network mapping and VLAN segmentation testing
+	fmt.Fprint(os.Stderr, `NETY - internal network mapping and VLAN segmentation testing
 
 Usage:
   nety serve [flags]            start the web platform

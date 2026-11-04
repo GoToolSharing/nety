@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/jobs"
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/ports"
-	"github.com/vaadata/nety/internal/store"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/jobs"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/ports"
+	"github.com/GoToolSharing/nety/internal/store"
 )
 
 // scanProfile is a preset the launch form offers so the common cases are one
@@ -53,7 +53,7 @@ func scanProfiles() []scanProfile {
 			Description: "Top 1000 TCP and top 20 UDP ports, full fingerprinting, identity collection and checks. The usual choice.",
 			Options:     standard},
 		{ID: "full", Title: "Full",
-			Description: "All 65535 TCP ports and top 100 UDP. Thorough but long; run it overnight — it can be paused and resumed.",
+			Description: "All 65535 TCP ports and top 100 UDP. Thorough but long; run it overnight - it can be paused and resumed.",
 			Options:     full},
 		{ID: "stealth", Title: "Low and slow",
 			Description: "Connect scan at 300 packets per second, extra retries. For fragile networks or when an IPS is in the way.",
@@ -277,7 +277,7 @@ func (a *API) handleDeleteScan(w http.ResponseWriter, r *http.Request, u model.U
 	a.ok(w, map[string]bool{"ok": true})
 }
 
-// handleStartScan starts a queued scan or resumes a paused/interrupted one —
+// handleStartScan starts a queued scan or resumes a paused/interrupted one -
 // the same endpoint, because from the operator's point of view it is the same
 // gesture and the runner picks up exactly where it stopped.
 func (a *API) handleStartScan(w http.ResponseWriter, r *http.Request, u model.User) {

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/identity/smb"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/identity/smb"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // nbName is one entry of an NBSTAT node status response.

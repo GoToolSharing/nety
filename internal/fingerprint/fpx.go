@@ -13,7 +13,7 @@ import (
 
 	"github.com/praetorian-inc/fingerprintx/pkg/plugins"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 
 	// Blank imports: every fingerprintx protocol plugin registers itself in an
 	// init(). We list them one by one instead of importing pkg/scan so that
@@ -61,7 +61,7 @@ import (
 
 // fingerprintx is used as a LIBRARY: we drive its protocol plugins ourselves
 // (Plugin.Run takes a net.Conn) instead of calling its scanner, so that every
-// connection is ours — context-bound, deadlined and counted.
+// connection is ours - context-bound, deadlined and counted.
 //
 // By default only the plugins that claim the port (PortPriority) are run, so
 // an unidentified port costs at most a couple of extra connections. A full

@@ -14,7 +14,7 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 
-	"github.com/vaadata/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/engine"
 )
 
 // Interfaces enumerates local interfaces via netlink.

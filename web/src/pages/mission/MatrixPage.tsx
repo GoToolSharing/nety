@@ -163,7 +163,7 @@ export default function MatrixPage() {
     <PageContainer wide>
       <PageHeader
         title="Segmentation matrix"
-        description="Which networks can reach which, measured — not assumed. Each cell counts the services retried from the source network against the target network."
+        description="Which networks can reach which, measured - not assumed. Each cell counts the services retried from the source network against the target network."
         actions={
           <LinkButton to="../exports" variant="secondary">
             Export the matrix
@@ -219,7 +219,7 @@ export default function MatrixPage() {
               <div className="text-xs text-muted">
                 {totalTested > 0
                   ? `${((totalReachable / totalTested) * 100).toFixed(1)}% of attempts`
-                  : '—'}
+                  : '-'}
               </div>
             </div>
             <div className="card px-4 py-3">
@@ -241,7 +241,7 @@ export default function MatrixPage() {
           {bypassHits.length > 0 && (
             <InlineAlert tone="warn" className="mt-4" icon={<BoltIcon />} title="Filtering bypassed">
               {bypassHits.length} result{bypassHits.length > 1 ? 's were' : ' was'} obtained with
-              a technique other than plain routing — the filtering exists but can be walked
+              a technique other than plain routing - the filtering exists but can be walked
               around. These are marked{' '}
               <Badge tone="warn">
                 <BoltIcon width={10} height={10} />
@@ -371,15 +371,15 @@ export default function MatrixPage() {
                 <span className="font-medium">Legend:</span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-3 w-3 rounded-sm bg-crit/25" aria-hidden="true" />
-                  reachable — segmentation does not hold
+                  reachable - segmentation does not hold
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-3 w-3 rounded-sm bg-warn/20" aria-hidden="true" />
-                  routed but closed — packets cross, ports are shut
+                  routed but closed - packets cross, ports are shut
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-3 w-3 rounded-sm bg-ok/20" aria-hidden="true" />
-                  filtered — blocked
+                  filtered - blocked
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-3 w-3 rounded-sm bg-elevated" aria-hidden="true" />
@@ -467,7 +467,7 @@ export default function MatrixPage() {
                   </table>
                   {serviceRows.length > 500 && (
                     <p className="px-4 py-2 text-xs text-faint">
-                      Showing the first 500 of {formatNumber(serviceRows.length)} rows — narrow
+                      Showing the first 500 of {formatNumber(serviceRows.length)} rows - narrow
                       the search to see the rest.
                     </p>
                   )}
@@ -513,7 +513,7 @@ export default function MatrixPage() {
                       <Mono>{r.ip}</Mono>
                     </td>
                     <td className="tabular">
-                      {r.port ? `${r.port}/${r.protocol ?? 'tcp'}` : '—'}
+                      {r.port ? `${r.port}/${r.protocol ?? 'tcp'}` : '-'}
                     </td>
                     <td>
                       <span className="flex items-center gap-1.5">
@@ -531,10 +531,10 @@ export default function MatrixPage() {
                       <ReachBadge status={r.status} />
                     </td>
                     <td className="tabular text-muted">
-                      {r.rtt_ms ? formatMs(r.rtt_ms) : '—'}
+                      {r.rtt_ms ? formatMs(r.rtt_ms) : '-'}
                     </td>
                     <td className="max-w-[220px] truncate text-muted" title={r.detail}>
-                      {r.detail || '—'}
+                      {r.detail || '-'}
                     </td>
                     <td className="text-muted">
                       <RelativeTime value={r.tested_at} />

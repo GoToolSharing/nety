@@ -2,7 +2,7 @@
 #
 # Three isolated Docker networks stand in for three VLANs, each with a few
 # services to find. NETY is attached to lab_vlan10 only, so a discovery scan
-# sees that segment, and a segmentation scan should NOT reach the others —
+# sees that segment, and a segmentation scan should NOT reach the others -
 # until you attach NETY to a second network and watch the matrix light up:
 #
 #   make lab-up

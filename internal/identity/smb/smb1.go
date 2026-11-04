@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/vaadata/nety/internal/identity/ntlm"
+	"github.com/GoToolSharing/nety/internal/identity/ntlm"
 )
 
 // SMB1 constants.

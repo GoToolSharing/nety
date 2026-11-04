@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/config"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/config"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // The Markdown and HTML reports are the human-facing deliverable: an executive
@@ -109,9 +109,9 @@ func writeMarkdown(w io.Writer, d model.MissionData) error {
 
 	title := d.Mission.Name
 	if d.Mission.Client != "" {
-		title = fmt.Sprintf("%s — %s", d.Mission.Client, d.Mission.Name)
+		title = fmt.Sprintf("%s - %s", d.Mission.Client, d.Mission.Name)
 	}
-	if err := p("# Internal network review — %s\n\n", title); err != nil {
+	if err := p("# Internal network review - %s\n\n", title); err != nil {
 		return err
 	}
 	if d.Mission.Description != "" {
@@ -180,13 +180,13 @@ func writeMarkdown(w io.Writer, d model.MissionData) error {
 		svcPerNet[s.NetworkID]++
 	}
 	for _, n := range d.Networks {
-		vlan := "—"
+		vlan := "-"
 		if n.VLANID != 0 {
 			vlan = itoa(n.VLANID)
 		}
 		if err := p("| %s | %s | %s | %s | %d | %d |\n",
 			mdEscape(n.Name), vlan, strings.Join(n.Prefixes, ", "),
-			firstNonEmpty(n.Gateway, "—"), hostsPerNet[n.ID], svcPerNet[n.ID]); err != nil {
+			firstNonEmpty(n.Gateway, "-"), hostsPerNet[n.ID], svcPerNet[n.ID]); err != nil {
 			return err
 		}
 	}
@@ -199,7 +199,7 @@ func writeMarkdown(w io.Writer, d model.MissionData) error {
 		if len(n.L2.Neighbors) == 0 && !n.L2.DTPSeen {
 			continue
 		}
-		if err := p("### Switch port — %s\n\n", mdEscape(n.Name)); err != nil {
+		if err := p("### Switch port - %s\n\n", mdEscape(n.Name)); err != nil {
 			return err
 		}
 		if n.L2.DTPSeen {
@@ -208,7 +208,7 @@ func writeMarkdown(w io.Writer, d model.MissionData) error {
 			}
 		}
 		for _, nb := range n.L2.Neighbors {
-			if err := p("- **%s** via %s — port `%s`%s%s\n",
+			if err := p("- **%s** via %s - port `%s`%s%s\n",
 				mdEscape(nb.DeviceID), strings.ToUpper(nb.Protocol), nb.PortID,
 				optional(", platform ", nb.Platform), optional(", mgmt ", nb.MgmtAddress)); err != nil {
 				return err
@@ -296,7 +296,7 @@ func writeMarkdown(w io.Writer, d model.MissionData) error {
 			if f.Port != 0 {
 				loc = fmt.Sprintf("%s:%d/%s", f.IP, f.Port, f.Protocol)
 			}
-			if err := p("### [%s] %s — %s\n\n", strings.ToUpper(string(f.Severity)), mdEscape(f.Title), loc); err != nil {
+			if err := p("### [%s] %s - %s\n\n", strings.ToUpper(string(f.Severity)), mdEscape(f.Title), loc); err != nil {
 				return err
 			}
 			if f.Description != "" {
@@ -338,10 +338,10 @@ func writeMarkdown(w io.Writer, d model.MissionData) error {
 			label := hostLabel(h)
 			extra := ""
 			if h.OS != "" {
-				extra = " — " + h.OS
+				extra = " - " + h.OS
 			}
 			if h.Vendor != "" {
-				extra += " — " + h.Vendor
+				extra += " - " + h.Vendor
 			}
 			if err := p("#### %s (%s)%s\n\n", mdEscape(label), h.IP, mdEscape(extra)); err != nil {
 				return err
@@ -451,7 +451,7 @@ func matrixIndex(d model.MissionData) map[[2]int64]model.MatrixCell {
 
 func mdCell(src, dst int64, cells map[[2]int64]model.MatrixCell) string {
 	if src == dst {
-		return "—"
+		return "-"
 	}
 	c, ok := cells[[2]int64{src, dst}]
 	if !ok {
@@ -506,7 +506,7 @@ func writeHTML(w io.Writer, d model.MissionData) error {
 
 	title := d.Mission.Name
 	if d.Mission.Client != "" {
-		title = d.Mission.Client + " — " + d.Mission.Name
+		title = d.Mission.Client + " - " + d.Mission.Name
 	}
 
 	if err := p(htmlHead, e(title)); err != nil {
@@ -576,12 +576,12 @@ func writeHTML(w io.Writer, d model.MissionData) error {
 		svcPerNet[s.NetworkID]++
 	}
 	for _, n := range d.Networks {
-		vlan := "—"
+		vlan := "-"
 		if n.VLANID != 0 {
 			vlan = itoa(n.VLANID)
 		}
 		if err := p(`<tr><td>%s</td><td>%s</td><td class="mono">%s</td><td class="mono">%s</td><td>%d</td><td>%d</td></tr>`,
-			e(n.Name), vlan, e(strings.Join(n.Prefixes, ", ")), e(firstNonEmpty(n.Gateway, "—")),
+			e(n.Name), vlan, e(strings.Join(n.Prefixes, ", ")), e(firstNonEmpty(n.Gateway, "-")),
 			hostsPerNet[n.ID], svcPerNet[n.ID]); err != nil {
 			return err
 		}
@@ -740,7 +740,7 @@ func writeHTML(w io.Writer, d model.MissionData) error {
 
 func htmlCell(src, dst int64, cells map[[2]int64]model.MatrixCell) (string, string) {
 	if src == dst {
-		return "self", "—"
+		return "self", "-"
 	}
 	c, ok := cells[[2]int64{src, dst}]
 	if !ok {
@@ -755,7 +755,7 @@ func htmlCell(src, dst int64, cells map[[2]int64]model.MatrixCell) (string, stri
 const htmlHead = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>%s — NETY report</title>
+<title>%s - NETY report</title>
 <style>
 :root{--bg:#fff;--fg:#14171c;--muted:#5a6472;--line:#e3e7ec;--accent:#1f6feb;
 --crit:#8b1a1a;--high:#c2410c;--med:#a16207;--low:#2563eb;--info:#64748b;

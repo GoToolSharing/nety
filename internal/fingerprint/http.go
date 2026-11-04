@@ -20,7 +20,7 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 const (

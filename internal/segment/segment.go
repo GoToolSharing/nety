@@ -7,7 +7,7 @@
 // up live. Techniques range from "just connect" to "create a tagged
 // sub-interface for the target VLAN"; the ones that touch the client's switch
 // are opt-in (SegmentOptions.AllowL2Active) and every system change is undone
-// before Test returns — on success, on error, on cancellation and on panic.
+// before Test returns - on success, on error, on cancellation and on panic.
 package segment
 
 import (
@@ -21,9 +21,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/netif"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/netif"
 )
 
 var errUnsupported = engine.ErrUnsupported

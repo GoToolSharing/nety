@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // allModelTechniques is every technique constant the frozen model contract

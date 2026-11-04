@@ -12,8 +12,8 @@ import (
 	"github.com/mdlayher/packet"
 	"golang.org/x/sys/unix"
 
-	"github.com/vaadata/nety/internal/netif"
-	"github.com/vaadata/nety/internal/rawnet"
+	"github.com/GoToolSharing/nety/internal/netif"
+	"github.com/GoToolSharing/nety/internal/rawnet"
 )
 
 // checkTaggedFrameAccepted proves the 802.1Q frames NETY builds itself are
@@ -22,7 +22,7 @@ import (
 // Sniffing the parent to read the tag back does not work: Linux keeps the VLAN
 // id out of the frame bytes (it travels in skb->vlan_tci and reaches AF_PACKET
 // only as auxiliary data), so a capture shows untagged frames whatever we do.
-// Sending is the better test anyway — it exercises the frame builder the
+// Sending is the better test anyway - it exercises the frame builder the
 // double-tag technique uses, and the peer's VLAN sub-interface only replies if
 // the tag we wrote is the one it is configured for.
 func checkTaggedFrameAccepted(parent string, vlanID int, srcIP, dstIP netip.Addr) error {
@@ -116,7 +116,7 @@ func parseARPReply(f []byte) (op uint16, sender netip.Addr, ok bool) {
 // asserts it byte for byte against the protocol.
 //
 // No switch here will answer it, but a malformed frame would be silently
-// ignored by one that would — so the frame itself is worth verifying.
+// ignored by one that would - so the frame itself is worth verifying.
 func checkDTPFrame() error {
 	src, err := net.ParseMAC("aa:bb:cc:dd:ee:ff")
 	if err != nil {

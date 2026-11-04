@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/vaadata/nety/internal/export"
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/store"
+	"github.com/GoToolSharing/nety/internal/export"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/store"
 )
 
 func (a *API) handleListHosts(w http.ResponseWriter, r *http.Request, u model.User) {

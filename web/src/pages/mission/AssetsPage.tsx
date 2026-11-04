@@ -117,9 +117,9 @@ function AssetDrawer({
         <section>
           <h3 className="panel-title mb-1.5">Identity</h3>
           <dl className="rounded-md border border-border bg-elevated/50 px-3 py-2">
-            <KeyValue label="Hostname">{asset.hostname || '—'}</KeyValue>
-            <KeyValue label="Domain">{asset.domain || '—'}</KeyValue>
-            <KeyValue label="OS">{asset.os || '—'}</KeyValue>
+            <KeyValue label="Hostname">{asset.hostname || '-'}</KeyValue>
+            <KeyValue label="Domain">{asset.domain || '-'}</KeyValue>
+            <KeyValue label="OS">{asset.os || '-'}</KeyValue>
             <KeyValue label="Seen">
               <RelativeTime value={asset.last_seen} /> · first{' '}
               <RelativeTime value={asset.first_seen} />
@@ -129,7 +129,7 @@ function AssetDrawer({
 
         <section className="mt-4">
           <h3 className="panel-title mb-1.5">
-            Addresses ({(asset.ips ?? []).length}) — the same machine across VLANs
+            Addresses ({(asset.ips ?? []).length}) - the same machine across VLANs
           </h3>
           <div className="table-scroll rounded-md border border-border">
             <table className="data-table">
@@ -173,7 +173,7 @@ function AssetDrawer({
 
         <section className="mt-4">
           <h3 className="panel-title mb-1.5">
-            Identity keys ({(asset.keys ?? []).length}) — why NETY believes it is the same machine
+            Identity keys ({(asset.keys ?? []).length}) - why NETY believes it is the same machine
           </h3>
           <div className="table-scroll rounded-md border border-border">
             <table className="data-table">
@@ -205,7 +205,7 @@ function AssetDrawer({
                           <Mono>{k.value}</Mono>
                         </td>
                         <td className="text-muted">
-                          <Mono>{k.source || '—'}</Mono>
+                          <Mono>{k.source || '-'}</Mono>
                         </td>
                         <td className="text-right">
                           <Badge tone={confidenceTone(k.confidence)}>{k.confidence}/100</Badge>
@@ -276,7 +276,7 @@ function AssetDrawer({
               <h3 className="panel-title mb-1.5">Merge another asset into this one</h3>
               <div className="space-y-3 rounded-md border border-border bg-elevated/50 p-3">
                 <p className="text-xs text-muted">
-                  Use this when the correlator split one machine in two — for example the same
+                  Use this when the correlator split one machine in two - for example the same
                   server seen on two VLANs without a shared identity key. The source asset's IPs
                   and keys move here, and the source disappears.
                 </p>
@@ -291,7 +291,7 @@ function AssetDrawer({
                     .map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.label || `Asset #${a.id}`}
-                        {a.hostname ? ` — ${a.hostname}` : ''} (
+                        {a.hostname ? ` - ${a.hostname}` : ''} (
                         {(a.ips ?? []).map((i) => i.ip).join(', ') || 'no IP'})
                       </option>
                     ))}
@@ -412,7 +412,7 @@ export default function AssetsPage() {
 
       {multiVlan > 0 && (
         <InlineAlert tone="info" className="mt-4">
-          {multiVlan} asset{multiVlan > 1 ? 's are' : ' is'} present on more than one network —
+          {multiVlan} asset{multiVlan > 1 ? 's are' : ' is'} present on more than one network -
           a multi-homed machine is often the shortest path across a segment boundary.
         </InlineAlert>
       )}
@@ -512,9 +512,9 @@ export default function AssetsPage() {
                       </td>
                       <td className="text-muted">{ASSET_KIND_LABELS[a.kind] ?? a.kind}</td>
                       <td className="max-w-[200px] truncate text-muted" title={a.os}>
-                        {a.os || '—'}
+                        {a.os || '-'}
                       </td>
-                      <td className="text-muted">{a.domain || '—'}</td>
+                      <td className="text-muted">{a.domain || '-'}</td>
                       <td>
                         <span className="flex flex-wrap items-center gap-1">
                           {(a.ips ?? []).slice(0, 3).map((ip) => (
@@ -547,7 +547,7 @@ export default function AssetsPage() {
                                 {k}
                               </Badge>
                             ))}
-                          {(a.keys ?? []).length === 0 && <span className="text-faint">—</span>}
+                          {(a.keys ?? []).length === 0 && <span className="text-faint">-</span>}
                         </span>
                       </td>
                       <td>
@@ -557,7 +557,7 @@ export default function AssetsPage() {
                               {t}
                             </Badge>
                           ))}
-                          {(a.tags ?? []).length === 0 && <span className="text-faint">—</span>}
+                          {(a.tags ?? []).length === 0 && <span className="text-faint">-</span>}
                         </span>
                       </td>
                       <td className={cn('text-muted')}>

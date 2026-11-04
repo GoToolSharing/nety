@@ -8,7 +8,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // Turning a failed connection into a verdict is the whole point of a

@@ -1,4 +1,4 @@
-module github.com/vaadata/nety
+module github.com/GoToolSharing/nety
 
 go 1.27.3
 

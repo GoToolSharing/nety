@@ -17,8 +17,8 @@ import (
 
 	"github.com/vishvananda/netlink"
 
-	"github.com/vaadata/nety/internal/portscan"
-	"github.com/vaadata/nety/internal/rawnet"
+	"github.com/GoToolSharing/nety/internal/portscan"
+	"github.com/GoToolSharing/nety/internal/rawnet"
 )
 
 const rawSupported = true
@@ -70,8 +70,8 @@ func (r *rawDisc) tsNow() uint32 { return uint32(time.Since(r.start) / time.Micr
 //     case their MAC is learnt (on-link hosts that do not answer ARP cannot
 //     receive IP probes either and are considered down);
 //  2. every other target (and on-link hosts when arp is disabled) gets a
-//     burst of IP probes — ICMP echo + timestamp, TCP SYN on TCPPorts, TCP
-//     ACK, UDP payloads — sent through the gateway's MAC. Hosts are visited
+//     burst of IP probes - ICMP echo + timestamp, TCP SYN on TCPPorts, TCP
+//     ACK, UDP payloads - sent through the gateway's MAC. Hosts are visited
 //     in a keyed random permutation and probes are rate limited.
 //
 // Replies are validated statelessly with keyed cookies (TCP sequence / ACK

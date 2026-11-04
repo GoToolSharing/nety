@@ -23,7 +23,7 @@ export function RelativeTime({
     const t = setInterval(() => force((n) => n + 1), 30_000)
     return () => clearInterval(t)
   }, [])
-  if (!value) return <span className={cn('text-faint', className)}>—</span>
+  if (!value) return <span className={cn('text-faint', className)}>-</span>
   return (
     <time dateTime={value} title={formatAbsolute(value)} className={cn('tabular', className)}>
       {prefix}
@@ -246,7 +246,7 @@ export function Pagination({
           'No rows'
         ) : (
           <>
-            Rows {formatNumber(from)}–{formatNumber(to)}
+            Rows {formatNumber(from)}-{formatNumber(to)}
             {hasMore ? ' (more available)' : ''}
           </>
         )}

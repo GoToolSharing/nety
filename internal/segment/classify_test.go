@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // fakeTimeout is an error that behaves like a net timeout.

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/store"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/store"
 )
 
 // A machine to invent, with the services that make it look like what it is.

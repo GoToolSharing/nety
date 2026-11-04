@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/identity/ntlm"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/identity/ntlm"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 type mailProto int

@@ -5,9 +5,9 @@ import (
 	"net/netip"
 	"strings"
 
-	"github.com/vaadata/nety/internal/auth"
-	"github.com/vaadata/nety/internal/jobs"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/auth"
+	"github.com/GoToolSharing/nety/internal/jobs"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // ---------------------------------------------------------------------------

@@ -8,7 +8,7 @@ import { fileURLToPath, URL } from 'node:url'
 // A relative base ('./') must NOT be used here: the client-side router has
 // nested routes such as /missions/1/scans/1, and on a reload or a shared deep
 // link the browser would resolve ./assets/… against /missions/1/scans/,
-// getting index.html back instead of the bundle — a blank page.
+// getting index.html back instead of the bundle - a blank page.
 export default defineConfig({
   base: '/',
   plugins: [react()],

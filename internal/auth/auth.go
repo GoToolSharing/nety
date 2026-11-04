@@ -22,8 +22,8 @@ import (
 
 	"golang.org/x/crypto/argon2"
 
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/store"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/store"
 )
 
 // Errors returned by Authenticate.
@@ -85,7 +85,7 @@ func VerifyPassword(encoded, password string) bool {
 }
 
 // ValidatePassword enforces a minimal policy: long enough, and not a single
-// character class. Deliberately permissive about symbols — length matters more.
+// character class. Deliberately permissive about symbols - length matters more.
 func ValidatePassword(p string) error {
 	if len(p) < 12 {
 		return fmt.Errorf("%w: use at least 12 characters", ErrWeakPassword)
@@ -336,7 +336,7 @@ func ValidRole(r model.Role) bool {
 // a terminal (0/O, 1/l/I). Characters are drawn with rejection sampling rather
 // than a modulo, which would bias the distribution, and the draw is repeated
 // until it satisfies the policy instead of forcing fixed characters into known
-// positions — that would hand an attacker two characters for free.
+// positions - that would hand an attacker two characters for free.
 func GeneratePassword() (string, error) {
 	const alphabet = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 	const length = 20

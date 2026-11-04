@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/vaadata/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/engine"
 )
 
 // errUnsupported is engine.ErrUnsupported, returned by the !linux stubs.

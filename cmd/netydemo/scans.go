@@ -8,8 +8,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/store"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/store"
 )
 
 // seedScans writes the scan history: one discovery per network, the
@@ -125,7 +125,7 @@ func seedScans(ctx context.Context, st *store.Store, raw *sql.DB, missionID int6
 		return err
 	}
 
-	// A long one the operator paused to go to lunch — resumable.
+	// A long one the operator paused to go to lunch - resumable.
 	full := std
 	full.Profile, full.TCPPorts, full.UDPPorts = "full", "all", "top100"
 	if err := mk(nets[1], model.ScanDiscovery, model.ScanPaused, full,
@@ -211,7 +211,7 @@ func seedReachability(ctx context.Context, st *store.Store, missionID int64, net
 
 			// The plain attempt.
 			status := model.ReachFiltered
-			detail := "aucune réponse — paquet filtré"
+			detail := "aucune réponse - paquet filtré"
 			roll := rng.Float64()
 			switch {
 			case roll < r.direct:
@@ -219,7 +219,7 @@ func seedReachability(ctx context.Context, st *store.Store, missionID int64, net
 				detail = "connexion établie"
 			case roll < r.direct+r.closed:
 				status = model.ReachClosed
-				detail = "RST reçu — routé, port fermé"
+				detail = "RST reçu - routé, port fermé"
 			}
 			if r.direct == 0 && r.closed == 0 {
 				status = model.ReachUnreachable

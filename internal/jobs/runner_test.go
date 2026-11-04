@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vaadata/nety/internal/bus"
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/store"
+	"github.com/GoToolSharing/nety/internal/bus"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/store"
 )
 
 // ---------------------------------------------------------------------------

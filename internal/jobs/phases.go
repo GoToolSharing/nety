@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/oui"
-	"github.com/vaadata/nety/internal/ports"
-	"github.com/vaadata/nety/internal/store"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/oui"
+	"github.com/GoToolSharing/nety/internal/ports"
+	"github.com/GoToolSharing/nety/internal/store"
 )
 
 // Work-unit payloads. Each is a small JSON document stored in scan_work, so a
@@ -360,7 +360,7 @@ func (r *Runner) planSegment(ctx context.Context, sc model.Scan) error {
 // walks every phase again on a resume, so a phase that was already complete
 // before the pause would get here a second time. Generating again would append
 // a duplicate set of units and redo work the scan had already done, which is
-// exactly what requirement R2 forbids — hence the guard below.
+// exactly what requirement R2 forbids - hence the guard below.
 func (r *Runner) generate(ctx context.Context, sc model.Scan, finished model.WorkPhase) error {
 	if generated, ok := generatedPhases[finished]; ok {
 		already, err := r.phaseHasWork(ctx, sc.ID, generated...)
@@ -490,7 +490,7 @@ func (r *Runner) addHostUnits(ctx context.Context, sc model.Scan, phase model.Wo
 }
 
 // ---------------------------------------------------------------------------
-// phase implementations — every result is stored and published immediately
+// phase implementations - every result is stored and published immediately
 // ---------------------------------------------------------------------------
 
 func (r *Runner) execL2(ctx context.Context, sc model.Scan, _ *runState, u model.WorkUnit) error {
@@ -544,7 +544,7 @@ func (r *Runner) execL2(ctx context.Context, sc model.Scan, _ *runState, u model
 	}
 	if l2.DTPSeen {
 		r.logScan(ctx, sc, "warn", fmt.Sprintf(
-			"the switch port negotiates trunking (DTP mode %q) — a trunk may be obtainable from here", l2.DTPMode))
+			"the switch port negotiates trunking (DTP mode %q) - a trunk may be obtainable from here", l2.DTPMode))
 	}
 	return nil
 }

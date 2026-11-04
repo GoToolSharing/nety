@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GoToolSharing/nety/internal/engine"
 	"github.com/mdlayher/packet"
-	"github.com/vaadata/nety/internal/engine"
 	"golang.org/x/net/bpf"
 	"golang.org/x/sys/unix"
 )

@@ -1,4 +1,4 @@
-# NETY — web front-end
+# NETY - web front-end
 
 React 18 + TypeScript + Vite + Tailwind SPA for the NETY audit platform.
 The production build is written to `../internal/server/dist`, which the Go
@@ -33,7 +33,7 @@ chains it with the Go binaries.
 
 ## Dev loop
 
-Run the Go server first — it owns the API, the session cookies and the event
+Run the Go server first - it owns the API, the session cookies and the event
 WebSocket:
 
 ```sh
@@ -60,7 +60,7 @@ If the Go server runs elsewhere, change `server.proxy['/api'].target`.
 
 ```
 src/
-  types/api.ts        hand-written mirror of internal/model/model.go — the contract
+  types/api.ts        hand-written mirror of internal/model/model.go - the contract
   lib/                api client (CSRF, 401 handling), query hooks, formatting, misc hooks
   live/               WebSocket client, event store, cache patching (see below)
   state/              auth and theme providers

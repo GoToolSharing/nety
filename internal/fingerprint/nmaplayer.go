@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // The nmap-service-probes data file is NOT shipped with NETY: it belongs to

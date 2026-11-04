@@ -104,7 +104,7 @@ export default function OverviewPage() {
           <EmptyState
             icon={<NetworkIcon width={20} height={20} />}
             title="Create a network for the VLAN you are plugged into"
-            description="A network records the segment you are attached to — its interface, addressing, gateway, DNS and the passive L2 recon of the switch port. Everything else in the mission hangs off it."
+            description="A network records the segment you are attached to - its interface, addressing, gateway, DNS and the passive L2 recon of the switch port. Everything else in the mission hangs off it."
             action={
               canWrite && (
                 <LinkButton to="../networks" variant="primary" icon={<PlusIcon />}>
@@ -123,7 +123,7 @@ export default function OverviewPage() {
               icon={<TrunkIcon />}
               title={`${trunkNetworks.length} port${trunkNetworks.length > 1 ? 's' : ''} negotiate${trunkNetworks.length > 1 ? '' : 's'} trunking (DTP)`}
             >
-              {trunkNetworks.map((n) => n.name).join(', ')} — a port that offers DTP lets an
+              {trunkNetworks.map((n) => n.name).join(', ')} - a port that offers DTP lets an
               attacker become a trunk and reach every VLAN it carries. This is a finding in
               itself.{' '}
               <Link to="../networks" className="underline underline-offset-2">
@@ -209,7 +209,7 @@ export default function OverviewPage() {
                                 </div>
                                 <div className="truncate text-xs text-muted">
                                   {net?.name ?? `network ${s.network_id}`} ·{' '}
-                                  {s.phase || '—'} · <RelativeTime value={s.created_at} />
+                                  {s.phase || '-'} · <RelativeTime value={s.created_at} />
                                 </div>
                               </div>
                               <div className="w-28 shrink-0">
@@ -275,9 +275,9 @@ export default function OverviewPage() {
                               {n.name}
                             </Link>
                           </td>
-                          <td className="tabular text-muted">{n.vlan_id || '—'}</td>
+                          <td className="tabular text-muted">{n.vlan_id || '-'}</td>
                           <td className="font-mono text-[12px] text-muted">
-                            {(n.prefixes ?? []).join(', ') || '—'}
+                            {(n.prefixes ?? []).join(', ') || '-'}
                           </td>
                           <td className="tabular text-right">{formatNumber(hostsHere)}</td>
                           <td>
@@ -289,7 +289,7 @@ export default function OverviewPage() {
                                 {(n.l2?.neighbors ?? []).length > 1 ? 's' : ''}
                               </Badge>
                             ) : (
-                              <span className="text-faint">—</span>
+                              <span className="text-faint">-</span>
                             )}
                           </td>
                         </tr>
@@ -343,7 +343,7 @@ export default function OverviewPage() {
                         </td>
                         <td className="font-mono text-[12px]">{f.ip}</td>
                         <td className="tabular text-muted">
-                          {f.port ? `${f.port}/${f.protocol ?? 'tcp'}` : '—'}
+                          {f.port ? `${f.port}/${f.protocol ?? 'tcp'}` : '-'}
                         </td>
                         <td className="text-muted">
                           <RelativeTime value={f.last_seen} />

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/vaadata/nety/internal/config"
+	"github.com/GoToolSharing/nety/internal/config"
 )
 
 func TestInlineScriptHashes(t *testing.T) {

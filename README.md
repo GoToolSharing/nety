@@ -5,8 +5,8 @@ platform.**
 
 NETY is the tool you plug into a client's switch port. It maps what is on that
 VLAN, fingerprints every service it finds, gives each machine a stable identity
-that survives a DHCP reshuffle overnight, and then — once you have mapped
-several VLANs — tells you exactly which flows actually cross the segmentation
+that survives a DHCP reshuffle overnight, and then - once you have mapped
+several VLANs - tells you exactly which flows actually cross the segmentation
 boundary, plain routing or bypass technique alike.
 
 It is one static Go binary. Everything is implemented natively in-process:
@@ -49,7 +49,7 @@ with their own account and watches the same scan live.
 **Per network (VLAN):**
 - auto-detects interface, addressing, gateway, DNS and DHCP server
 - passively listens for CDP/LLDP/DTP/STP and 802.1Q tags, so you learn what the
-  switch port is configured for — a port that offers to negotiate a trunk is a
+  switch port is configured for - a port that offers to negotiate a trunk is a
   finding in itself
 - host discovery (ARP, ICMP echo and timestamp, TCP SYN and ACK, UDP payloads)
 - stateless SYN port scanning in the style of masscan, or a connect scan when
@@ -63,12 +63,12 @@ with their own account and watches the same scan live.
 
 **Over Wi-Fi as over cable:** everything that rides on IP behaves identically.
 NETY detects a wireless interface and skips only what cannot exist on an access
-point association — the passive switch-port recon and the 802.1Q/DTP
-techniques — saying so plainly instead of failing obscurely.
+point association - the passive switch-port recon and the 802.1Q/DTP
+techniques - saying so plainly instead of failing obscurely.
 
 **Across networks:**
 - replays every service discovered elsewhere from where you are now
-- distinguishes *reachable* from *port closed* from *filtered* from *no route* —
+- distinguishes *reachable* from *port closed* from *filtered* from *no route* -
   which is the whole point of the exercise
 - 15 techniques, from plain routing to source-port tricks, IPv6, alternate
   next hops and fragmentation, plus opt-in layer-2 techniques (802.1Q
@@ -108,8 +108,8 @@ techniques. Either run as root, or grant the capabilities to the binary:
 sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip ./nety
 ```
 
-Without them NETY still works — it falls back to connect scanning and says so
-in the interface — but it is slower and cannot do layer-2 work.
+Without them NETY still works - it falls back to connect scanning and says so
+in the interface - but it is slower and cannot do layer-2 work.
 
 In a container:
 
@@ -131,7 +131,7 @@ nety serve --nmap-probes /usr/share/nmap/nmap-service-probes
 ### A typical engagement
 
 1. Plug into the first VLAN. **Networks → New**, pick the interface, hit
-   detect, name it (`VLAN 10 — offices`), save.
+   detect, name it (`VLAN 10 - offices`), save.
 2. **Scans → New**, profile *Standard*, start. Watch it live.
 3. Unplug, move to the next VLAN, repeat.
 4. Back on any VLAN, start a **segmentation** scan. NETY replays every service
@@ -167,7 +167,7 @@ reverted.
 
 Note that Docker bridges forward between each other by default, so the lab's
 matrix will legitimately show VLAN 10 reaching VLAN 20. That is a real
-reachability result, not a false positive — it is what an unsegmented network
+reachability result, not a false positive - it is what an unsegmented network
 looks like.
 
 Tear it down with `make lab-down`.
@@ -175,7 +175,7 @@ Tear it down with `make lab-down`.
 ### What is proven, and what is not
 
 `make verify-kernel` runs the checks that unit tests cannot reach, in a
-throwaway privileged container — the lab does not need to be up:
+throwaway privileged container - the lab does not need to be up:
 
 - an 802.1Q sub-interface is created, addressed, routed through and deleted,
   and every change is tracked and reverted, with untracked changes left alone;
@@ -183,22 +183,22 @@ throwaway privileged container — the lab does not need to be up:
   against the protocol (Cisco SNAP 0x2004, version, all four TLVs);
 - a veth pair with one end in its own network namespace carries a **real
   tagged data path**: a sub-interface on each side, a listener on the far one,
-  and NETY's own port scanner finding it through the tag — which is exactly
+  and NETY's own port scanner finding it through the tag - which is exactly
   what `dot1q-subif` does once a trunk exists;
-- a tagged frame built by NETY's own frame builder — the one `double-tag`
-  uses — is put on the wire and answered by a real 802.1Q decoder, so the tag
+- a tagged frame built by NETY's own frame builder - the one `double-tag`
+  uses - is put on the wire and answered by a real 802.1Q decoder, so the tag
   it writes is demonstrably the one a switch would read.
 
 `make lab-up` then validates the rest against a live network: raw sockets, the
 ARP sweep, the stateless SYN scan, UDP probing, fingerprinting, identity
-collection, the checks, and the full segmentation matrix — leaving no
+collection, the checks, and the full segmentation matrix - leaving no
 interface and no route behind.
 
 **What still needs physical hardware:** that a switch *grants* a trunk in
 response to the DTP frame. The frame is verified correct and everything that
 follows a granted trunk is verified working; what is untested is the switch's
 reply. That is the single remaining unknown in `dtp-trunk`, and it fails
-safely — no trunk means the technique reports nothing rather than guessing.
+safely - no trunk means the technique reports nothing rather than guessing.
 
 ---
 
@@ -231,8 +231,8 @@ NETY is built for **authorised** internal security assessments.
   unless you turn it on, capped at three tries so nothing gets locked out.
 - The layer-2 techniques change switch-port state and are off by default,
   behind an explicit toggle with a warning.
-- Everything NETY changes on your machine — routes, sub-interfaces, trunk
-  negotiation — is tracked and reverted when a test ends, when it is cancelled,
+- Everything NETY changes on your machine - routes, sub-interfaces, trunk
+  negotiation - is tracked and reverted when a test ends, when it is cancelled,
   and again on shutdown.
 - Your own address is always excluded from the scope, along with anything in
   the mission's exclusion list.
@@ -245,4 +245,4 @@ Get written authorisation before you point this at anything.
 
 ## Licence
 
-Internal tooling. Not for distribution outside Vaadata without approval.
+See LICENSE.

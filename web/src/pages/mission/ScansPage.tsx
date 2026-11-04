@@ -72,7 +72,7 @@ export default function ScansPage() {
     <PageContainer>
       <PageHeader
         title="Scans"
-        description="Every scan is resumable: pausing keeps the work units, and the server picks up exactly where it stopped — even after a crash."
+        description="Every scan is resumable: pausing keeps the work units, and the server picks up exactly where it stopped - even after a crash."
         actions={
           canWrite && (
             <LinkButton to="../scans/new" variant="primary" icon={<PlusIcon />}>
@@ -153,7 +153,7 @@ export default function ScansPage() {
                       <Link
                         to={`../scans/${s.id}`}
                         className="font-medium hover:underline"
-                        title={`Profile: ${s.options?.profile ?? '—'}`}
+                        title={`Profile: ${s.options?.profile ?? '-'}`}
                       >
                         #{s.id}
                       </Link>
@@ -259,7 +259,7 @@ export default function ScansPage() {
       {canWrite && visible.length > 0 && (
         <p className="mt-3 text-xs text-faint">
           Tip: a paused scan shows <strong className="text-muted">Resume</strong>, never “start”
-          — resuming replays only the pending work units.
+          - resuming replays only the pending work units.
         </p>
       )}
     </PageContainer>

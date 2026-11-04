@@ -94,7 +94,7 @@ function CreateMissionModal({ open, onClose }: { open: boolean; onClose: () => v
           label="Name"
           required
           data-autofocus
-          placeholder="Internal audit — HQ"
+          placeholder="Internal audit - HQ"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -152,7 +152,7 @@ function CountChip({
       title={`${label}: ${value === undefined ? 'unknown' : formatNumber(value)}`}
     >
       <span className="text-faint">{icon}</span>
-      <span className="tabular text-fg">{value === undefined ? '—' : formatNumber(value)}</span>
+      <span className="tabular text-fg">{value === undefined ? '-' : formatNumber(value)}</span>
       <span className="hidden sm:inline">{label}</span>
     </span>
   )

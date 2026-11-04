@@ -19,8 +19,8 @@
 // ("IEEE Registration Authority", "Private") are omitted from the database so
 // they can never shadow a real vendor.
 //
-// Locally administered addresses — those with the U/L bit set, i.e. randomized
-// Wi-Fi MACs, container and hypervisor-generated MACs — are reported as
+// Locally administered addresses - those with the U/L bit set, i.e. randomized
+// Wi-Fi MACs, container and hypervisor-generated MACs - are reported as
 // follows:
 //
 //	Lookup("02:00:00:00:00:01")  == "(randomized)"           // LA, unregistered
@@ -32,7 +32,7 @@
 //
 // The multicast / group bit (the least-significant bit of the first octet) is
 // masked off before the registry lookup, so group addresses still resolve to
-// the vendor that owns the matching unicast OUI — 01:00:0C (Cisco CDP/PVST+)
+// the vendor that owns the matching unicast OUI - 01:00:0C (Cisco CDP/PVST+)
 // resolves to Cisco. The broadcast address FF:FF:FF:FF:FF:FF is reported as
 // unknown.
 package oui
@@ -410,7 +410,7 @@ func Normalize(mac string) string {
 	return string(out[:])
 }
 
-// IsLocallyAdministered reports whether mac has the U/L bit set — the
+// IsLocallyAdministered reports whether mac has the U/L bit set - the
 // second-least-significant bit of the first octet. Such addresses are assigned
 // by the local network or generated at random (Wi-Fi MAC randomization,
 // containers, hypervisors) rather than by IEEE. It is false for invalid input.
@@ -420,7 +420,7 @@ func IsLocallyAdministered(mac string) bool {
 	return ok && b[0]&0x02 != 0
 }
 
-// IsMulticast reports whether mac has the I/G (group) bit set — the
+// IsMulticast reports whether mac has the I/G (group) bit set - the
 // least-significant bit of the first octet. It is false for invalid input.
 func IsMulticast(mac string) bool {
 	var b [8]byte

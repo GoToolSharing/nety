@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 func testStore(t *testing.T) *Store {

@@ -95,8 +95,8 @@ func routeKey(dst netip.Prefix, via netip.Addr, iface string) string {
 }
 
 // undoKeyed runs the undo action registered under key, if there is one, and
-// drops it. When there is none — because the thing already existed and NETY
-// did not create it — it does nothing and reports no error.
+// drops it. When there is none - because the thing already existed and NETY
+// did not create it - it does nothing and reports no error.
 //
 // This is the safe way for a caller to unwind: it reverts exactly what NETY
 // made and never touches a sub-interface, address or route that was already

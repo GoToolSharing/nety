@@ -9,7 +9,7 @@ import (
 	"net"
 	"net/netip"
 
-	"github.com/vaadata/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/engine"
 )
 
 const rawSupported = false

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // This file holds the hot write paths. Results are written the moment they are

@@ -19,7 +19,7 @@ import (
 	"net/netip"
 	"os"
 
-	"github.com/vaadata/nety/internal/netif"
+	"github.com/GoToolSharing/nety/internal/netif"
 )
 
 func main() {

@@ -1,8 +1,8 @@
-# NETY — architecture & contracts
+# NETY - architecture & contracts
 
 NETY is a single static Go binary (Linux, `CGO_ENABLED=0`) for internal-network
 pentests. It serves an authenticated web platform (React SPA embedded with
-`go:embed`) and drives native Go scanning engines — **no nmap/masscan
+`go:embed`) and drives native Go scanning engines - **no nmap/masscan
 subprocess**, everything is implemented in-process so results stream out as
 they are found.
 
@@ -23,17 +23,17 @@ they are found.
 
 ## Non-negotiable requirements
 
-### R1 — Live results
+### R1 - Live results
 No result may wait for the end of a scan. Every host, port, service, finding
 and reachability result is **persisted and broadcast the moment it is known**:
 
-- engines stream through callbacks (`out func(...)`) — never return bulk slices;
+- engines stream through callbacks (`out func(...)`) - never return bulk slices;
 - the runner writes each result to SQLite immediately (batched by a short
   flush window, ≤ 250 ms) and publishes a `model.Event` on the bus;
 - the API pushes events to the SPA over WebSocket, so tables fill up live;
 - progress (`scan.progress`, `scan.phase`) is updated continuously.
 
-### R2 — Pause / resume / stop, crash-safe
+### R2 - Pause / resume / stop, crash-safe
 A scan is split into persisted **work units** (`model.WorkUnit`) per phase
 (`model.WorkPhase`). The runner claims units, executes them, marks them done.
 Consequences:
@@ -42,7 +42,7 @@ Consequences:
   `paused`; *resume* continues exactly where it stopped;
 - *stop* is a cancel; already-collected data stays;
 - if the process dies mid-scan, units left `running` are reset to `pending` at
-  startup and the scan can be resumed the next day — nothing is lost and
+  startup and the scan can be resumed the next day - nothing is lost and
   nothing is redone;
 - phases generate the units of the next phase as they produce results
   (discovery → port scan → fingerprint → …), so a resume replays only the
@@ -51,7 +51,7 @@ Consequences:
 Work units are sized so one unit is seconds-to-a-minute of work (e.g. 4096
 host×port probes, one service to fingerprint, one reachability test).
 
-### R3 — No tooling installed on the operator's workstation
+### R3 - No tooling installed on the operator's workstation
 All builds, tests and integration labs run in **Docker** (`Dockerfile`,
 `docker-compose.yml`, `make` targets). The repo never requires installing Go,
 Node, nmap or anything else on the host.
@@ -60,8 +60,8 @@ Node, nmap or anything else on the host.
 
 | Package | Content | Constructor |
 |---|---|---|
-| `internal/model` | shared domain types (frozen contract) | — |
-| `internal/engine` | engine interfaces (frozen contract) | — |
+| `internal/model` | shared domain types (frozen contract) | - |
+| `internal/engine` | engine interfaces (frozen contract) | - |
 | `internal/ports` | port spec parsing, top-N lists, port→name | `ports.Parse(spec, proto)` |
 | `internal/rawnet` | AF_PACKET / raw socket helpers, rate limiting, cookies, permutation | free-form |
 | `internal/discovery` | ARP/ICMP/TCP/UDP host discovery | `discovery.New(log) engine.Discoverer` |
@@ -76,12 +76,12 @@ Node, nmap or anything else on the host.
 | `internal/store` | SQLite persistence (modernc, pure Go) | `store.Open(path) (*store.Store, error)` |
 | `internal/bus` | in-process event bus → WebSocket | `bus.New()` |
 | `internal/jobs` | scan runner: work units, phases, pause/resume | `jobs.New(...)` |
-| `internal/auth` | users, sessions, password hashing, RBAC | — |
-| `internal/api` | REST + WebSocket handlers | — |
-| `internal/server` | HTTP server, TLS, embedded SPA | — |
-| `internal/config` | configuration & flags | — |
-| `cmd/nety` | entrypoint & wiring | — |
-| `web/` | React + TS + Vite + Tailwind SPA → `internal/server/dist` | — |
+| `internal/auth` | users, sessions, password hashing, RBAC | - |
+| `internal/api` | REST + WebSocket handlers | - |
+| `internal/server` | HTTP server, TLS, embedded SPA | - |
+| `internal/config` | configuration & flags | - |
+| `cmd/nety` | entrypoint & wiring | - |
+| `web/` | React + TS + Vite + Tailwind SPA → `internal/server/dist` | - |
 
 ## Rules for all code
 
@@ -91,11 +91,11 @@ Node, nmap or anything else on the host.
   works everywhere.
 - Structured logging with `log/slog`; no `fmt.Println` in library code.
 - Contexts everywhere; cancellation stops work quickly and cleans up (sockets
-  closed, routes and sub-interfaces removed — always, including on panic).
+  closed, routes and sub-interfaces removed - always, including on panic).
 - Results stream through callbacks; callbacks are called concurrently and must
   be safe to call from several goroutines.
 - Bounded memory: a /16 × 1000 ports scan must not allocate the whole space
   (use the permutation iterator, not a materialised list).
 - Unit tests for pure logic (`go test ./...`), run in Docker.
 - `model` and `engine` are frozen contracts: coordinate before changing them.
-- Nothing is installed on the host — use `make` targets, which run Docker.
+- Nothing is installed on the host - use `make` targets, which run Docker.

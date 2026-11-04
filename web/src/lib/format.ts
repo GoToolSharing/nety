@@ -10,24 +10,24 @@ const dateTimeFmt = new Intl.DateTimeFormat(undefined, {
 const timeFmt = new Intl.DateTimeFormat(undefined, { timeStyle: 'medium' })
 
 export function formatNumber(n: number | null | undefined): string {
-  if (n === null || n === undefined || Number.isNaN(n)) return '—'
+  if (n === null || n === undefined || Number.isNaN(n)) return '-'
   return numberFmt.format(n)
 }
 
 export function formatCompact(n: number | null | undefined): string {
-  if (n === null || n === undefined || Number.isNaN(n)) return '—'
+  if (n === null || n === undefined || Number.isNaN(n)) return '-'
   return Math.abs(n) >= 10000 ? compactFmt.format(n) : numberFmt.format(n)
 }
 
 export function formatPercent(fraction: number | null | undefined, digits = 0): string {
-  if (fraction === null || fraction === undefined || Number.isNaN(fraction)) return '—'
+  if (fraction === null || fraction === undefined || Number.isNaN(fraction)) return '-'
   const clamped = Math.max(0, Math.min(1, fraction))
   return `${(clamped * 100).toFixed(digits)}%`
 }
 
 /** Human duration from seconds: "4s", "2m 10s", "1h 06m", "2d 3h". */
 export function formatDuration(seconds: number | null | undefined): string {
-  if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return '—'
+  if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return '-'
   const s = Math.max(0, Math.round(seconds))
   if (s < 60) return `${s}s`
   const m = Math.floor(s / 60)
@@ -39,14 +39,14 @@ export function formatDuration(seconds: number | null | undefined): string {
 }
 
 export function formatMs(ms: number | null | undefined): string {
-  if (ms === null || ms === undefined || !Number.isFinite(ms)) return '—'
+  if (ms === null || ms === undefined || !Number.isFinite(ms)) return '-'
   if (ms < 1) return `${ms.toFixed(2)} ms`
   if (ms < 1000) return `${ms.toFixed(1)} ms`
   return formatDuration(ms / 1000)
 }
 
 export function formatBytes(bytes: number | null | undefined): string {
-  if (bytes === null || bytes === undefined || !Number.isFinite(bytes)) return '—'
+  if (bytes === null || bytes === undefined || !Number.isFinite(bytes)) return '-'
   if (bytes < 1024) return `${bytes} B`
   const units = ['KB', 'MB', 'GB', 'TB']
   let value = bytes / 1024
@@ -67,13 +67,13 @@ export function parseDate(value: string | null | undefined): Date | null {
 /** Absolute timestamp, used for the title attribute of relative times. */
 export function formatAbsolute(value: string | Date | null | undefined): string {
   const d = value instanceof Date ? value : parseDate(value)
-  if (!d) return '—'
+  if (!d) return '-'
   return dateTimeFmt.format(d)
 }
 
 export function formatClock(value: string | Date | null | undefined): string {
   const d = value instanceof Date ? value : parseDate(value)
-  if (!d) return '—'
+  if (!d) return '-'
   return timeFmt.format(d)
 }
 
@@ -92,7 +92,7 @@ const relFmt = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
 
 export function formatRelative(value: string | Date | null | undefined): string {
   const d = value instanceof Date ? value : parseDate(value)
-  if (!d) return '—'
+  if (!d) return '-'
   const deltaSeconds = (d.getTime() - Date.now()) / 1000
   const abs = Math.abs(deltaSeconds)
   if (abs < 5) return 'just now'
@@ -118,7 +118,7 @@ export function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-/** "src-port-53" -> "Src port 53" — readable label for an id-ish string. */
+/** "src-port-53" -> "Src port 53" - readable label for an id-ish string. */
 export function humanizeId(s: string): string {
   if (!s) return ''
   return titleCase(s.replace(/[-_]+/g, ' '))

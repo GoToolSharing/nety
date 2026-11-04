@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/auth"
-	"github.com/vaadata/nety/internal/config"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/auth"
+	"github.com/GoToolSharing/nety/internal/config"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 type sessionResponse struct {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/vaadata/nety/internal/identity/smb"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/identity/smb"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 func init() {

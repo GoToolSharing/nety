@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // job is one (target, technique) test.

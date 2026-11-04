@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // DefaultTimeout is the per-I/O timeout when CheckOptions.Timeout is zero.

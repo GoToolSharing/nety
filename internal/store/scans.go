@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 const scanCols = `id, mission_id, network_id, kind, status, options, phase, progress,
@@ -211,7 +211,7 @@ func (s *Store) DeleteScan(ctx context.Context, id int64) error {
 }
 
 // ---------------------------------------------------------------------------
-// Work units — the backbone of pause / resume / crash recovery
+// Work units - the backbone of pause / resume / crash recovery
 // ---------------------------------------------------------------------------
 
 // AddWork appends work units for a phase. seq numbering continues from the
@@ -354,7 +354,7 @@ func (s *Store) FailWork(ctx context.Context, id int64, cause string, requeue bo
 
 // ReleaseRunningWork puts every leased unit of a scan back in the pending
 // queue. Called when a scan is paused, and at startup for scans that were
-// running when the process died — nothing is lost, nothing is redone twice.
+// running when the process died - nothing is lost, nothing is redone twice.
 //
 // The attempt counter is rolled back too: being interrupted is not a failed
 // attempt, and counting it as one would burn the unit's retry budget after a

@@ -12,8 +12,8 @@ import (
 //	[ dst | src | 0x8100 native | 0x8100 target | IPv4 | ICMP echo ]
 //
 // The trunk port strips the outer tag because it matches the native VLAN
-// (which a trunk sends untagged), and forwards what is left — a frame still
-// carrying the target VLAN tag — into the target VLAN. Nothing comes back
+// (which a trunk sends untagged), and forwards what is left - a frame still
+// carrying the target VLAN tag - into the target VLAN. Nothing comes back
 // along the same path, which is why the technique is one-way: the reply, if
 // any, is routed normally and only arrives if the target VLAN can reach ours.
 

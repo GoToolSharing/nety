@@ -11,7 +11,7 @@ import (
 	"github.com/mdlayher/packet"
 	"golang.org/x/sys/unix"
 
-	"github.com/vaadata/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/engine"
 )
 
 // Active L2 transmission helpers. These are the only functions in this package

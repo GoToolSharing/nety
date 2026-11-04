@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 const userCols = `id, username, display_name, role, password_hash, disabled,

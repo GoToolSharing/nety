@@ -128,18 +128,18 @@ export default function AuditPage() {
                       <RelativeTime value={entryTime(e)} />
                     </td>
                     <td className="font-medium">
-                      {e.username || (e.user_id ? `#${e.user_id}` : '—')}
+                      {e.username || (e.user_id ? `#${e.user_id}` : '-')}
                     </td>
                     <td>
                       <Badge tone={actionTone(e.action)}>{e.action}</Badge>
                     </td>
                     <td className="text-muted">
-                      {e.mission_id ? `#${e.mission_id}` : '—'}
+                      {e.mission_id ? `#${e.mission_id}` : '-'}
                     </td>
                     <td className="max-w-[420px] truncate text-muted" title={e.detail}>
-                      {e.detail || '—'}
+                      {e.detail || '-'}
                     </td>
-                    <td className="text-muted">{e.remote ? <Mono>{e.remote}</Mono> : '—'}</td>
+                    <td className="text-muted">{e.remote ? <Mono>{e.remote}</Mono> : '-'}</td>
                   </tr>
                 ))}
               </tbody>

@@ -19,9 +19,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/vaadata/nety/internal/auth"
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/store"
+	"github.com/GoToolSharing/nety/internal/auth"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/store"
 
 	_ "modernc.org/sqlite"
 )
@@ -105,7 +105,7 @@ func run(dataDir, username, password string, reset bool) error {
 
 	stats, _ := st.Stats(ctx)
 	fmt.Printf("Demo mission ready in %s\n\n", dataDir)
-	fmt.Printf("  mission   %s — %s\n", m.Name, m.Client)
+	fmt.Printf("  mission   %s - %s\n", m.Name, m.Client)
 	for _, k := range []string{"networks", "hosts", "services", "assets", "findings", "reach_results", "scans"} {
 		fmt.Printf("  %-9s %d\n", k, stats[k])
 	}
@@ -130,7 +130,7 @@ func seedNetworks(ctx context.Context, st *store.Store, missionID int64, now tim
 		l2                                   model.L2Info
 	}{
 		{
-			name: "Bureaux — étage 2", desc: "Prise murale salle de réunion B204.",
+			name: "Bureaux - étage 2", desc: "Prise murale salle de réunion B204.",
 			iface: "eth0", local: "10.20.10.37", gw: "10.20.10.1", prefix: "10.20.10.0/24", vlan: 10,
 			l2: model.L2Info{
 				Neighbors: []model.L2Neighbor{{

@@ -3,7 +3,7 @@ package identity
 import (
 	"strings"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // kindFacts is a normalized view of what is known about a host, used by the

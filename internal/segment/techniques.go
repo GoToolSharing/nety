@@ -3,8 +3,8 @@ package segment
 import (
 	"sort"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // The technique catalogue. Each entry answers one question an auditor asks
@@ -64,7 +64,7 @@ var techniqueCatalog = []engine.TechniqueInfo{
 	{
 		ID:          model.TechGatewayRoute,
 		Title:       "Route via local gateway",
-		Description: "Temporarily installs a route to the target network through the local default gateway, tests, then removes it — this shows whether the router would forward the traffic if only the client knew the way.",
+		Description: "Temporarily installs a route to the target network through the local default gateway, tests, then removes it - this shows whether the router would forward the traffic if only the client knew the way.",
 		Default:     true,
 	},
 	{
@@ -80,7 +80,7 @@ var techniqueCatalog = []engine.TechniqueInfo{
 	{
 		ID:          model.TechDot1QSubif,
 		Title:       "802.1Q sub-interface",
-		Description: "Creates a tagged sub-interface for the target VLAN, obtains an address on it and tests from inside that VLAN — this works when the switch port is a trunk rather than an access port.",
+		Description: "Creates a tagged sub-interface for the target VLAN, obtains an address on it and tests from inside that VLAN - this works when the switch port is a trunk rather than an access port.",
 		L2Active:    true,
 	},
 	{

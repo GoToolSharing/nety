@@ -23,7 +23,7 @@ func ipmiChecksum(b []byte) byte {
 // ipmiPayload is a Get Channel Authentication Capabilities request for the
 // current channel at ADMINISTRATOR privilege, inside an unauthenticated
 // IPMI v1.5 session. Both 1.5 and 2.0 BMCs answer it, and a 2.0 BMC advertises
-// its v2.0 support in the extended-capabilities byte — so one probe covers
+// its v2.0 support in the extended-capabilities byte - so one probe covers
 // both. This is the request ipmitool and ipmi-version use.
 func ipmiPayload() []byte {
 	msg := []byte{

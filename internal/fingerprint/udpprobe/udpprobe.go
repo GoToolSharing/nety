@@ -1,7 +1,7 @@
 // Package udpprobe builds UDP service probes and decodes their responses.
 //
 // The package is pure: it produces payload bytes and parses response bytes. It
-// performs no I/O at all — sockets, deadlines, retries and context handling are
+// performs no I/O at all - sockets, deadlines, retries and context handling are
 // the caller's business. That makes every decoder trivially unit-testable and
 // keeps hostile input confined to pure functions.
 //
@@ -76,7 +76,7 @@ var registry = []probeDef{
 	{name: "rpc-null", ports: []uint16{111}, payload: rpcDumpPayload(), decode: decodeRPC},
 	// Tail: sent to anything we have no specific probe for. A bare empty
 	// datagram is enough to elicit an ICMP port-unreachable (closed) or, on a
-	// chatty service, a banner. It has no decoder of its own — use DecodeAny on
+	// chatty service, a banner. It has no decoder of its own - use DecodeAny on
 	// whatever comes back.
 	{name: "generic-udp", ports: nil, payload: []byte{}, decode: nil},
 }

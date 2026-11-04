@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // RDP negotiation protocols (MS-RDPBCGR 2.2.1.1.1).

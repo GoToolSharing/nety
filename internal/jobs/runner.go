@@ -2,10 +2,10 @@
 //
 // It implements the two non-negotiable requirements of docs/ARCHITECTURE.md:
 //
-//	R1 live results   — every host, port, service, finding and reachability
+//	R1 live results   - every host, port, service, finding and reachability
 //	                    result is written to the store and published on the bus
 //	                    the instant the engine reports it, never at the end.
-//	R2 pause/resume   — a scan is a queue of persisted work units. Pausing
+//	R2 pause/resume   - a scan is a queue of persisted work units. Pausing
 //	                    stops claiming new units and returns the in-flight ones
 //	                    to the queue; resuming continues exactly where it
 //	                    stopped, even after a crash or a reboot.
@@ -21,10 +21,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/vaadata/nety/internal/bus"
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/store"
+	"github.com/GoToolSharing/nety/internal/bus"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/store"
 )
 
 // Engines holds the scanning implementations. A nil engine makes the phases
@@ -106,8 +106,8 @@ type Runner struct {
 	// segMu serialises the segmentation phase process-wide. The segmentation
 	// engine creates sub-interfaces, addresses and routes on the one machine
 	// we are running on, and tracks them for cleanup per call; two concurrent
-	// callers would tear down each other's state, leaking interfaces and —
-	// worse — turning a reachable service into a "filtered" cell in the
+	// callers would tear down each other's state, leaking interfaces and -
+	// worse - turning a reachable service into a "filtered" cell in the
 	// matrix handed to the client.
 	segMu sync.Mutex
 
@@ -152,7 +152,7 @@ func (r *Runner) Recover(ctx context.Context) error {
 			return err
 		}
 		if err := r.st.SetScanStatus(ctx, sc.ID, model.ScanPaused,
-			"interrupted by a restart — resume to continue"); err != nil {
+			"interrupted by a restart - resume to continue"); err != nil {
 			return err
 		}
 		r.log.Warn("recovered an interrupted scan",

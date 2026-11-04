@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/store"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/store"
 )
 
 func newService(t *testing.T) (*Service, *store.Store) {

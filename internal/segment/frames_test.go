@@ -6,7 +6,7 @@ import (
 	"net/netip"
 	"testing"
 
-	"github.com/vaadata/nety/internal/netif"
+	"github.com/GoToolSharing/nety/internal/netif"
 )
 
 func TestDoubleTagFrameLayout(t *testing.T) {

@@ -5,7 +5,7 @@ package netif
 import (
 	"net"
 
-	"github.com/vaadata/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/engine"
 )
 
 // IsWireless always reports false off Linux: NETY only scans from Linux, and

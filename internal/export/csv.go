@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 func writeHostsCSV(w io.Writer, d model.MissionData) error {
@@ -247,7 +247,7 @@ func writeMatrixCSV(w io.Writer, d model.MissionData) error {
 		row := []string{netName(names, src)}
 		for _, dst := range ids {
 			if src == dst {
-				row = append(row, "—")
+				row = append(row, "-")
 				continue
 			}
 			c, ok := cells[[2]int64{src, dst}]

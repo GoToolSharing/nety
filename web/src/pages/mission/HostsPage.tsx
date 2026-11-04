@@ -67,21 +67,21 @@ function HostDrawer({
                 </span>
               </KeyValue>
               <KeyValue label="MAC / vendor" mono>
-                {host.mac || '—'}
+                {host.mac || '-'}
                 {host.vendor ? <span className="text-muted"> · {host.vendor}</span> : null}
               </KeyValue>
               <KeyValue label="Hostname">
-                {host.hostname || '—'}
+                {host.hostname || '-'}
                 {(host.hostnames ?? []).length > 1 && (
                   <span className="text-muted"> ({(host.hostnames ?? []).join(', ')})</span>
                 )}
               </KeyValue>
-              <KeyValue label="Domain">{host.domain || '—'}</KeyValue>
-              <KeyValue label="OS">{host.os || '—'}</KeyValue>
-              <KeyValue label="TTL">{host.ttl || '—'}</KeyValue>
+              <KeyValue label="Domain">{host.domain || '-'}</KeyValue>
+              <KeyValue label="OS">{host.os || '-'}</KeyValue>
+              <KeyValue label="TTL">{host.ttl || '-'}</KeyValue>
               <KeyValue label="Discovered by">
                 {(host.discovered_by ?? []).length === 0 ? (
-                  '—'
+                  '-'
                 ) : (
                   <span className="flex flex-wrap gap-1">
                     {(host.discovered_by ?? []).map((m) => (
@@ -131,7 +131,7 @@ function HostDrawer({
                             <PortStateBadge state={s.state} />
                           </td>
                           <td>
-                            {s.name || '—'}
+                            {s.name || '-'}
                             {s.tunnel ? (
                               <Badge tone="info" className="ml-1">
                                 {s.tunnel}
@@ -139,7 +139,7 @@ function HostDrawer({
                             ) : null}
                           </td>
                           <td className="max-w-[220px] truncate text-muted">
-                            {[s.product, s.version].filter(Boolean).join(' ') || '—'}
+                            {[s.product, s.version].filter(Boolean).join(' ') || '-'}
                           </td>
                           <td>
                             <button
@@ -269,7 +269,7 @@ export default function HostsPage() {
             description={
               query
                 ? 'Clear the search or pick another network.'
-                : 'Launch a discovery scan on one of your networks — hosts appear here as soon as they answer, without waiting for the scan to finish.'
+                : 'Launch a discovery scan on one of your networks - hosts appear here as soon as they answer, without waiting for the scan to finish.'
             }
             action={
               !query && (
@@ -311,7 +311,7 @@ export default function HostsPage() {
                       <Mono className="font-medium">{h.ip}</Mono>
                     </td>
                     <td className="text-muted">
-                      {h.mac ? <Mono>{h.mac}</Mono> : '—'}
+                      {h.mac ? <Mono>{h.mac}</Mono> : '-'}
                       {h.vendor && (
                         <span className="ml-1.5 text-faint" title={h.vendor}>
                           {h.vendor}
@@ -319,15 +319,15 @@ export default function HostsPage() {
                       )}
                     </td>
                     <td>
-                      {h.hostname || <span className="text-faint">—</span>}
+                      {h.hostname || <span className="text-faint">-</span>}
                       {h.domain && <span className="text-faint">.{h.domain}</span>}
                     </td>
                     <td className="max-w-[220px] truncate text-muted" title={h.os}>
-                      {h.os || '—'}
+                      {h.os || '-'}
                     </td>
                     <td className="text-muted">{netName.get(h.network_id) ?? h.network_id}</td>
                     <td className="max-w-[240px] truncate text-xs text-muted">
-                      {(h.discovered_by ?? []).join(', ') || '—'}
+                      {(h.discovered_by ?? []).join(', ') || '-'}
                     </td>
                     <td className="text-muted">
                       <RelativeTime value={h.last_seen} />

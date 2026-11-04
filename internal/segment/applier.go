@@ -9,14 +9,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vaadata/nety/internal/netif"
+	"github.com/GoToolSharing/nety/internal/netif"
 )
 
 // Everything in this package that changes the operator's machine or the
 // client's switch goes through sysApplier, for two reasons: the netif-backed
 // implementation keeps the netlink/AF_PACKET details out of the orchestration
 // code, and a recording fake lets the tests prove that every change is undone
-// — including when the scan is cancelled half way through.
+// - including when the scan is cancelled half way through.
 
 type sysApplier interface {
 	HasRoute(ip netip.Addr) bool

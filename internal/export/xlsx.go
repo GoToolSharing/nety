@@ -7,7 +7,7 @@ import (
 
 	"github.com/xuri/excelize/v2"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // The workbook is what gets mailed to the client: one sheet per view, frozen
@@ -206,9 +206,9 @@ func sheetSummary(f *excelize.File, st xlsxStyles, d model.MissionData) error {
 
 	title := d.Mission.Name
 	if d.Mission.Client != "" {
-		title = d.Mission.Client + " — " + d.Mission.Name
+		title = d.Mission.Client + " - " + d.Mission.Name
 	}
-	if err := f.SetCellStr(sheet, "A1", "Internal network review — "+title); err != nil {
+	if err := f.SetCellStr(sheet, "A1", "Internal network review - "+title); err != nil {
 		return err
 	}
 	if err := f.SetCellStyle(sheet, "A1", "A1", st.title); err != nil {

@@ -8,13 +8,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/vaadata/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/engine"
 )
 
 // An operator plugs into a client's network with a cable on one job and
 // associates to its Wi-Fi on the next. Everything NETY does works the same
-// either way — discovery, port scanning, fingerprinting, and the routing-level
-// segmentation techniques all ride on IP — with one real exception: the
+// either way - discovery, port scanning, fingerprinting, and the routing-level
+// segmentation techniques all ride on IP - with one real exception: the
 // switch-port techniques (802.1Q sub-interfaces, DTP trunk negotiation, double
 // tagging) and the passive CDP/LLDP/DTP recon only exist on a wired port. An
 // access point does not forward tagged frames to a station and does not speak

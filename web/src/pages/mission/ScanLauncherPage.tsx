@@ -331,7 +331,7 @@ export default function ScanLauncherPage() {
     <PageContainer>
       <PageHeader
         title="New scan"
-        description="Results stream in from the first second — you never wait for the end of a scan to see what is on the wire."
+        description="Results stream in from the first second - you never wait for the end of a scan to see what is on the wire."
         actions={
           <LinkButton to="../scans" variant="ghost">
             Cancel
@@ -391,7 +391,7 @@ export default function ScanLauncherPage() {
                 <option key={n.id} value={n.id}>
                   {n.name}
                   {n.vlan_id ? ` (VLAN ${n.vlan_id})` : ''}
-                  {n.interface ? ` — ${n.interface}` : ''}
+                  {n.interface ? ` - ${n.interface}` : ''}
                 </option>
               ))}
             </SelectField>
@@ -399,14 +399,14 @@ export default function ScanLauncherPage() {
               <div className="rounded-md border border-border bg-elevated px-3 py-2 text-xs">
                 <div className="text-muted">
                   Local{' '}
-                  <span className="font-mono text-fg">{selectedNetwork.local_ip || '—'}</span> ·
+                  <span className="font-mono text-fg">{selectedNetwork.local_ip || '-'}</span> ·
                   gateway{' '}
-                  <span className="font-mono text-fg">{selectedNetwork.gateway || '—'}</span>
+                  <span className="font-mono text-fg">{selectedNetwork.gateway || '-'}</span>
                 </div>
                 <div className="mt-1 text-muted">
                   Prefixes{' '}
                   <span className="font-mono text-fg">
-                    {(selectedNetwork.prefixes ?? []).join(', ') || '—'}
+                    {(selectedNetwork.prefixes ?? []).join(', ') || '-'}
                   </span>
                 </div>
                 {selectedNetwork.l2?.dtp_seen && (
@@ -614,7 +614,7 @@ export default function ScanLauncherPage() {
                       </Badge>
                     </span>
                   }
-                  hint="The only check family that authenticates. A short, capped list of vendor defaults is tried, so nothing gets locked out — but these are real login attempts and they land in the target's logs. Off by default; agree it with the client."
+                  hint="The only check family that authenticates. A short, capped list of vendor defaults is tried, so nothing gets locked out - but these are real login attempts and they land in the target's logs. Off by default; agree it with the client."
                 />
               </div>
             </CardBody>
@@ -763,7 +763,7 @@ export default function ScanLauncherPage() {
               {opts.allow_l2_active && l2Selected.length > 0 && (
                 <InlineAlert tone="warn" title="Layer-2 active techniques are armed">
                   {l2Selected.map((t) => t.title || t.id).join(', ')}. NETY restores every route
-                  and sub-interface it creates, including on cancellation — but the switch may
+                  and sub-interface it creates, including on cancellation - but the switch may
                   still react. Make sure you can physically reach the port.
                 </InlineAlert>
               )}

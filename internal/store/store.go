@@ -4,7 +4,7 @@
 // docs/ARCHITECTURE.md), and scan progress is tracked as persisted work units
 // (see R2) so a scan survives a pause, a stop or a crash.
 //
-// Concurrency model: SQLite in WAL mode with two pools — a single-connection
+// Concurrency model: SQLite in WAL mode with two pools - a single-connection
 // writer (SQLite allows one writer at a time anyway, serialising in Go avoids
 // SQLITE_BUSY entirely) and a multi-connection reader pool. Every exported
 // method is safe for concurrent use.
@@ -148,7 +148,7 @@ type migration struct {
 	apply func(ctx context.Context, tx *sql.Tx) error
 }
 
-// migrations are applied in order, once each. Append only — never edit or
+// migrations are applied in order, once each. Append only - never edit or
 // reorder an entry that has shipped.
 var migrations = []migration{}
 

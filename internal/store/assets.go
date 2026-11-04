@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // Assets are the long-lived identities that survive IP changes between scan

@@ -5,12 +5,12 @@
 // Detection is layered; each layer is tried in turn and the first confident
 // answer wins:
 //
-//  1. TLS — a handshake on any TCP port that does not speak first, walking
+//  1. TLS - a handshake on any TCP port that does not speak first, walking
 //     from TLS 1.3 down to TLS 1.0 to record the highest accepted version.
 //     Application probes then continue inside the tunnel with Tunnel="ssl".
-//  2. HTTP(S) — GET / without following redirects: status, title, headers,
+//  2. HTTP(S) - GET / without following redirects: status, title, headers,
 //     authentication schemes, body digest, favicon hash, technologies.
-//  3. SSH — identification banner, offered algorithms, host key fingerprints
+//  3. SSH - identification banner, offered algorithms, host key fingerprints
 //     and accepted authentication methods.
 //  4. praetorian-inc/fingerprintx protocol plugins, driven as a library.
 //  5. nmap's service-probes engine, loaded at RUNTIME from disk (the data file
@@ -33,9 +33,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
-	"github.com/vaadata/nety/internal/ports"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/ports"
 )
 
 // Methods reported in model.Service.Method.
@@ -144,7 +144,7 @@ func (f *fingerprinter) Fingerprint(
 func (f *fingerprinter) fingerprintTCP(
 	ctx context.Context, d *dialer, svc *model.Service, intensity int,
 ) error {
-	// Layer 0 — NULL probe. A service that speaks first hands us its banner
+	// Layer 0 - NULL probe. A service that speaks first hands us its banner
 	// and, incidentally, proves it is not TLS (a TLS server never speaks
 	// before the ClientHello), which lets us skip the handshake.
 	peek := d.peek(ctx)
@@ -154,7 +154,7 @@ func (f *fingerprinter) fingerprintTCP(
 	}
 	banner := peek.data
 
-	// Layer 1 — TLS.
+	// Layer 1 - TLS.
 	if len(banner) == 0 && ctx.Err() == nil {
 		if info, conn, err := d.probeTLS(ctx, tlsALPN); err == nil {
 			svc.TLS = info
@@ -172,13 +172,13 @@ func (f *fingerprinter) fingerprintTCP(
 		svc.Banner = printable(banner)
 	}
 
-	// Layer 3 (hoisted: the banner already proves it) — SSH.
+	// Layer 3 (hoisted: the banner already proves it) - SSH.
 	if bytes.HasPrefix(banner, []byte("SSH-")) {
 		f.fillSSH(ctx, d, svc, banner)
 		return nil
 	}
 
-	// Layer 2 — HTTP(S). HTTP servers do not speak first, so we try whenever
+	// Layer 2 - HTTP(S). HTTP servers do not speak first, so we try whenever
 	// the service stayed silent, when it answered with an HTTP response, or
 	// when ALPN announced HTTP inside the tunnel.
 	if ctx.Err() == nil && (len(banner) == 0 || looksHTTP(banner) || alpnIsHTTP(svc.TLS)) {
@@ -191,7 +191,7 @@ func (f *fingerprinter) fingerprintTCP(
 		}
 	}
 
-	// Layer 4 — fingerprintx plugins.
+	// Layer 4 - fingerprintx plugins.
 	if ctx.Err() == nil {
 		if s := f.probeFPX(ctx, d, useTLS, intensity); s != nil {
 			fillFromFPX(svc, s)
@@ -201,7 +201,7 @@ func (f *fingerprinter) fingerprintTCP(
 		}
 	}
 
-	// Layer 5 — nmap service probes (runtime data file).
+	// Layer 5 - nmap service probes (runtime data file).
 	if ctx.Err() == nil {
 		applyProbeOutcome(svc, f.probeNmap(ctx, d, banner, useTLS, intensity))
 		if svc.Confidence >= confidentEnough {
@@ -209,7 +209,7 @@ func (f *fingerprinter) fingerprintTCP(
 		}
 	}
 
-	// Layer 6 — banner heuristics, then the port table.
+	// Layer 6 - banner heuristics, then the port table.
 	f.fillFallback(svc, d, banner)
 	return nil
 }

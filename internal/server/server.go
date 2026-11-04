@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/config"
+	"github.com/GoToolSharing/nety/internal/config"
 )
 
 // dist holds the compiled SPA. `make web` writes it; a placeholder page is
@@ -207,7 +207,7 @@ func (s *Server) ensureSelfSigned(certFile, keyFile string) error {
 	}
 
 	sum := sha256Hex(der)
-	s.log.Info("self-signed certificate ready — share this fingerprint with your colleagues",
+	s.log.Info("self-signed certificate ready - share this fingerprint with your colleagues",
 		"sha256", sum)
 	return nil
 }

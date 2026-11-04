@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // newTester returns a Tester wired to a fake applier and, unless the test
@@ -457,7 +457,7 @@ func TestNormalizeOptions(t *testing.T) {
 // TestWirelessDropsSwitchPortTechniques covers the Wi-Fi case: an operator
 // associates to the client's wireless network instead of plugging a cable in.
 // Everything that rides on IP must behave identically; only the switch-port
-// techniques, which have no meaning on an access point association, drop out —
+// techniques, which have no meaning on an access point association, drop out -
 // and they must drop out cleanly rather than failing against the driver.
 func TestWirelessDropsSwitchPortTechniques(t *testing.T) {
 	for _, wireless := range []bool{false, true} {

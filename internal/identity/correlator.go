@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // MatchThreshold is the minimum score for an observation to be attached to

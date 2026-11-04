@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/identity/smb"
+	"github.com/GoToolSharing/nety/internal/identity/smb"
 )
 
 // Minimal SMB1 (CIFS) client used by the smbv1 / signing / MS17-010 checks.

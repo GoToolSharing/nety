@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/engine"
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // Exporter implements engine.Exporter.
@@ -25,12 +25,12 @@ func New() *Exporter { return &Exporter{} }
 
 var formats = []engine.ExportFormat{
 	{ID: "json", Title: "JSON (complete dataset)", Extension: "json", ContentType: "application/json"},
-	{ID: "csv-hosts", Title: "CSV — hosts", Extension: "csv", ContentType: "text/csv"},
-	{ID: "csv-services", Title: "CSV — services", Extension: "csv", ContentType: "text/csv"},
-	{ID: "csv-findings", Title: "CSV — findings", Extension: "csv", ContentType: "text/csv"},
-	{ID: "csv-reach", Title: "CSV — segmentation results", Extension: "csv", ContentType: "text/csv"},
-	{ID: "csv-assets", Title: "CSV — assets", Extension: "csv", ContentType: "text/csv"},
-	{ID: "csv-matrix", Title: "CSV — segmentation matrix", Extension: "csv", ContentType: "text/csv"},
+	{ID: "csv-hosts", Title: "CSV - hosts", Extension: "csv", ContentType: "text/csv"},
+	{ID: "csv-services", Title: "CSV - services", Extension: "csv", ContentType: "text/csv"},
+	{ID: "csv-findings", Title: "CSV - findings", Extension: "csv", ContentType: "text/csv"},
+	{ID: "csv-reach", Title: "CSV - segmentation results", Extension: "csv", ContentType: "text/csv"},
+	{ID: "csv-assets", Title: "CSV - assets", Extension: "csv", ContentType: "text/csv"},
+	{ID: "csv-matrix", Title: "CSV - segmentation matrix", Extension: "csv", ContentType: "text/csv"},
 	{ID: "nmap-xml", Title: "Nmap XML", Extension: "xml", ContentType: "text/xml"},
 	{ID: "gnmap", Title: "Nmap greppable", Extension: "gnmap", ContentType: "text/plain"},
 	{ID: "targets-txt", Title: "Target list (ip:port)", Extension: "txt", ContentType: "text/plain"},

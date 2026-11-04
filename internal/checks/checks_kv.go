@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vaadata/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/model"
 )
 
 // ---------------------------------------------------------------------------
