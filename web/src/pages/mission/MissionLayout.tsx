@@ -2,7 +2,13 @@ import { useEffect, useMemo } from 'react'
 import { NavLink, Outlet, useParams } from 'react-router-dom'
 import { LiveProvider } from '@/live/LiveProvider'
 import { useAuth } from '@/state/auth'
-import { useMission, useMissionSummary, useNetworks, useScans } from '@/lib/queries'
+import {
+  useMission,
+  useMissionMembers,
+  useMissionSummary,
+  useNetworks,
+  useScans,
+} from '@/lib/queries'
 import { cn } from '@/lib/cn'
 import { formatNumber } from '@/lib/format'
 import { lastMissionId, rememberMission } from '@/lib/lastMission'
@@ -97,6 +103,7 @@ function MissionSections({ missionId }: { missionId: number }) {
   const summary = useMissionSummary(missionId)
   const networks = useNetworks(missionId)
   const scans = useScans(missionId)
+  const members = useMissionMembers(missionId)
 
   const s = summary.data
   const running = (scans.data ?? []).filter(
@@ -130,6 +137,7 @@ function MissionSections({ missionId }: { missionId: number }) {
     { to: `${base}/assets`, label: 'Assets', icon: <AssetIcon />, count: s?.assets },
     { to: `${base}/matrix`, label: 'Segmentation matrix', icon: <MatrixIcon /> },
     { to: `${base}/exports`, label: 'Exports', icon: <ExportIcon /> },
+    { to: `${base}/team`, label: 'Team', icon: <UsersIcon />, count: members.data?.length },
   ]
 
   return (

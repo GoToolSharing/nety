@@ -9,7 +9,6 @@ import {
   useScans,
 } from '@/lib/queries'
 import { useMissionId } from '@/lib/hooks'
-import MissionTeam from '@/components/MissionTeam'
 import { useAuth } from '@/state/auth'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, CardBody, CardHeader, PageHeader, Stat } from '@/components/ui/Card'
@@ -375,9 +374,7 @@ export default function OverviewPage() {
             )}
           </Card>
 
-          <div className="mt-4">
-            <MissionTeam missionId={missionId} />
-          </div>
+
         </>
       )}
     </PageContainer>
