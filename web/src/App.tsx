@@ -6,7 +6,7 @@ import { LinkButton } from '@/components/ui/Button'
 import LoginPage from '@/pages/LoginPage'
 import ForcePasswordChange from '@/pages/ForcePasswordChange'
 import MissionsPage from '@/pages/MissionsPage'
-import MissionLayout from '@/pages/mission/MissionLayout'
+import MissionLayout, { SidebarShell } from '@/pages/mission/MissionLayout'
 import OverviewPage from '@/pages/mission/OverviewPage'
 import NetworksPage from '@/pages/mission/NetworksPage'
 import ScansPage from '@/pages/mission/ScansPage'
@@ -18,6 +18,7 @@ import FindingsPage from '@/pages/mission/FindingsPage'
 import AssetsPage from '@/pages/mission/AssetsPage'
 import MatrixPage from '@/pages/mission/MatrixPage'
 import ExportsPage from '@/pages/mission/ExportsPage'
+import HelpPage from '@/pages/HelpPage'
 import UsersPage from '@/pages/admin/UsersPage'
 import AuditPage from '@/pages/admin/AuditPage'
 import AppShell from '@/components/layout/AppShell'
@@ -87,22 +88,27 @@ export default function App() {
           <Route path="matrix" element={<MatrixPage />} />
           <Route path="exports" element={<ExportsPage />} />
         </Route>
-        <Route
-          path="admin/users"
-          element={
-            <RequireAdmin>
-              <UsersPage />
-            </RequireAdmin>
-          }
-        />
-        <Route
-          path="admin/audit"
-          element={
-            <RequireAdmin>
-              <AuditPage />
-            </RequireAdmin>
-          }
-        />
+        {/* Outside a mission, but kept inside the same two-pane layout so the
+            sidebar never disappears from under the operator. */}
+        <Route element={<SidebarShell />}>
+          <Route path="help" element={<HelpPage />} />
+          <Route
+            path="admin/users"
+            element={
+              <RequireAdmin>
+                <UsersPage />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="admin/audit"
+            element={
+              <RequireAdmin>
+                <AuditPage />
+              </RequireAdmin>
+            }
+          />
+        </Route>
         <Route
           path="*"
           element={

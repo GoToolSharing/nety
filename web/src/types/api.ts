@@ -394,7 +394,36 @@ export interface SSHInfo {
   auth_methods?: string[]
 }
 
+/** model.TriageStatus - where the operator is with a service. */
+export type TriageStatus = 'todo' | 'in_progress' | 'done' | 'flagged' | 'skipped'
+
+export const TRIAGE_STATUSES: TriageStatus[] = [
+  'todo',
+  'in_progress',
+  'done',
+  'flagged',
+  'skipped',
+]
+
+/** model.Triage - the operator's own record against a service, never written by a scan. */
+export interface Triage {
+  status: TriageStatus
+  note?: string
+  updated_by?: number
+  updated_by_name?: string
+  updated_at?: string
+}
+
+/** GET /api/missions/{id}/triage */
+export interface TriageSummary {
+  counts: Record<TriageStatus, number>
+  total: number
+  reviewed: number
+  statuses: TriageStatus[]
+}
+
 export interface Service {
+  triage: Triage
   id: number
   mission_id: number
   network_id: number

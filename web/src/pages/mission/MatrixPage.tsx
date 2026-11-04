@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMatrix, useNetworks, useReach } from '@/lib/queries'
 import { useMissionId } from '@/lib/hooks'
 import PageContainer from '@/components/layout/PageContainer'
@@ -8,8 +9,15 @@ import { EmptyState, ErrorState, InlineAlert, TableSkeleton } from '@/components
 import { Badge, ReachBadge } from '@/components/ui/Badge'
 import { LinkButton } from '@/components/ui/Button'
 import { Mono, RelativeTime, SearchInput, Tabs } from '@/components/common'
+import {
+  TechniqueBadge,
+  TechniqueDetail,
+  TechniqueFlags,
+  TechniqueHelpLink,
+} from '@/components/TechniqueDetail'
+import { techniqueHelpHref, useTechniqueGuides } from '@/lib/techniques'
 import { cn } from '@/lib/cn'
-import { compareIP, formatMs, formatNumber, humanizeId } from '@/lib/format'
+import { compareIP, formatMs, formatNumber } from '@/lib/format'
 import { BoltIcon, MatrixIcon } from '@/components/icons'
 import {
   BYPASS_TECHNIQUES,
@@ -63,7 +71,9 @@ export default function MatrixPage() {
   const reach = useReach(missionId)
   const [view, setView] = useState<View>('network')
   const [drill, setDrill] = useState<{ source: number; target: number } | null>(null)
+  const [explained, setExplained] = useState<number | null>(null)
   const [query, setQuery] = useState('')
+  const guides = useTechniqueGuides()
 
   const networks: Network[] = useMemo(() => {
     const fromMatrix = matrix.data?.networks ?? []
@@ -233,7 +243,10 @@ export default function MatrixPage() {
                 {formatNumber(bypassHits.length)}
               </div>
               <div className="text-xs text-muted">
-                source-port, fragment, IPv6, alternate route or 802.1Q
+                source-port, fragment, IPv6, alternate route or 802.1Q -{' '}
+                <Link to="/help" className="text-accent underline-offset-2 hover:underline">
+                  what these are
+                </Link>
               </div>
             </div>
           </div>
@@ -242,12 +255,12 @@ export default function MatrixPage() {
             <InlineAlert tone="warn" className="mt-4" icon={<BoltIcon />} title="Filtering bypassed">
               {bypassHits.length} result{bypassHits.length > 1 ? 's were' : ' was'} obtained with
               a technique other than plain routing - the filtering exists but can be walked
-              around. These are marked{' '}
-              <Badge tone="warn">
-                <BoltIcon width={10} height={10} />
-                bypass
-              </Badge>{' '}
-              in the detail views.
+              around. Every detail view names the technique that got through; click it to read
+              what it does and how to reproduce it by hand, or browse{' '}
+              <Link to="/help" className="underline underline-offset-2">
+                the technique reference
+              </Link>
+              .
             </InlineAlert>
           )}
 
@@ -312,16 +325,22 @@ export default function MatrixPage() {
                           }
                           const cell = cellOf(src.id, dst.id)
                           const style = cellStyle(cell)
-                          const techniques = Object.entries(cell?.by_technique ?? {}).filter(
+                          const used = Object.entries(cell?.by_technique ?? {}).filter(
                             ([, v]) => v > 0,
                           )
-                          const viaBypass = techniques.some(([t]) => BYPASS_TECHNIQUES.has(t))
+                          const bypassUsed = used
+                            .filter(([t]) => BYPASS_TECHNIQUES.has(t))
+                            .map(([t]) => guides.byId(t).title)
+                          const viaBypass = bypassUsed.length > 0
                           return (
                             <td key={dst.id} className="p-0">
                               <button
                                 type="button"
                                 disabled={!cell || cell.tested === 0}
-                                onClick={() => setDrill({ source: src.id, target: dst.id })}
+                                onClick={() => {
+                                  setExplained(null)
+                                  setDrill({ source: src.id, target: dst.id })
+                                }}
                                 className={cn(
                                   'h-full w-full px-3 py-2 text-left transition-colors',
                                   style.className,
@@ -331,7 +350,10 @@ export default function MatrixPage() {
                                 )}
                                 title={
                                   cell
-                                    ? `${cell.reachable} reachable, ${cell.closed} closed, ${cell.filtered} filtered of ${cell.tested} tested`
+                                    ? `${cell.reachable} reachable, ${cell.closed} closed, ${cell.filtered} filtered of ${cell.tested} tested` +
+                                      (viaBypass
+                                        ? `. Crossed with: ${bypassUsed.join(', ')}`
+                                        : '')
                                     : 'Not tested'
                                 }
                               >
@@ -352,7 +374,10 @@ export default function MatrixPage() {
                                     {viaBypass && (
                                       <span className="mt-1 inline-flex items-center gap-1 text-[10px] text-warn">
                                         <BoltIcon width={9} height={9} />
-                                        via bypass
+                                        via {bypassUsed[0]}
+                                        {bypassUsed.length > 1
+                                          ? ` +${bypassUsed.length - 1}`
+                                          : ''}
                                       </span>
                                     )}
                                   </>
@@ -444,18 +469,18 @@ export default function MatrixPage() {
                               )
                             }
                             const bypass = BYPASS_TECHNIQUES.has(best.technique)
+                            const t = guides.byId(best.technique)
                             return (
                               <td key={n.id}>
                                 <span className="flex flex-wrap items-center gap-1">
                                   <ReachBadge status={best.status} />
                                   {bypass && best.status === 'reachable' && (
-                                    <Badge
-                                      tone="warn"
-                                      title={`Reached with the ${best.technique} technique, not plain routing`}
+                                    <Link
+                                      to={techniqueHelpHref(t.id)}
+                                      title={`Reached with the ${t.title} technique, not plain routing. ${t.notes?.short ?? ''} Click to read how it works.`}
                                     >
-                                      <BoltIcon width={9} height={9} />
-                                      {best.technique}
-                                    </Badge>
+                                      <TechniqueBadge t={t} />
+                                    </Link>
                                   )}
                                 </span>
                               </td>
@@ -480,12 +505,15 @@ export default function MatrixPage() {
 
       <Drawer
         open={!!drill}
-        onClose={() => setDrill(null)}
+        onClose={() => {
+          setDrill(null)
+          setExplained(null)
+        }}
         width="lg"
         title={
           drill ? `${netName(drill.source)} → ${netName(drill.target)}` : ''
         }
-        subtitle={`${drillResults.length} individual results`}
+        subtitle={`${drillResults.length} individual results - click a technique to see how that flow got through`}
       >
         {drillResults.length === 0 ? (
           <p className="text-sm text-muted">
@@ -499,7 +527,7 @@ export default function MatrixPage() {
                 <tr>
                   <th>IP</th>
                   <th>Port</th>
-                  <th>Technique</th>
+                  <th>How it was obtained</th>
                   <th>Status</th>
                   <th>RTT</th>
                   <th>Detail</th>
@@ -507,40 +535,76 @@ export default function MatrixPage() {
                 </tr>
               </thead>
               <tbody>
-                {drillResults.map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <Mono>{r.ip}</Mono>
-                    </td>
-                    <td className="tabular">
-                      {r.port ? `${r.port}/${r.protocol ?? 'tcp'}` : '-'}
-                    </td>
-                    <td>
-                      <span className="flex items-center gap-1.5">
-                        <Mono className="text-muted">{r.technique}</Mono>
-                        {BYPASS_TECHNIQUES.has(r.technique) && (
-                          <Badge tone="warn" title={humanizeId(r.technique)}>
-                            <BoltIcon width={9} height={9} />
-                            bypass
-                          </Badge>
-                        )}
-                        {r.vlan_id ? <Badge tone="accent">vlan {r.vlan_id}</Badge> : null}
-                      </span>
-                    </td>
-                    <td>
-                      <ReachBadge status={r.status} />
-                    </td>
-                    <td className="tabular text-muted">
-                      {r.rtt_ms ? formatMs(r.rtt_ms) : '-'}
-                    </td>
-                    <td className="max-w-[220px] truncate text-muted" title={r.detail}>
-                      {r.detail || '-'}
-                    </td>
-                    <td className="text-muted">
-                      <RelativeTime value={r.tested_at} />
-                    </td>
-                  </tr>
-                ))}
+                {drillResults.map((r) => {
+                  const t = guides.byId(r.technique)
+                  const open = explained === r.id
+                  return (
+                    <Fragment key={r.id}>
+                      <tr>
+                        <td>
+                          <Mono>{r.ip}</Mono>
+                        </td>
+                        <td className="tabular">
+                          {r.port ? `${r.port}/${r.protocol ?? 'tcp'}` : '-'}
+                        </td>
+                        <td>
+                          <span className="flex items-center gap-1.5">
+                            <TechniqueBadge
+                              t={t}
+                              expanded={open}
+                              onToggle={() => setExplained(open ? null : r.id)}
+                            />
+                            {r.vlan_id ? <Badge tone="accent">vlan {r.vlan_id}</Badge> : null}
+                          </span>
+                        </td>
+                        <td>
+                          <ReachBadge status={r.status} />
+                        </td>
+                        <td className="tabular text-muted">
+                          {r.rtt_ms ? formatMs(r.rtt_ms) : '-'}
+                        </td>
+                        <td className="max-w-[220px] truncate text-muted" title={r.detail}>
+                          {r.detail || '-'}
+                        </td>
+                        <td className="text-muted">
+                          <RelativeTime value={r.tested_at} />
+                        </td>
+                      </tr>
+                      {open && (
+                        <tr>
+                          <td colSpan={7} className="whitespace-normal bg-elevated p-0">
+                            {/* Pinned to the left and capped: the table is
+                                wider than the drawer, and prose must not run
+                                off the side of it. */}
+                            <div className="sticky left-0 max-w-[40rem] space-y-3 px-4 py-3">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h4 className="whitespace-normal text-sm font-semibold text-fg">
+                                  How this crossed: {t.title}{' '}
+                                  <Mono className="ml-1 font-normal text-faint">{t.id}</Mono>
+                                </h4>
+                                <TechniqueFlags t={t} />
+                              </div>
+                              <p className="whitespace-normal text-sm">
+                                <span className="text-muted">On the wire: </span>
+                                <Mono>
+                                  {netName(r.source_network_id)} -&gt; {r.ip}
+                                  {r.port ? `:${r.port}/${r.protocol ?? 'tcp'}` : ''}
+                                </Mono>{' '}
+                                <span className="text-muted">
+                                  answered {r.status}
+                                  {r.rtt_ms ? ` in ${formatMs(r.rtt_ms)}` : ''}
+                                  {r.detail ? `, ${r.detail}` : ''}.
+                                </span>
+                              </p>
+                              <TechniqueDetail t={t} />
+                              <TechniqueHelpLink t={t} />
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
               </tbody>
             </table>
           </div>

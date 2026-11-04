@@ -7,7 +7,7 @@ import { useServerStatus } from '@/lib/queries'
 import { Button, IconButton, Spinner } from '@/components/ui/Button'
 import { TextField } from '@/components/ui/Field'
 import { InlineAlert } from '@/components/ui/Feedback'
-import { MoonIcon, SunIcon } from '@/components/icons'
+import { MoonIcon, NetyMark, SunIcon } from '@/components/icons'
 
 export default function LoginPage() {
   const { user, loading, login } = useAuth()
@@ -97,17 +97,7 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <svg width="44" height="44" viewBox="0 0 32 32" aria-hidden="true">
-            <rect width="32" height="32" rx="7" fill="rgb(var(--c-accent))" opacity="0.14" />
-            <path
-              d="M8 23V9l16 14V9"
-              stroke="rgb(var(--c-accent))"
-              strokeWidth="3"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <NetyMark size={52} />
           <div>
             <h1 className="text-xl font-semibold tracking-tight">NETY</h1>
             <p className="mt-1 text-sm text-muted">Internal network audit platform</p>

@@ -9,23 +9,13 @@ import { TextField } from '@/components/ui/Field'
 import { InlineAlert } from '@/components/ui/Feedback'
 import { useToast } from '@/components/ui/Toast'
 import { Badge } from '@/components/ui/Badge'
-import { AlertIcon, LockIcon, LogoutIcon, MoonIcon, SunIcon } from '@/components/icons'
+import { AlertIcon, LockIcon, LogoutIcon, MoonIcon, NetyMark, SunIcon } from '@/components/icons'
 import { formatDuration } from '@/lib/format'
 
 function Logo() {
   return (
     <Link to="/missions" className="flex items-center gap-2 rounded" aria-label="NETY home">
-      <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
-        <rect width="32" height="32" rx="7" fill="rgb(var(--c-accent))" opacity="0.14" />
-        <path
-          d="M8 23V9l16 14V9"
-          stroke="rgb(var(--c-accent))"
-          strokeWidth="3"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
+      <NetyMark size={24} />
       <span className="text-[15px] font-semibold tracking-tight">NETY</span>
     </Link>
   )

@@ -45,6 +45,11 @@ export default function ScanControls({
     }
   }
 
+  // Every control is laid out on the same minimum width, so Resume, Pause and
+  // Stop are the same size and whatever follows them in a table row lines up
+  // with the rows above and below.
+  const width = size === 'sm' ? 'min-w-[6rem]' : size === 'lg' ? 'min-w-[8rem]' : 'min-w-[7rem]'
+
   const busy = action.isPending
   const everStarted = Boolean(scan.started_at)
   const failedUnits = (scan.phases ?? []).reduce((sum, p) => sum + (p.failed ?? 0), 0)
@@ -59,11 +64,12 @@ export default function ScanControls({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
         {canStart && (
           <Button
             variant="success"
             size={size}
+            className={width}
             loading={busy}
             icon={<PlayIcon />}
             onClick={() => void run('start')}
@@ -75,6 +81,7 @@ export default function ScanControls({
           <Button
             variant="warning"
             size={size}
+            className={width}
             loading={busy}
             icon={<PauseIcon />}
             onClick={() => void run('pause')}
@@ -86,6 +93,7 @@ export default function ScanControls({
           <Button
             variant="danger"
             size={size}
+            className={width}
             disabled={busy}
             icon={<StopIcon />}
             onClick={() => setConfirmStop(true)}
@@ -96,6 +104,7 @@ export default function ScanControls({
         {showRetry && failedUnits > 0 && (
           <Button
             size={size}
+            className={width}
             loading={busy}
             icon={<RefreshIcon />}
             onClick={() => void run('retry-failed')}

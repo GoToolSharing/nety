@@ -5,7 +5,7 @@ export type SocketStatus = 'connecting' | 'open' | 'reconnecting' | 'closed'
 
 interface SocketHandlers {
   onEvent: (event: LiveEvent) => void
-  onStatus: (status: SocketStatus, nextRetryInMs?: number) => void
+  onStatus: (status: SocketStatus) => void
 }
 
 const BASE_DELAY = 500
@@ -53,23 +53,6 @@ export class EventSocket {
       }
     }
     this.handlers.onStatus('closed')
-  }
-
-  /** Force an immediate reconnect (used by the "reconnect now" button). */
-  reconnectNow(): void {
-    if (this.stopped) return
-    if (this.retryTimer) clearTimeout(this.retryTimer)
-    this.retryTimer = null
-    this.attempt = 0
-    if (this.ws) {
-      try {
-        this.ws.close()
-      } catch {
-        /* ignore */
-      }
-      return // onclose schedules the reconnect
-    }
-    this.open()
   }
 
   private open(): void {
@@ -120,7 +103,7 @@ export class EventSocket {
     // Full jitter, so a server restart does not get a thundering herd.
     const delay = Math.round(exponential / 2 + Math.random() * (exponential / 2))
     this.attempt = Math.min(this.attempt + 1, 10)
-    this.handlers.onStatus('reconnecting', delay)
+    this.handlers.onStatus('reconnecting')
     this.retryTimer = setTimeout(() => {
       this.retryTimer = null
       this.open()

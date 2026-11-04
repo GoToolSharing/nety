@@ -23,6 +23,49 @@ function Icon({ children, ...props }: IconProps) {
   )
 }
 
+/**
+ * The NETY mark: three nodes wired into one graph, laid across a dashed
+ * segment boundary. Two nodes sit on one side, one on the other, and the
+ * links run straight through the boundary - which is the whole job of the
+ * tool: map the nodes, then find out whether the boundary actually holds.
+ *
+ * Drawn on a 24-unit grid with heavy strokes so it survives 16px favicons and
+ * the 24px header. The nodes and links take the accent token; the boundary
+ * takes currentColor so it stays readable on a light or a dark surface.
+ */
+export function NetyMark({ size = 24, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M12.5 2v20"
+        stroke="currentColor"
+        strokeOpacity="0.4"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeDasharray="2 3"
+      />
+      <path
+        d="M5 7v10M5 7l14 5M5 17l14-5"
+        stroke="rgb(var(--c-accent))"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="5" cy="7" r="2.9" fill="rgb(var(--c-accent))" />
+      <circle cx="5" cy="17" r="2.9" fill="rgb(var(--c-accent))" />
+      <circle cx="19" cy="12" r="2.9" fill="rgb(var(--c-accent))" />
+    </svg>
+  )
+}
+
 export const XIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M18 6 6 18M6 6l12 12" />
@@ -253,11 +296,10 @@ export const TrunkIcon = (p: IconProps) => (
   </Icon>
 )
 
-export const WifiOffIcon = (p: IconProps) => (
+export const HelpIcon = (p: IconProps) => (
   <Icon {...p}>
-    <path d="M2 4l20 16" />
-    <path d="M5 11a11 11 0 0 1 4-2.5M19 11a11 11 0 0 0-5.5-2.9" />
-    <path d="M8.5 14.5a6 6 0 0 1 2-1.2M12 18.5v.1" />
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.5 9.3a2.6 2.6 0 1 1 3.4 2.5c-.6.2-.9.7-.9 1.3v.4M12 16.8v.1" />
   </Icon>
 )
 
@@ -385,3 +427,32 @@ export const ASSET_KIND_LABELS: Record<AssetKind, string> = {
   hypervisor: 'Hypervisor',
   storage: 'Storage',
 }
+// Triage status icons. Small and flat, so they read at 13px beside a label.
+
+export const TodoIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="8" />
+  </Icon>
+)
+
+export const SpinnerIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="8" />
+    <path d="M12 12V7" />
+    <path d="M12 12l3.5 2" />
+  </Icon>
+)
+
+export const FlagIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M5 21V4" />
+    <path d="M5 4h11l-2 3.5L16 11H5" />
+  </Icon>
+)
+
+export const SkipIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="8" />
+    <path d="M9 12h6" />
+  </Icon>
+)

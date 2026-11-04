@@ -51,16 +51,43 @@ const SEVERITY_TONE: Record<Severity, Tone> = {
   info: 'neutral',
 }
 
-/** A severity is never signalled by colour alone: the word is always there,
- * plus a filled-block ramp readable without colour perception. */
-const SEVERITY_RAMP: Record<Severity, string> = {
-  critical: '████',
-  high: '███',
-  medium: '██',
-  low: '█',
-  info: '·',
+/** How many of the four steps of the meter are lit, highest first. */
+const SEVERITY_STEPS: Record<Severity, number> = {
+  critical: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+  info: 0,
 }
 
+/**
+ * A four-step meter drawn in the badge's own colour. The rank is carried by
+ * the number of lit bars and by the label, so the badge still reads without
+ * colour perception; the colour only reinforces it.
+ */
+function SeverityMeter({ steps }: { steps: number }) {
+  return (
+    <svg width="11" height="8" viewBox="0 0 11 8" aria-hidden="true" focusable="false">
+      {[0, 1, 2, 3].map((i) => (
+        <rect
+          key={i}
+          x={i * 3}
+          y={6.5 - i * 1.7}
+          width="2"
+          height={1.5 + i * 1.7}
+          rx="0.5"
+          fill="currentColor"
+          fillOpacity={i < steps ? 1 : 0.25}
+        />
+      ))}
+    </svg>
+  )
+}
+
+/**
+ * The severity badge, used everywhere a finding's severity is shown. One
+ * shape, one size, one reading order: meter, then word.
+ */
 export function SeverityBadge({
   severity,
   className,
@@ -68,13 +95,20 @@ export function SeverityBadge({
   severity: Severity
   className?: string
 }) {
+  const steps = SEVERITY_STEPS[severity] ?? 0
   return (
-    <Badge tone={SEVERITY_TONE[severity] ?? 'neutral'} className={cn('uppercase', className)}>
-      <span aria-hidden="true" className="text-[7px] leading-none tracking-tighter">
-        {SEVERITY_RAMP[severity] ?? '·'}
-      </span>
+    <span
+      className={cn(
+        'inline-flex select-none items-center gap-1.5 rounded border px-1.5 py-0.5',
+        'text-[10px] font-semibold uppercase leading-4 tracking-wide',
+        TONES[SEVERITY_TONE[severity] ?? 'neutral'],
+        severity === 'critical' && 'border-crit/70 bg-crit/20',
+        className,
+      )}
+    >
+      <SeverityMeter steps={steps} />
       {severity}
-    </Badge>
+    </span>
   )
 }
 

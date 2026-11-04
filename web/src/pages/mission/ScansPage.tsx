@@ -138,12 +138,16 @@ export default function ScansPage() {
                   <th>Scan</th>
                   <th>Network</th>
                   <th>Status</th>
-                  <th className="w-[200px]">Progress</th>
+                  <th className="w-[170px]">Progress</th>
                   <th className="text-right">Hosts</th>
                   <th className="text-right">Services</th>
                   <th className="text-right">Findings</th>
                   <th>Started</th>
-                  <th className="w-px">Actions</th>
+                  {/* Pinned to the right edge: the table is wider than a
+                      laptop screen and the controls must stay reachable. */}
+                  <th className="sticky right-0 z-20 w-px border-l border-border bg-surface text-right">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -181,30 +185,37 @@ export default function ScansPage() {
                       )}
                     </td>
                     <td>
-                      <ProgressBar
-                        value={s.progress}
-                        height="h-1.5"
-                        striped={s.status === 'running'}
-                        tone={
-                          s.status === 'running'
-                            ? 'accent'
-                            : s.status === 'paused'
-                              ? 'warn'
-                              : s.status === 'completed'
-                                ? 'ok'
-                                : s.status === 'failed'
-                                  ? 'crit'
-                                  : 'muted'
-                        }
-                        label={`Scan ${s.id}`}
-                      />
-                      <div className="mt-1 flex items-center justify-between text-[11px] text-faint">
-                        <span className="tabular">{formatPercent(s.progress)}</span>
-                        <span className="truncate pl-2">
-                          {s.status === 'running' && s.eta_seconds
-                            ? `ETA ${formatDuration(s.eta_seconds)}`
-                            : s.phase || ''}
+                      {/* Bar and percentage share one baseline, so the cell
+                          reads as a single line whatever the row height. */}
+                      <div className="flex w-[150px] items-center gap-2">
+                        <ProgressBar
+                          value={s.progress}
+                          height="h-1.5"
+                          className="min-w-0 flex-1"
+                          striped={s.status === 'running'}
+                          tone={
+                            s.status === 'running'
+                              ? 'accent'
+                              : s.status === 'paused'
+                                ? 'warn'
+                                : s.status === 'completed'
+                                  ? 'ok'
+                                  : s.status === 'failed'
+                                    ? 'crit'
+                                    : 'muted'
+                          }
+                          label={`Scan ${s.id}`}
+                        />
+                        <span className="tabular w-9 shrink-0 text-right text-[11px] text-muted">
+                          {formatPercent(s.progress)}
                         </span>
+                      </div>
+                      {/* Fixed height: a scan without a phase must not shift
+                          the bar above it out of line with the other rows. */}
+                      <div className="h-4 truncate text-[11px] leading-4 text-faint">
+                        {s.status === 'running' && s.eta_seconds
+                          ? `ETA ${formatDuration(s.eta_seconds)}`
+                          : s.phase || ''}
                       </div>
                     </td>
                     <td className="tabular text-right">{formatNumber(s.stats?.hosts_up ?? 0)}</td>
@@ -215,17 +226,32 @@ export default function ScansPage() {
                     <td className="text-muted">
                       <RelativeTime value={s.started_at ?? s.created_at} />
                     </td>
-                    <td>
+                    <td className="sticky right-0 z-10 border-l border-border bg-surface">
+                      {/* Fixed slots: whatever combination of controls a row
+                          shows, Open and the delete button stay in the same
+                          column down the whole table. */}
                       <div className="flex items-center justify-end gap-2">
-                        <ScanControls scan={s} missionId={missionId} size="sm" showRetry={false} />
-                        <LinkButton to={`../scans/${s.id}`} size="sm">
+                        <div className="flex w-[12.5rem] items-center justify-end gap-2">
+                          <ScanControls
+                            scan={s}
+                            missionId={missionId}
+                            size="sm"
+                            showRetry={false}
+                          />
+                        </div>
+                        <LinkButton to={`../scans/${s.id}`} size="sm" className="w-[4.5rem]">
                           Open
                         </LinkButton>
-                        {canWrite && s.status !== 'running' && (
-                          <IconButton label={`Delete scan ${s.id}`} onClick={() => setDeleting(s)}>
-                            <TrashIcon />
-                          </IconButton>
-                        )}
+                        <div className="w-8 shrink-0">
+                          {canWrite && s.status !== 'running' && (
+                            <IconButton
+                              label={`Delete scan ${s.id}`}
+                              onClick={() => setDeleting(s)}
+                            >
+                              <TrashIcon />
+                            </IconButton>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>

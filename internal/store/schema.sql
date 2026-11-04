@@ -212,7 +212,9 @@ CREATE TABLE IF NOT EXISTS services (
 CREATE INDEX IF NOT EXISTS idx_services_mission ON services(mission_id, network_id);
 CREATE INDEX IF NOT EXISTS idx_services_host ON services(host_id);
 CREATE INDEX IF NOT EXISTS idx_services_port ON services(mission_id, port);
-CREATE INDEX IF NOT EXISTS idx_services_triage ON services(mission_id, triage_status);
+-- idx_services_triage is created by the migration, not here. This file runs
+-- against existing databases too, where the triage columns do not exist yet
+-- (migrations run after it), and indexing a missing column fails the startup.
 
 CREATE TABLE IF NOT EXISTS findings (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,

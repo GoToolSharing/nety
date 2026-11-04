@@ -1,5 +1,7 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
-import { useNetworks, useServices } from '@/lib/queries'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import { qk, useNetworks, useServices } from '@/lib/queries'
 import { useDebounced, useMissionId } from '@/lib/hooks'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, PageHeader } from '@/components/ui/Card'
@@ -10,7 +12,9 @@ import { Mono, Pagination, RelativeTime, SearchInput } from '@/components/common
 import ServiceDetail from '@/components/ServiceDetail'
 import { formatNumber } from '@/lib/format'
 import { ChevronDownIcon, ChevronRightIcon, ServiceIcon } from '@/components/icons'
-import type { Service } from '@/types/api'
+import { TriageProgress, TriageSelect } from '@/components/Triage'
+import { useToast } from '@/components/ui/Toast'
+import type { Service, TriageStatus } from '@/types/api'
 
 const PAGE_SIZE = 50
 
@@ -24,6 +28,18 @@ export default function ServicesPage() {
   const [port, setPort] = useState('')
   const [offset, setOffset] = useState(0)
   const [expanded, setExpanded] = useState<number | null>(null)
+  const [triage, setTriage] = useState<TriageStatus[]>([])
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [busy, setBusy] = useState<number | null>(null)
+
+  const qc = useQueryClient()
+  const toast = useToast()
+
+  const summary = useQuery({
+    queryKey: ['triage-summary', missionId, networkId],
+    queryFn: () => api.triageSummary(missionId, networkId || undefined),
+    enabled: missionId > 0,
+  })
 
   const debouncedQuery = useDebounced(query, 300)
   const debouncedPort = useDebounced(port, 300)
@@ -31,7 +47,8 @@ export default function ServicesPage() {
   // Any filter change restarts the pagination window.
   useEffect(() => {
     setOffset(0)
-  }, [debouncedQuery, networkId, protocol, debouncedPort])
+    setSelected(new Set())
+  }, [debouncedQuery, networkId, protocol, debouncedPort, triage])
 
   const params = useMemo(
     () => ({
@@ -39,10 +56,11 @@ export default function ServicesPage() {
       network_id: networkId || undefined,
       protocol: protocol || undefined,
       port: debouncedPort ? Number(debouncedPort) : undefined,
+      triage: triage.length ? triage.join(',') : undefined,
       limit: PAGE_SIZE,
       offset,
     }),
-    [debouncedQuery, networkId, protocol, debouncedPort, offset],
+    [debouncedQuery, networkId, protocol, debouncedPort, triage, offset],
   )
 
   const services = useServices(missionId, params)
@@ -56,6 +74,53 @@ export default function ServicesPage() {
   }, [networks.data])
 
   const describe = (s: Service) => [s.product, s.version].filter(Boolean).join(' ')
+
+  const refresh = useCallback(() => {
+    void qc.invalidateQueries({ queryKey: ['services', missionId] })
+    void qc.invalidateQueries({ queryKey: ['triage-summary', missionId] })
+    void qc.invalidateQueries({ queryKey: qk.summary(missionId) })
+  }, [qc, missionId])
+
+  const setStatus = useCallback(
+    async (service: Service, status: TriageStatus) => {
+      setBusy(service.id)
+      try {
+        await api.triageService(service.id, { status })
+        refresh()
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not update the status')
+      } finally {
+        setBusy(null)
+      }
+    },
+    [refresh, toast],
+  )
+
+  const setSelectionStatus = useCallback(
+    async (status: TriageStatus) => {
+      const ids = [...selected]
+      if (ids.length === 0) return
+      try {
+        const res = await api.triageBulk(missionId, ids, status)
+        setSelected(new Set())
+        refresh()
+        toast.success(`${res.updated} services marked ${status.replace('_', ' ')}`)
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not update the selection')
+      }
+    },
+    [missionId, selected, refresh, toast],
+  )
+
+  const toggleSelected = (id: number) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const allOnPageSelected = items.length > 0 && items.every((s) => selected.has(s.id))
 
   return (
     <PageContainer wide>
@@ -115,9 +180,54 @@ export default function ServicesPage() {
         </span>
       </div>
 
+      {summary.data && (
+        <div className="mt-4">
+          <TriageProgress
+            counts={summary.data.counts}
+            total={summary.data.total}
+            active={triage}
+            onPick={(status) =>
+              setTriage((prev) =>
+                status === null
+                  ? []
+                  : prev.includes(status)
+                    ? prev.filter((s) => s !== status)
+                    : [...prev, status],
+              )
+            }
+          />
+        </div>
+      )}
+
+      {selected.size > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent/5 px-3 py-2">
+          <span className="text-xs font-medium text-fg">
+            {selected.size} selected
+          </span>
+          <span className="text-xs text-muted">Mark as</span>
+          {(['done', 'flagged', 'skipped', 'in_progress', 'todo'] as TriageStatus[]).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => void setSelectionStatus(s)}
+              className="rounded border border-border bg-surface px-2 py-0.5 text-[11px] text-fg hover:border-border-strong"
+            >
+              {s.replace('_', ' ')}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="ml-auto text-[11px] text-muted hover:text-fg"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
       <Card className="mt-4">
         {services.isLoading ? (
-          <TableSkeleton rows={10} columns={7} />
+          <TableSkeleton rows={10} columns={9} />
         ) : services.isError ? (
           <ErrorState
             title="Could not load the services"
@@ -152,6 +262,20 @@ export default function ServicesPage() {
                 <thead>
                   <tr>
                     <th className="w-px" />
+                    <th className="w-px">
+                      <input
+                        type="checkbox"
+                        aria-label="Select every service on this page"
+                        checked={allOnPageSelected}
+                        onChange={() =>
+                          setSelected(
+                            allOnPageSelected ? new Set() : new Set(items.map((s) => s.id)),
+                          )
+                        }
+                        className="h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]"
+                      />
+                    </th>
+                    <th className="w-[122px]">Status</th>
                     <th>Address</th>
                     <th>Port</th>
                     <th>State</th>
@@ -185,6 +309,22 @@ export default function ServicesPage() {
                               {open ? <ChevronDownIcon /> : <ChevronRightIcon />}
                             </button>
                           </td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              aria-label={`Select ${s.ip} port ${s.port}`}
+                              checked={selected.has(s.id)}
+                              onChange={() => toggleSelected(s.id)}
+                              className="h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]"
+                            />
+                          </td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <TriageSelect
+                              value={s.triage?.status}
+                              busy={busy === s.id}
+                              onChange={(next) => void setStatus(s, next)}
+                            />
+                          </td>
                           <td>
                             <Mono className="font-medium">{s.ip}</Mono>
                           </td>
@@ -204,8 +344,10 @@ export default function ServicesPage() {
                           <td className="max-w-[240px] truncate text-muted" title={describe(s)}>
                             {describe(s) || '-'}
                           </td>
-                          <td className="max-w-[280px] truncate text-xs text-muted">
-                            {s.http?.title
+                          <td className="max-w-[280px] truncate text-xs text-muted" title={s.triage?.note || undefined}>
+                            {s.triage?.note
+                              ? s.triage.note
+                              : s.http?.title
                               ? s.http.title
                               : s.tls?.subject_cn
                                 ? `CN=${s.tls.subject_cn}`
@@ -224,8 +366,8 @@ export default function ServicesPage() {
                         </tr>
                         {open && (
                           <tr>
-                            <td colSpan={9} className="whitespace-normal bg-bg/60 p-4">
-                              <ServiceDetail service={s} />
+                            <td colSpan={11} className="whitespace-normal bg-bg/60 p-4">
+                              <ServiceDetail service={s} onTriaged={refresh} />
                             </td>
                           </tr>
                         )}

@@ -16,6 +16,7 @@ import { CardSkeleton, EmptyState, InlineAlert } from '@/components/ui/Feedback'
 import { Badge, ScanStatusBadge, SeverityBadge } from '@/components/ui/Badge'
 import { LinkButton } from '@/components/ui/Button'
 import { ProgressBar, RelativeTime } from '@/components/common'
+import SeverityByNetwork from '@/components/charts/SeverityByNetwork'
 import { formatNumber, formatPercent } from '@/lib/format'
 import { SEVERITIES, type Severity } from '@/types/api'
 import { NetworkIcon, PlusIcon, ScanIcon, TrunkIcon } from '@/components/icons'
@@ -158,7 +159,20 @@ export default function OverviewPage() {
             />
           </div>
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <Card className="mt-4">
+            <CardHeader
+              title="Findings by network"
+              description="Which VLAN carries the exposure, worst first. Each bar is one network, stacked critical first and scaled against the busiest network."
+              actions={
+                <LinkButton to="../findings" size="sm">
+                  All findings
+                </LinkButton>
+              }
+            />
+            <SeverityByNetwork networks={nets} findings={findingList} />
+          </Card>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 title="Scans"

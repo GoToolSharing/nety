@@ -26,6 +26,8 @@ import type {
   ServicePage,
   SessionInfo,
   TechniqueInfo,
+  TriageStatus,
+  TriageSummary,
   User,
 } from '@/types/api'
 
@@ -245,6 +247,7 @@ export const api = {
       port?: number
       protocol?: string
       q?: string
+      triage?: string
       limit?: number
       offset?: number
     } = {},
@@ -259,6 +262,24 @@ export const api = {
     // more"; a short page is the last one.
     return { items, has_more: limit > 0 && items.length >= limit, limit, offset }
   },
+  service: (id: number) => request<Service>(`api/services/${id}`),
+
+  /** Record a status, a note, or both. A field left out is left alone. */
+  triageService: (id: number, body: { status?: TriageStatus; note?: string }) =>
+    request<Service>(`api/services/${id}`, { method: 'PATCH', body }),
+
+  /** Apply one status to a selection in a single call. */
+  triageBulk: (missionId: number, serviceIds: number[], status: TriageStatus) =>
+    request<{ updated: number; status: TriageStatus }>(
+      `api/missions/${missionId}/services/triage`,
+      { method: 'POST', body: { service_ids: serviceIds, status } },
+    ),
+
+  triageSummary: (missionId: number, networkId?: number) =>
+    request<TriageSummary>(`api/missions/${missionId}/triage`, {
+      query: { network_id: networkId },
+    }),
+
   findings: async (missionId: number, networkId?: number) =>
     list(
       await request<Finding[] | null>(`api/missions/${missionId}/findings`, {
