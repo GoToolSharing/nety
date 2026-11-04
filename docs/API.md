@@ -61,6 +61,7 @@ missions), `viewer` (read-only on their missions).
     "scan_mode": "auto",         // auto | syn | connect
     "host_discovery": true, "service_detection": true,
     "identity_collection": true, "checks": true,
+    "allow_default_creds": false,   // opt-in, the only intrusive checks
     // segmentation only
     "source_network_ids": [], "techniques": [], "allow_l2_active": false,
     "vlan_range": ""

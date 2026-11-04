@@ -139,6 +139,10 @@ type ScanOptions struct {
 	ServiceDetection   bool `json:"service_detection"`   //
 	IdentityCollection bool `json:"identity_collection"` //
 	Checks             bool `json:"checks"`              //
+	// AllowDefaultCreds enables the only intrusive check family: a short,
+	// curated list of vendor default credentials, capped so nothing can be
+	// locked out. Off by default and opted into per scan.
+	AllowDefaultCreds bool `json:"allow_default_creds"`
 
 	// Segmentation only.
 	SourceNetworkIDs []int64  `json:"source_network_ids,omitempty"` // whose services to replay (empty = all others)

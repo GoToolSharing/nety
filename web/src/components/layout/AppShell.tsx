@@ -123,7 +123,7 @@ export default function AppShell() {
   const status = useServerStatus()
   const [pwOpen, setPwOpen] = useState(false)
 
-  const privileged = status.data?.privileged ?? status.data?.raw_sockets
+  const privileged = status.data?.raw_sockets
 
   return (
     <div className="flex h-full min-h-0 flex-col">

@@ -740,7 +740,7 @@ func (r *Runner) execChecks(ctx context.Context, sc model.Scan, st *runState, u 
 	}
 	findings, err := r.eng.Checker.Run(ctx, host, services, engine.CheckOptions{
 		Timeout:           r.timeout(sc),
-		AllowDefaultCreds: false,
+		AllowDefaultCreds: sc.Options.AllowDefaultCreds,
 	})
 	if err != nil {
 		return err

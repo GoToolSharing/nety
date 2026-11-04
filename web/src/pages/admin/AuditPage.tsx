@@ -19,8 +19,8 @@ function actionTone(action: string): 'crit' | 'warn' | 'ok' | 'neutral' | 'accen
   return 'neutral'
 }
 
-function entryTime(e: AuditEntry): string | undefined {
-  return e.time ?? e.created_at
+function entryTime(e: AuditEntry): string {
+  return e.time
 }
 
 export default function AuditPage() {
@@ -36,11 +36,10 @@ export default function AuditPage() {
           !q ||
           e.action.toLowerCase().includes(q) ||
           (e.username ?? '').toLowerCase().includes(q) ||
-          (e.target ?? '').toLowerCase().includes(q) ||
           (e.detail ?? '').toLowerCase().includes(q) ||
-          (e.ip ?? '').includes(q),
+          (e.remote ?? '').includes(q),
       )
-      .sort((a, b) => (entryTime(b) ?? '').localeCompare(entryTime(a) ?? ''))
+      .sort((a, b) => entryTime(b).localeCompare(entryTime(a)))
   }, [audit.data, query])
 
   const unavailable = audit.isError
@@ -117,9 +116,9 @@ export default function AuditPage() {
                   <th>When</th>
                   <th>User</th>
                   <th>Action</th>
-                  <th>Target</th>
+                  <th>Mission</th>
                   <th>Detail</th>
-                  <th>Source IP</th>
+                  <th>Source</th>
                 </tr>
               </thead>
               <tbody>
@@ -129,22 +128,18 @@ export default function AuditPage() {
                       <RelativeTime value={entryTime(e)} />
                     </td>
                     <td className="font-medium">
-                      {e.username ?? (e.user_id ? `#${e.user_id}` : '—')}
+                      {e.username || (e.user_id ? `#${e.user_id}` : '—')}
                     </td>
                     <td>
                       <Badge tone={actionTone(e.action)}>{e.action}</Badge>
-                      {e.status && <span className="ml-1.5 text-xs text-muted">{e.status}</span>}
                     </td>
                     <td className="text-muted">
-                      {e.target ? <Mono>{e.target}</Mono> : '—'}
-                      {e.mission_id ? (
-                        <span className="ml-1.5 text-xs text-faint">mission #{e.mission_id}</span>
-                      ) : null}
+                      {e.mission_id ? `#${e.mission_id}` : '—'}
                     </td>
-                    <td className="max-w-[360px] truncate text-muted" title={e.detail}>
+                    <td className="max-w-[420px] truncate text-muted" title={e.detail}>
                       {e.detail || '—'}
                     </td>
-                    <td className="text-muted">{e.ip ? <Mono>{e.ip}</Mono> : '—'}</td>
+                    <td className="text-muted">{e.remote ? <Mono>{e.remote}</Mono> : '—'}</td>
                   </tr>
                 ))}
               </tbody>
