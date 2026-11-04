@@ -1,0 +1,84 @@
+# NETY integration lab.
+#
+# Three isolated Docker networks stand in for three VLANs, each with a few
+# services to find. NETY is attached to lab_vlan10 only, so a discovery scan
+# sees that segment, and a segmentation scan should NOT reach the others —
+# until you attach NETY to a second network and watch the matrix light up:
+#
+#   make lab-up
+#   docker compose -f build/lab/docker-compose.yml logs -f nety   # admin password
+#   open https://localhost:8443/
+#
+#   # later, to prove a crossing is detected:
+#   docker network connect lab_vlan20 nety-lab
+#
+# Nothing here is installed on the host.
+
+name: nety-lab
+
+networks:
+  vlan10:
+    name: lab_vlan10
+    ipam: { config: [{ subnet: 10.10.10.0/24 }] }
+  vlan20:
+    name: lab_vlan20
+    ipam: { config: [{ subnet: 10.10.20.0/24 }] }
+  vlan30:
+    name: lab_vlan30
+    ipam: { config: [{ subnet: 10.10.30.0/24 }] }
+
+services:
+  nety:
+    container_name: nety-lab
+    build:
+      context: ../..
+      dockerfile: build/lab/Dockerfile.lab
+    # Raw sockets for SYN scanning and ARP discovery, NET_ADMIN for the
+    # route and sub-interface work the segmentation techniques need.
+    cap_add: [NET_RAW, NET_ADMIN]
+    ports: ["8443:8443"]
+    environment:
+      NETY_DATA: /data
+      NETY_LISTEN: ":8443"
+      NETY_LOG_LEVEL: info
+    volumes:
+      - nety-data:/data
+    networks: [vlan10]
+
+  # --- VLAN 10: the segment NETY is plugged into -------------------------
+  web10:
+    image: nginx:alpine
+    networks: { vlan10: { ipv4_address: 10.10.10.10 } }
+
+  ssh10:
+    image: linuxserver/openssh-server:latest
+    environment: { PUID: "1000", PGID: "1000", TZ: "UTC", USER_NAME: lab }
+    networks: { vlan10: { ipv4_address: 10.10.10.11 } }
+
+  # --- VLAN 20: servers, must be unreachable from VLAN 10 ----------------
+  web20:
+    image: httpd:alpine
+    networks: { vlan20: { ipv4_address: 10.10.20.10 } }
+
+  db20:
+    image: postgres:16-alpine
+    environment: { POSTGRES_PASSWORD: labpassword }
+    networks: { vlan20: { ipv4_address: 10.10.20.11 } }
+
+  redis20:
+    # Deliberately unauthenticated: the checks engine should flag it.
+    image: redis:alpine
+    networks: { vlan20: { ipv4_address: 10.10.20.12 } }
+
+  # --- VLAN 30: a third segment -----------------------------------------
+  web30:
+    image: traefik/whoami:latest
+    networks: { vlan30: { ipv4_address: 10.10.30.10 } }
+
+  ftp30:
+    image: delfer/alpine-ftp-server:latest
+    environment: { USERS: "lab|labpassword" }
+    networks: { vlan30: { ipv4_address: 10.10.30.11 } }
+
+volumes:
+  nety-data:
