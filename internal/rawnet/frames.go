@@ -104,6 +104,15 @@ func NewFrameBuilder() *FrameBuilder {
 	}
 }
 
+// init makes a zero-value FrameBuilder usable.
+func (b *FrameBuilder) init() {
+	if b.buf == nil {
+		b.buf = gopacket.NewSerializeBufferExpectedSize(64, 256)
+		b.opts = gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+		b.ipID = uint16(NewCookie().k0)
+	}
+}
+
 // l2Layers builds the Ethernet header (plus 802.1Q / QinQ tags) carrying
 // payload type et, and returns the layer chain to prepend.
 func (b *FrameBuilder) l2Layers(l2 L2, et layers.EthernetType) []gopacket.SerializableLayer {
@@ -299,6 +308,10 @@ func (b *FrameBuilder) ICMPTimestamp(l2 L2, src, dst netip.Addr, ttl uint8, id, 
 }
 
 func (b *FrameBuilder) serialize(ls ...gopacket.SerializableLayer) ([]byte, error) {
+	// A FrameBuilder is normally made by NewFrameBuilder, but the zero value
+	// has a nil buffer and would panic here. Since this sits on the packet
+	// sending path, initialise lazily rather than crash the scan.
+	b.init()
 	if err := b.buf.Clear(); err != nil {
 		return nil, err
 	}

@@ -172,19 +172,33 @@ looks like.
 
 Tear it down with `make lab-down`.
 
-### What the lab does and does not prove
+### What is proven, and what is not
 
-Validated against a live network in the lab: raw sockets, the ARP sweep, the
-stateless SYN scan, UDP probing, service fingerprinting, identity collection,
-the checks, the full segmentation matrix with its per-technique breakdown, and
-the guarantee that the machine is left exactly as it was found.
+`make verify-kernel` runs the checks that unit tests cannot reach, in a
+throwaway privileged container — the lab does not need to be up:
 
-Still requiring physical hardware: that a real switch grants a trunk in
-response to DTP, and that an access port forwards a double-tagged frame. The
-code paths are exercised, their cleanup is proven, but the switch's half of
-those conversations cannot be simulated. Treat the first run of the
-`dtp-trunk` and `double-tag` techniques on a client site as untested in the
-field.
+- an 802.1Q sub-interface is created, addressed, routed through and deleted,
+  and every change is tracked and reverted, with untracked changes left alone;
+- the DTP advertisement NETY would send is decoded and checked byte for byte
+  against the protocol (Cisco SNAP 0x2004, version, all four TLVs);
+- a veth pair with one end in its own network namespace carries a **real
+  tagged data path**: a sub-interface on each side, a listener on the far one,
+  and NETY's own port scanner finding it through the tag — which is exactly
+  what `dot1q-subif` does once a trunk exists;
+- a tagged frame built by NETY's own frame builder — the one `double-tag`
+  uses — is put on the wire and answered by a real 802.1Q decoder, so the tag
+  it writes is demonstrably the one a switch would read.
+
+`make lab-up` then validates the rest against a live network: raw sockets, the
+ARP sweep, the stateless SYN scan, UDP probing, fingerprinting, identity
+collection, the checks, and the full segmentation matrix — leaving no
+interface and no route behind.
+
+**What still needs physical hardware:** that a switch *grants* a trunk in
+response to the DTP frame. The frame is verified correct and everything that
+follows a granted trunk is verified working; what is untested is the switch's
+reply. That is the single remaining unknown in `dtp-trunk`, and it fails
+safely — no trunk means the technique reports nothing rather than guessing.
 
 ---
 

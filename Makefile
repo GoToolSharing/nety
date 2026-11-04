@@ -47,7 +47,7 @@ DOCKER_RUN = docker run --rm -t \
 	-e HOME=/tmp \
 	$(TOOL_IMAGE)
 
-.PHONY: all build test vet fmt web shell image lab-up lab-down clean toolchain
+.PHONY: all build test vet fmt web shell image lab-up lab-down lab-verify verify-kernel clean toolchain
 
 all: build
 
@@ -108,8 +108,17 @@ image:
 lab-up: build
 	docker compose -f build/lab/docker-compose.yml up -d --build
 
-## Exercise the raw-socket and netlink paths against a real kernel inside the
-## lab. It reconfigures the lab container's interfaces, never your machine.
+## Exercise the raw-socket, netlink and 802.1Q paths against a real kernel.
+## Runs in its own throwaway container — the lab does not need to be up, and
+## nothing on your machine is reconfigured.
+verify-kernel: toolchain
+	$(DOCKER_RUN) env GOOS=linux GOARCH=$(LAB_ARCH) go build -o dist/labcheck ./cmd/labcheck
+	docker run --rm \
+		--cap-add=NET_RAW --cap-add=NET_ADMIN --cap-add=SYS_ADMIN \
+		-v $(PWD)/dist:/dist --entrypoint /dist/labcheck \
+		$(TOOL_IMAGE) -iface eth0
+
+## Same checks, run inside the lab container against the lab's own network.
 lab-verify: toolchain
 	$(DOCKER_RUN) env GOOS=linux GOARCH=$(LAB_ARCH) go build -o dist/labcheck ./cmd/labcheck
 	docker cp dist/labcheck nety-lab:/usr/local/bin/labcheck

@@ -26,8 +26,6 @@ func main() {
 	parent := flag.String("iface", "eth0", "parent interface to build the sub-interface on")
 	vlan := flag.Int("vlan", 4000, "VLAN id to use for the test (must be unused)")
 	flag.Parse()
-	fail := func(f string, a ...any) { fmt.Printf("FAIL  "+f+"\n", a...); os.Exit(1) }
-	ok := func(f string, a ...any) { fmt.Printf("ok    "+f+"\n", a...) }
 
 	name, err := netif.AddVLAN(*parent, *vlan)
 	if err != nil {
@@ -81,5 +79,28 @@ func main() {
 	}
 	ok("undo of an untracked change is a safe no-op")
 
-	fmt.Println("\nALL REAL-KERNEL VLAN CHECKS PASSED")
+	// The DTP advertisement NETY would send, decoded and checked against the
+	// protocol. A switch is still needed to prove one answers it.
+	if err := checkDTPFrame(); err != nil {
+		fail("DTP frame: %v", err)
+	}
+	ok("DTP advertisement is well formed (Cisco SNAP 0x2004, all four TLVs)")
+
+	// The half of dot1q-subif that does not need a switch: real tagged frames
+	// over a real kernel path, scanned by the real scanner.
+	fmt.Println("\n-- 802.1Q data path (veth across two namespaces) --")
+	if err := runVLANDataPathCheck("netychk0", "netychk1"); err != nil {
+		fail("802.1Q data path: %v", err)
+	}
+
+	fmt.Println("\nALL REAL-KERNEL CHECKS PASSED")
+	fmt.Println("Still unproven without physical hardware: that a switch grants")
+	fmt.Println("a trunk in response to the DTP frame above.")
 }
+
+func fail(f string, a ...any) {
+	fmt.Printf("FAIL  "+f+"\n", a...)
+	os.Exit(1)
+}
+
+func ok(f string, a ...any) { fmt.Printf("ok    "+f+"\n", a...) }
