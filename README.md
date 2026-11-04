@@ -1,151 +1,222 @@
 # NETY
 
-**Internal network mapping and VLAN segmentation testing, as a shareable web
-platform.**
+**Map every VLAN on an internal pentest, then measure which ones can actually
+reach each other.**
 
-NETY is the tool you plug into a client's switch port. It maps what is on that
-VLAN, fingerprints every service it finds, gives each machine a stable identity
-that survives a DHCP reshuffle overnight, and then - once you have mapped
-several VLANs - tells you exactly which flows actually cross the segmentation
-boundary, plain routing or bypass technique alike.
+You plug into a switch port, NETY maps that segment and fingerprints everything
+on it. You move to the next VLAN and repeat. Then, from any one of them, it
+replays every service it found elsewhere and tells you exactly which flows
+cross the boundary, by plain routing or by working around the filtering.
 
-It is one static Go binary. Everything is implemented natively in-process:
-no `nmap`, no `masscan`, no subprocess to parse.
+One static Go binary, an authenticated web interface, and no `nmap` or
+`masscan` subprocess: the scanning is native, so results stream out as they are
+found instead of landing in a file at the end.
 
----
-
-## Why it exists
-
-A segmentation review usually goes like this: plug into VLAN A, run a port
-scan, wait, copy the output somewhere, plug into VLAN B, repeat, then try to
-reconcile the files by hand and work out what can reach what. Three things hurt:
-
-1. **Results arrive at the end.** A long scan that dies at 80 % leaves nothing.
-2. **Nothing is resumable.** Come back the next day and you start over.
-3. **Machines lose their identity.** DHCP moved everything; yesterday's
-   inventory no longer lines up with today's.
-
-NETY is built around fixing exactly those three:
-
-- **Live results.** Every host, port, service, finding and reachability result
-  is written to the database and pushed to the browser the instant it is found.
-  You watch the tables fill while the scan runs.
-- **Pause, resume, survive a crash.** A scan is a queue of persisted work
-  units. Pause it, close the laptop, reboot the machine, resume the next
-  morning: it continues exactly where it stopped, and nothing is redone.
-- **Stable identities.** NETY collects evidence that outlives an IP change
-  (SMB server GUID, SNMP engine ID, SSH host keys, NetBIOS adapter MAC,
-  certificates, FQDNs…) and correlates observations into long-lived *assets*,
-  so the same machine seen on a new address tomorrow is still the same machine.
-
-And it is a **platform, not a CLI**: it serves an authenticated HTTPS web
-interface, so a colleague on the same VLAN opens your IP in a browser, logs in
-with their own account and watches the same scan live.
+![Mission overview](docs/images/overview.png)
 
 ---
 
-## What it does
+## Why
 
-**Per network (VLAN):**
-- auto-detects interface, addressing, gateway, DNS and DHCP server
-- passively listens for CDP/LLDP/DTP/STP and 802.1Q tags, so you learn what the
-  switch port is configured for - a port that offers to negotiate a trunk is a
-  finding in itself
-- host discovery (ARP, ICMP echo and timestamp, TCP SYN and ACK, UDP payloads)
-- stateless SYN port scanning in the style of masscan, or a connect scan when
-  raw sockets are not available
-- UDP scanning with ~35 real protocol payloads, not empty datagrams
-- service and version fingerprinting: TLS (full certificate detail), HTTP
-  (title, headers, auth schemes, technologies, favicon hash), SSH (host keys
-  and algorithms), the `nmap-service-probes` database when it is installed, and
-  a fallback banner/port heuristic
-- 44 safe, read-only checks for the usual internal hygiene problems
+A segmentation review usually means scanning VLAN A, copying the output
+somewhere, scanning VLAN B, and reconciling files by hand. Three things hurt,
+and NETY is built around them.
 
-**Over Wi-Fi as over cable:** everything that rides on IP behaves identically.
-NETY detects a wireless interface and skips only what cannot exist on an access
-point association - the passive switch-port recon and the 802.1Q/DTP
-techniques - saying so plainly instead of failing obscurely.
+**Results arrive at the end.** A scan that dies at 80% leaves nothing. Here
+every host, port, service and finding is written and pushed to the browser the
+moment it is found.
 
-**Across networks:**
-- replays every service discovered elsewhere from where you are now
-- distinguishes *reachable* from *port closed* from *filtered* from *no route* -
-  which is the whole point of the exercise
-- 15 techniques, from plain routing to source-port tricks, IPv6, alternate
-  next hops and fragmentation, plus opt-in layer-2 techniques (802.1Q
-  sub-interfaces, DTP trunk negotiation, double tagging) that stay **off by
-  default** because they can disturb a switch
-- fills a source × target matrix, the table the client reads first
+**Nothing is resumable.** A scan is a queue of persisted work units. Pause it,
+shut the laptop, resume tomorrow: it continues exactly where it stopped. Kill
+the process mid-scan and it comes back as *paused*, not lost.
 
-**Exports:** JSON, CSV (hosts, services, findings, segmentation, assets,
-matrix), Nmap XML, greppable Nmap, a bare `ip:port` list, Markdown, a
-self-contained HTML report and an Excel workbook.
+**Machines lose their identity.** DHCP reshuffles everything overnight and
+yesterday's inventory no longer lines up. NETY collects evidence that outlives
+an IP change (SMB server GUID, SNMP engine ID, SSH host keys, the NetBIOS
+adapter MAC, certificates) and correlates it into long-lived *assets*.
+
+And it is a platform, not a CLI: a colleague on the same VLAN opens your IP in
+a browser, signs in with their own account and watches the same scan live.
 
 ---
 
-## Quick start
+## The workflow
 
-Nothing is installed on your machine: every target runs in Docker.
+### 1. Create a mission, then a network per VLAN
 
-```bash
-make build          # static linux/amd64 + linux/arm64 binaries in ./dist
-make test           # the whole test suite
-make image          # runtime container image
+A *mission* is one engagement. Inside it, each VLAN you plug into is a
+*network*. Pick the interface and press detect: NETY reads the addressing,
+gateway, DNS and DHCP lease for you.
+
+![Networks and switch-port recon](docs/images/networks.png)
+
+It also listens passively for CDP, LLDP, DTP, STP and 802.1Q tags. That tells
+you who the switch is, what the port is configured for, and whether it offers
+to negotiate a trunk. A port that does is a finding on its own, and the
+interface says so in red.
+
+### 2. Run a discovery scan
+
+Pick a profile (*Standard* covers most cases) and start. The scan runs in
+phases, each one a queue of work units:
+
+```
+L2 recon -> host discovery -> TCP ports -> UDP ports
+         -> fingerprinting -> identity and assets -> checks
 ```
 
-Run it on the laptop you plug into the client network:
+![Live scan](docs/images/scan.png)
+
+Watch it fill. Hosts appear as they answer, ports as they open, services as
+each one is identified. Pause and resume at any point; the phase breakdown on
+the right is the real work-unit state, not an estimate.
+
+### 3. Repeat on every VLAN
+
+Unplug, move, create the next network, scan again. Assets correlate across
+networks and across days, so the same machine stays one entry.
+
+### 4. Test the segmentation
+
+Back on any VLAN, start a **segmentation** scan. NETY replays every service it
+knows about on the other networks, once per technique, and fills the matrix.
+
+![Segmentation matrix](docs/images/matrix.png)
+
+Each cell says how many services were reachable out of how many were tried, and
+whether any of it needed a bypass. The numbers are measured, not inferred from
+a config.
+
+### 5. Work through the services
+
+A scan says what is exposed. Deciding whether each service is a problem is
+still your job, one port at a time. Each service carries a status and a note.
+
+![Service triage](docs/images/triage.png)
+
+Mark things **to do**, **in progress**, **done**, **flagged** or **skipped**,
+alone or in batches, and write what you tested. The progress bar tells you how
+much is left.
+
+This is yours, not the scanner's: re-running a scan tomorrow refreshes what was
+observed and leaves every status and note intact.
+
+### 6. Export
+
+JSON, CSV (hosts, services, findings, segmentation, assets, matrix), Nmap XML,
+greppable Nmap, a bare `ip:port` list, Markdown, a self-contained HTML report
+and an Excel workbook.
+
+The services CSV and the Excel sheet carry your status, note, author and
+timestamp next to the service itself, because that sheet is what ends up in the
+client's tracker.
+
+---
+
+## Reading a result
+
+Three outcomes, used everywhere:
+
+| | Meaning |
+|---|---|
+| **Reachable** | The service answered. The boundary did not hold for this flow. |
+| **Closed (routed)** | The packet reached the host, which refused it. Nothing blocked the crossing; the port simply is not listening. |
+| **Filtered** | Nothing came back, or an ICMP prohibited answer did. The boundary held. |
+
+The distinction between *closed* and *filtered* is the whole point: one means
+routing works and the service is absent, the other means the filtering works.
+
+---
+
+## Bypass techniques
+
+A segmentation scan tries each service several ways. The interface has a
+**Help** page describing all of them, with the manual command to reproduce
+each one.
+
+![Bypass techniques](docs/images/help.png)
+
+**Routing level**, on by default, nothing is changed on the switch:
+
+| Technique | Why it sometimes works |
+|---|---|
+| `direct` | The reference measurement everything else is compared against. |
+| `icmp` | ACLs are written for TCP and UDP and leave ICMP open for troubleshooting. |
+| `src-port-53/88/123/20/67/500` | Stateless rules often permit anything coming from DNS, Kerberos, NTP or DHCP source ports. |
+| `ipv6` | IPv6 filtering is routinely forgotten while IPv4 is locked down. |
+| `gateway-route` / `alt-gateway` | The router would forward it; the client simply has no route. Install one and ask again. |
+| `ip-fragment` | Some stateless filters mishandle fragmented packets. |
+
+**Layer 2**, off by default because they change switch-port state and can
+disturb a switch:
+
+| Technique | What it does |
+|---|---|
+| `dot1q-subif` | Builds a tagged sub-interface for the target VLAN and talks to it directly. |
+| `dtp-trunk` | Asks the port to become a trunk, then does the above. Only worth trying where the passive recon saw DTP. |
+| `double-tag` | Sends a doubly-tagged frame. One-way by nature, so a positive result is reported as *sent*, never as confirmed. |
+
+Everything NETY changes on your machine (routes, sub-interfaces, trunk
+negotiation) is tracked and reverted when a test ends, when it is cancelled,
+and again at shutdown.
+
+---
+
+## Running it
 
 ```bash
-sudo ./dist/nety-linux-amd64 serve --data /var/lib/nety
+make build      # static linux/amd64 and linux/arm64 binaries in ./dist
+make test       # the whole test suite
 ```
 
-On first start it creates an administrator account and prints the password
-once. The log also lists the URLs your colleagues can reach you on.
+Every target runs in Docker, so Go and Node stay off your machine.
 
-Raw sockets are needed for SYN scanning, ARP discovery and the layer-2
-techniques. Either run as root, or grant the capabilities to the binary:
+On the laptop you plug in with:
 
 ```bash
 sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip ./nety
+nety serve --data /var/lib/nety
 ```
 
-Without them NETY still works - it falls back to connect scanning and says so
-in the interface - but it is slower and cannot do layer-2 work.
+First start prints an administrator password once. The log lists the URLs a
+colleague on the same VLAN can reach you on.
 
-In a container:
+### Where you can run it
 
-```bash
-docker run --rm --net=host --cap-add=NET_RAW --cap-add=NET_ADMIN \
-  -v nety-data:/data -p 8443:8443 nety:latest
-```
+| Environment | Connect scan | SYN, ARP, L2 recon | 802.1Q, DTP |
+|---|---|---|---|
+| Linux, native | yes | yes | yes |
+| Linux VM, bridged to a USB-Ethernet adapter | yes | yes | usually |
+| Linux VM, NAT | yes | inside the virtual network only | no |
+| macOS, native | yes | no | no |
 
-### Version detection
+Architecture does not matter: the binary is built for arm64 and amd64 and
+Rosetta is never involved. What matters is access to layer 2. A VM bridged onto
+a wired adapter covers nearly everything; only trunk work really wants a native
+Linux host.
 
-If `nmap` is installed on the machine, point NETY at its probe database for
-much sharper version detection (the file is never bundled, for licensing
-reasons):
+Wi-Fi behaves exactly like a cable for everything that rides on IP. Only the
+switch-port techniques drop out, since an access point does not carry tagged
+frames to a station or speak DTP, and NETY says so rather than failing
+obscurely.
+
+### Sharper version detection
+
+If `nmap` is installed, point NETY at its probe database. The file is read at
+runtime and never bundled:
 
 ```bash
 nety serve --nmap-probes /usr/share/nmap/nmap-service-probes
 ```
 
-### A typical engagement
-
-1. Plug into the first VLAN. **Networks → New**, pick the interface, hit
-   detect, name it (`VLAN 10 - offices`), save.
-2. **Scans → New**, profile *Standard*, start. Watch it live.
-3. Unplug, move to the next VLAN, repeat.
-4. Back on any VLAN, start a **segmentation** scan. NETY replays every service
-   it knows about on the other VLANs and fills the matrix.
-5. Export the HTML or Excel report.
-
-Long scan? Pause it, resume it tomorrow. Interrupted by a reboot? It comes back
-as *paused*, resumable, with everything collected so far intact.
+Without it, detection still works through TLS, HTTP and SSH inspection plus
+banner heuristics, just less precisely on exotic services.
 
 ---
 
-## The lab
+## Trying it without a client network
 
-To try it without a client network, there is a three-"VLAN" Docker lab:
+Three Docker "VLANs" with real services:
 
 ```bash
 make lab-up
@@ -153,95 +224,58 @@ docker compose -f build/lab/docker-compose.yml logs -f nety   # admin password
 open https://localhost:8443/
 ```
 
-NETY is attached to `lab_vlan10` only, so a segmentation scan should find the
-other two unreachable. To watch a crossing appear in the matrix:
+Docker bridges forward between each other by default, so the lab's matrix
+legitimately shows VLAN 10 reaching VLAN 20. That is what an unsegmented
+network looks like.
+
+To browse a filled-in interface without scanning anything, a separate generator
+invents an engagement. It is never run by `nety serve`:
 
 ```bash
-docker network connect lab_vlan20 nety-lab
+go run ./cmd/netydemo -data ./demo-data
+nety serve --data ./demo-data --no-tls --listen 127.0.0.1:8080
 ```
 
-`make lab-verify` additionally exercises, against the lab's real kernel, the
-paths unit tests cannot reach: creating an 802.1Q sub-interface, addressing it,
-installing a route, and proving every one of those changes is tracked and
-reverted.
-
-Note that Docker bridges forward between each other by default, so the lab's
-matrix will legitimately show VLAN 10 reaching VLAN 20. That is a real
-reachability result, not a false positive - it is what an unsegmented network
-looks like.
-
-Tear it down with `make lab-down`.
+A normal install starts empty: no mission, no host, just the administrator
+account you were given at first start.
 
 ### What is proven, and what is not
 
-`make verify-kernel` runs the checks that unit tests cannot reach, in a
-throwaway privileged container - the lab does not need to be up:
+`make verify-kernel` exercises, against a real kernel in a throwaway container,
+what unit tests cannot reach: creating and tearing down 802.1Q sub-interfaces,
+the DTP frame checked byte for byte against the protocol, and a real tagged
+data path over a veth pair across two network namespaces with NETY's own
+scanner finding a service through the tag.
 
-- an 802.1Q sub-interface is created, addressed, routed through and deleted,
-  and every change is tracked and reverted, with untracked changes left alone;
-- the DTP advertisement NETY would send is decoded and checked byte for byte
-  against the protocol (Cisco SNAP 0x2004, version, all four TLVs);
-- a veth pair with one end in its own network namespace carries a **real
-  tagged data path**: a sub-interface on each side, a listener on the far one,
-  and NETY's own port scanner finding it through the tag - which is exactly
-  what `dot1q-subif` does once a trunk exists;
-- a tagged frame built by NETY's own frame builder - the one `double-tag`
-  uses - is put on the wire and answered by a real 802.1Q decoder, so the tag
-  it writes is demonstrably the one a switch would read.
-
-`make lab-up` then validates the rest against a live network: raw sockets, the
-ARP sweep, the stateless SYN scan, UDP probing, fingerprinting, identity
-collection, the checks, and the full segmentation matrix - leaving no
-interface and no route behind.
-
-**What still needs physical hardware:** that a switch *grants* a trunk in
-response to the DTP frame. The frame is verified correct and everything that
-follows a granted trunk is verified working; what is untested is the switch's
-reply. That is the single remaining unknown in `dtp-trunk`, and it fails
-safely - no trunk means the technique reports nothing rather than guessing.
-
----
-
-## Development
-
-Every `make` target runs inside the toolchain container, so Go and Node stay out
-of your machine.
-
-```bash
-make toolchain   # build the Go + Node image (once)
-make test        # go test ./...
-make vet         # go vet + gofmt check
-make web         # build the SPA only
-make build-go    # rebuild the binary without rebuilding the SPA
-make shell       # a shell inside the toolchain
-```
-
-Architecture, package ownership and the rules every package follows are in
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). The HTTP contract is in
-[`docs/API.md`](docs/API.md).
+What still needs physical hardware is whether a switch *grants* a trunk in
+response to DTP. The frame is verified correct and everything after a granted
+trunk is verified working; the switch's reply is the one untested step, and it
+fails safe.
 
 ---
 
 ## Scope and safety
 
-NETY is built for **authorised** internal security assessments.
+NETY is for **authorised** internal security assessments.
 
-- Every check is read-only. Nothing writes, nothing exploits, and the only
-  credential attempts are a short, curated vendor-default list that is **off**
-  unless you turn it on, capped at three tries so nothing gets locked out.
-- The layer-2 techniques change switch-port state and are off by default,
-  behind an explicit toggle with a warning.
-- Everything NETY changes on your machine - routes, sub-interfaces, trunk
-  negotiation - is tracked and reverted when a test ends, when it is cancelled,
-  and again on shutdown.
-- Your own address is always excluded from the scope, along with anything in
-  the mission's exclusion list.
-- Every action is written to an audit log: who ran what, against which client,
-  from where.
+- Every check is read-only. The only credential attempts are a short vendor
+  default list, off unless you enable it, capped so nothing gets locked out.
+- The layer-2 techniques are off by default, behind an explicit toggle.
+- Your own address and the mission's exclusions are never scanned, including
+  by a segmentation scan.
+- Every action is written to an audit log: who, what, which client, from where.
 
-Get written authorisation before you point this at anything.
+Get written authorisation before pointing this at anything.
 
 ---
+
+## More
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) - how it is put together and
+  the rules every package follows
+- [`docs/OPERATIONS.md`](docs/OPERATIONS.md) - the field manual: privileges,
+  tuning, sharing, troubleshooting
+- [`docs/API.md`](docs/API.md) - the HTTP contract
 
 ## Licence
 
