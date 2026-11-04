@@ -204,7 +204,8 @@ func setupPeer(peerNS, origNS netns.NsHandle, peerVeth string) (net.Listener, er
 		return nil, fmt.Errorf("peer address: %w", err)
 	}
 
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", netip.MustParsePrefix(dpPeerIP).Addr(), dpPort))
+	addrPort := netip.AddrPortFrom(netip.MustParsePrefix(dpPeerIP).Addr(), dpPort)
+	ln, err := net.Listen("tcp", addrPort.String())
 	if err != nil {
 		return nil, fmt.Errorf("peer listener: %w", err)
 	}
@@ -232,7 +233,7 @@ func dialThrough(iface string, peer netip.Addr, port int) error {
 		Timeout:   3 * time.Second,
 		LocalAddr: &net.TCPAddr{IP: net.IP(src.Addr().AsSlice())},
 	}
-	conn, err := d.Dial("tcp", fmt.Sprintf("%s:%d", peer, port))
+	conn, err := d.Dial("tcp", netip.AddrPortFrom(peer, uint16(port)).String())
 	if err != nil {
 		return err
 	}
