@@ -10,6 +10,8 @@
 // What it still cannot prove: that a real switch grants a trunk in response to DTP, or
 // that an access port forwards a double-tagged frame. Those need physical switch
 // hardware.
+//go:build linux
+
 package main
 
 import (
