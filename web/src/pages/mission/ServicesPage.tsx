@@ -14,6 +14,7 @@ import {
   Pagination,
   RelativeTime,
   SearchInput,
+  SelectAllCheckbox,
   SortHeader,
   useSort,
 } from '@/components/common'
@@ -32,6 +33,9 @@ import { isAddressOrPrefix } from '@/lib/format'
 import type { Service, TriageStatus } from '@/types/api'
 
 const PAGE_SIZE = 50
+
+/** The ceiling the server puts on one listing and on one bulk triage call. */
+const SERVER_MAX = 5000
 
 /**
  * The columns the services table can be sorted by. Each one is a key the
@@ -54,6 +58,7 @@ export default function ServicesPage() {
   const [expanded, setExpanded] = useState<number | null>(null)
   const [triage, setTriage] = useState<TriageStatus[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [selectingAll, setSelectingAll] = useState(false)
   const [busy, setBusy] = useState<number | null>(null)
   // The services of a skipped host are out of the way by default. This is the
   // operator asking to see them anyway.
@@ -139,15 +144,47 @@ export default function ServicesPage() {
     [refresh, toast],
   )
 
+  /**
+   * Pull every service the current filter matches, not just the page on
+   * screen, and select all of it. Narrowing to one port and ticking the box
+   * at the head of the table reads as "all of these", and selecting fifty of
+   * three hundred would be the wrong answer told confidently.
+   */
+  const selectEverythingMatching = useCallback(async () => {
+    setSelectingAll(true)
+    try {
+      const page = await api.services(missionId, { ...params, limit: SERVER_MAX, offset: 0 })
+      setSelected(new Set(page.items.map((s) => s.id)))
+      if (page.has_more) {
+        toast.error(
+          `This filter matches more than ${formatNumber(SERVER_MAX)} services. ` +
+            `The first ${formatNumber(SERVER_MAX)} are selected; narrow the filter for the rest.`,
+        )
+      } else {
+        toast.success(`${formatNumber(page.items.length)} services selected`)
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not extend the selection')
+    } finally {
+      setSelectingAll(false)
+    }
+  }, [missionId, params, toast])
+
   const setSelectionStatus = useCallback(
     async (status: TriageStatus) => {
       const ids = [...selected]
       if (ids.length === 0) return
       try {
-        const res = await api.triageBulk(missionId, ids, status)
+        // Batched: a filter-wide selection goes past what one call accepts.
+        const BATCH = 2000
+        let updated = 0
+        for (let i = 0; i < ids.length; i += BATCH) {
+          const res = await api.triageBulk(missionId, ids.slice(i, i + BATCH), status)
+          updated += res.updated
+        }
         setSelected(new Set())
         refresh()
-        toast.success(`${res.updated} services marked ${status.replace('_', ' ')}`)
+        toast.success(`${formatNumber(updated)} services marked ${status.replace('_', ' ')}`)
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Could not update the selection')
       }
@@ -163,7 +200,11 @@ export default function ServicesPage() {
       return next
     })
 
-  const allOnPageSelected = items.length > 0 && items.every((s) => selected.has(s.id))
+  const selectedOnPage = items.reduce((n, s) => (selected.has(s.id) ? n + 1 : n), 0)
+  const allOnPageSelected = items.length > 0 && selectedOnPage === items.length
+  // Offered only while the selection is still just this page: once it covers
+  // the whole filter there is nothing left to extend.
+  const canSelectBeyondPage = allOnPageSelected && hasMore && selected.size <= items.length
 
   return (
     <PageContainer wide>
@@ -254,8 +295,21 @@ export default function ServicesPage() {
       {selected.size > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent/5 px-3 py-2">
           <span className="text-xs font-medium text-fg">
-            {selected.size} selected
+            {formatNumber(selected.size)} selected
           </span>
+          {/* The box at the head of the table reaches one page. This reaches
+              the filter, which is what the operator meant when they narrowed
+              the list to one port and ticked the box. */}
+          {canSelectBeyondPage && (
+            <button
+              type="button"
+              onClick={() => void selectEverythingMatching()}
+              disabled={selectingAll}
+              className="rounded border border-accent/50 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent hover:bg-accent/20 disabled:opacity-60"
+            >
+              {selectingAll ? 'Selecting…' : 'Select every service matching this filter'}
+            </button>
+          )}
           <span className="text-xs text-muted">Mark as</span>
           {(['done', 'flagged', 'skipped', 'in_progress', 'todo'] as TriageStatus[]).map((s) => (
             <button
@@ -315,16 +369,13 @@ export default function ServicesPage() {
                   <tr>
                     <th className="w-px" />
                     <th className="w-px">
-                      <input
-                        type="checkbox"
-                        aria-label="Select every service on this page"
-                        checked={allOnPageSelected}
-                        onChange={() =>
-                          setSelected(
-                            allOnPageSelected ? new Set() : new Set(items.map((s) => s.id)),
-                          )
+                      <SelectAllCheckbox
+                        noun="services on this page"
+                        total={items.length}
+                        selected={selectedOnPage}
+                        onChange={(selectAll) =>
+                          setSelected(selectAll ? new Set(items.map((s) => s.id)) : new Set())
                         }
-                        className="h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]"
                       />
                     </th>
                     <SortHeader

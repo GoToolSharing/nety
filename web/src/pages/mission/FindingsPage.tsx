@@ -14,6 +14,7 @@ import {
   Mono,
   RelativeTime,
   SearchInput,
+  SelectAllCheckbox,
   SortButton,
   useSort,
 } from '@/components/common'
@@ -251,10 +252,13 @@ export default function FindingsPage() {
   }, [hosts.data])
 
   // A filter change can empty the selection out from under the operator, so
-  // drop it rather than act on rows that are no longer on screen.
+  // drop it rather than act on rows that are no longer on screen. Every
+  // filter counts, the ones applied here as much as the ones the server
+  // applies: selecting thirty rows and then narrowing the search must not
+  // leave twenty-nine of them armed and invisible.
   useEffect(() => {
     setSelected(new Set())
-  }, [networkId, triage, showSkipped])
+  }, [networkId, triage, showSkipped, debouncedAddress, query, severity])
 
   const netName = useMemo(() => {
     const m = new Map<number, string>()
@@ -289,10 +293,19 @@ export default function FindingsPage() {
       const ids = [...selected]
       if (ids.length === 0) return
       try {
-        const res = await api.triageFindingsBulk(missionId, ids, status)
+        // The server refuses more than 5,000 ids in one call, and a filter
+        // that matches a whole informational check across a /16 goes past
+        // that. Send it in batches rather than hand the operator an error
+        // for doing exactly what the select-all box invited.
+        const BATCH = 2000
+        let updated = 0
+        for (let i = 0; i < ids.length; i += BATCH) {
+          const res = await api.triageFindingsBulk(missionId, ids.slice(i, i + BATCH), status)
+          updated += res.updated
+        }
         setSelected(new Set())
         refresh()
-        toast.success(`${res.updated} findings marked ${status.replace('_', ' ')}`)
+        toast.success(`${formatNumber(updated)} findings marked ${status.replace('_', ' ')}`)
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Could not update the selection')
       }
@@ -329,7 +342,10 @@ export default function FindingsPage() {
     })
   }, [all, query, severity])
 
-  const allSelected = filtered.length > 0 && filtered.every((f) => selected.has(f.id))
+  const selectedShown = useMemo(
+    () => filtered.reduce((n, f) => (selected.has(f.id) ? n + 1 : n), 0),
+    [filtered, selected],
+  )
 
   const toggle = (id: number) =>
     setExpanded((prev) => {
@@ -384,14 +400,6 @@ export default function FindingsPage() {
             ))}
           </select>
         </label>
-        <button
-          type="button"
-          onClick={() => setSelected(allSelected ? new Set() : new Set(filtered.map((f) => f.id)))}
-          disabled={filtered.length === 0}
-          className="rounded border border-border bg-elevated px-2 py-1 text-[11px] text-muted hover:text-fg disabled:opacity-50"
-        >
-          {allSelected ? 'Clear selection' : 'Select all shown'}
-        </button>
       </div>
 
       {summary.data?.findings && (
@@ -508,10 +516,18 @@ export default function FindingsPage() {
                 out by the server over every finding of the mission, so it is
                 the same whether one check fired or a thousand. */}
             <div className="flex items-center gap-3 border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-wider text-muted">
-              {/* Two spacers for the expand chevron and the checkbox, so the
-                  headers line up with the columns under them. */}
+              {/* A spacer for the expand chevron, then the master checkbox
+                  sitting exactly over the column of row checkboxes. */}
               <span className="w-5 shrink-0" aria-hidden />
-              <span className="w-3.5 shrink-0" aria-hidden />
+              <SelectAllCheckbox
+                className="shrink-0"
+                noun="findings"
+                total={filtered.length}
+                selected={selectedShown}
+                onChange={(selectAll) =>
+                  setSelected(selectAll ? new Set(filtered.map((f) => f.id)) : new Set())
+                }
+              />
               <SortButton
                 column="status"
                 label="Status"

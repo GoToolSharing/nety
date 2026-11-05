@@ -163,6 +163,68 @@ export interface SortState<K extends string> {
 }
 
 /**
+ * The master checkbox at the head of a selectable list.
+ *
+ * It selects what the filters are showing, which is the whole point: narrow
+ * the list to the one check that fired on thirty machines, tick this, set the
+ * status once. The third state matters as much as the other two - half ticked
+ * says "some of these are selected" instead of lying in either direction, and
+ * clicking it takes all of them.
+ */
+export function SelectAllCheckbox({
+  total,
+  selected,
+  onChange,
+  noun,
+  className,
+}: {
+  /** How many rows the filters are showing. */
+  total: number
+  /** How many of those are selected. */
+  selected: number
+  /** True to select every shown row, false to clear the selection. */
+  onChange: (selectAll: boolean) => void
+  /** Plural noun for the accessible name, such as "findings". */
+  noun: string
+  className?: string
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  const all = total > 0 && selected >= total
+  const some = selected > 0 && !all
+
+  // `indeterminate` is a property, not an attribute: React cannot set it from
+  // JSX and it has to be written on the node itself.
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = some
+  }, [some])
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      disabled={total === 0}
+      checked={all}
+      onChange={() => onChange(!all)}
+      title={
+        total === 0
+          ? `No ${noun} to select`
+          : all
+            ? 'Clear the selection'
+            : `Select the ${total.toLocaleString()} ${noun} these filters are showing`
+      }
+      aria-label={
+        all ? 'Clear the selection' : `Select all ${total} ${noun} matching the current filters`
+      }
+      className={cn(
+        'h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]',
+        'disabled:cursor-not-allowed disabled:opacity-40',
+        className,
+      )}
+    />
+  )
+}
+
+/**
  * The clickable part of a sortable header. It lives on its own because the
  * findings are a list of expandable cards rather than a table, and their
  * header strip needs the same control without a <th> around it.
