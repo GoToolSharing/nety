@@ -282,10 +282,10 @@ func TestScanDiffUnchangedScan(t *testing.T) {
 	if diff.Counts.HostsSame != 1 {
 		t.Errorf("the host was there both times, got %+v", diff.Counts)
 	}
-	// The in-place update is why a version change on an address that did not
-	// move cannot be reported, and the diff has to admit it.
+	// These two scans predate the change history, so the diff has to say it
+	// cannot vouch for a version change on an address that did not move.
 	if len(diff.Caveats) == 0 {
-		t.Error("expected the diff to carry the in-place update caveat")
+		t.Error("expected the diff to say its history does not reach back this far")
 	}
 }
 

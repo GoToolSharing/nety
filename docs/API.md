@@ -120,13 +120,19 @@ on its address **and** on its asset, so a machine that took a new lease reads as
 its ports and findings follow it. Only hosts are reported as `same`: an
 unchanged port or finding is left out.
 
-**What a diff cannot see.** There is no per-scan copy of a result row. A
-re-scan merges into the row that is already there and stamps `last_scan_id`, so
-a product or version that changed on a machine which kept its address cannot be
-recovered after the fact; `services_changed` only covers machines that also
-moved. Presence is worked out from `last_scan_id` together with `first_seen` and
-the end time of the scan that stamped the row, which assumes a scan of a network
-covers the whole network. `caveats` says all of this in the response itself.
+**How a version change is seen.** There is no per-scan copy of a result row: a
+re-scan merges into the row that is already there. So the moment a scan
+replaces a service's state, name, product or version, the previous value is
+written to `service_changes` before it is lost, and `services_changed` reads
+from there. That is what lets a version change be reported on a machine that
+kept its address. Nothing is written when a re-scan finds the same thing.
+
+**What a diff cannot see.** A comparison reaching back before this history
+existed has no previous values to read, and says so in `caveats` rather than
+reporting that nothing changed. Presence is worked out from `last_scan_id`
+together with `first_seen` and the end time of the scan that stamped the row,
+which assumes a scan of a network covers the whole network. `caveats` says all
+of this in the response itself.
 
 ## Results
 

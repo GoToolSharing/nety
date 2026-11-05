@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/GoToolSharing/nety/internal/model"
 )
@@ -279,4 +280,79 @@ func TestUpgradeFromAPreHostTriageDatabase(t *testing.T) {
 		t.Fatalf("reopening must be idempotent: %v", err)
 	}
 	defer again.Close()
+}
+
+// A database that already carries every triage column but no service history
+// has to gain the table and the stamp that says when the recording started,
+// without disturbing anything that is already there.
+func TestUpgradeToServiceChangeHistory(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "v3.db")
+
+	st, err := Open(path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mis, err := st.CreateMission(ctx, model.Mission{Name: "before"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.UpsertService(ctx, model.Service{
+		MissionID: mis.ID, NetworkID: 1, IP: "10.0.0.4", Port: 22,
+		Protocol: model.TCP, State: model.PortOpen, Product: "OpenSSH", Version: "8.4p1",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	st.Close()
+
+	// Put it back as it was before the history existed.
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, stmt := range []string{
+		`DROP TABLE service_changes`,
+		`DELETE FROM settings WHERE key = 'service_changes_since'`,
+		`PRAGMA user_version = 3`,
+	} {
+		if _, err := raw.ExecContext(ctx, stmt); err != nil {
+			t.Fatalf("%s: %v", stmt, err)
+		}
+	}
+	raw.Close()
+
+	st, err = Open(path, nil)
+	if err != nil {
+		t.Fatalf("upgrade: %v", err)
+	}
+	defer st.Close()
+
+	services, err := st.ListServices(ctx, ServiceFilter{MissionID: mis.ID})
+	if err != nil || len(services) != 1 {
+		t.Fatalf("the service did not survive the upgrade: %d, %v", len(services), err)
+	}
+	since, err := st.Setting(ctx, "service_changes_since")
+	if err != nil || since == "" {
+		t.Fatalf("the upgrade must stamp when the recording started: %q, %v", since, err)
+	}
+
+	// The table works, and a second open changes nothing.
+	sv := services[0]
+	sv.Version = "9.6p1"
+	sv.LastScanID = 7
+	if _, err := st.UpsertService(ctx, sv); err != nil {
+		t.Fatal(err)
+	}
+	changes, err := st.serviceChangesBetween(ctx, mis.ID,
+		time.Now().UTC().Add(-time.Hour), time.Now().UTC().Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := changes[sv.ID]["version"].From; got != "8.4p1" {
+		t.Fatalf("the previous version was not recorded: %q", got)
+	}
+	st.Close()
+	if st, err = Open(path, nil); err != nil {
+		t.Fatalf("reopening after the upgrade: %v", err)
+	}
 }

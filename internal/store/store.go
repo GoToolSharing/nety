@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -248,6 +249,40 @@ var migrations = []migration{
 				}
 			}
 			return nil
+		},
+	},
+	{
+		name: "service change history",
+		apply: func(ctx context.Context, tx *sql.Tx) error {
+			// Kept identical to the definition in schema.sql, which is what a
+			// fresh database gets. A service row holds only its latest merged
+			// description, so without this an upsert destroys the evidence
+			// that a version ever changed.
+			if _, err := tx.ExecContext(ctx, `
+				CREATE TABLE IF NOT EXISTS service_changes (
+				    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+				    mission_id INTEGER NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+				    service_id INTEGER NOT NULL,
+				    scan_id    INTEGER NOT NULL DEFAULT 0,
+				    at         INTEGER NOT NULL,
+				    field      TEXT    NOT NULL,
+				    old_value  TEXT    NOT NULL DEFAULT '',
+				    new_value  TEXT    NOT NULL DEFAULT ''
+				)`); err != nil {
+				return err
+			}
+			if _, err := tx.ExecContext(ctx,
+				`CREATE INDEX IF NOT EXISTS idx_service_changes ON service_changes(mission_id, at)`); err != nil {
+				return err
+			}
+			// Stamp when the recording started. Everything scanned before
+			// this moment has no history, and a diff reaching back past it
+			// has to say so rather than report that nothing changed.
+			_, err := tx.ExecContext(ctx,
+				`INSERT INTO settings (key, value) VALUES ('service_changes_since', ?)
+				 ON CONFLICT (key) DO NOTHING`,
+				strconv.FormatInt(time.Now().UTC().UnixMilli(), 10))
+			return err
 		},
 	},
 }

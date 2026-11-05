@@ -235,6 +235,26 @@ CREATE INDEX IF NOT EXISTS idx_services_port ON services(mission_id, port);
 -- against existing databases too, where the triage columns do not exist yet
 -- (migrations run after it), and indexing a missing column fails the startup.
 
+-- What a service used to say.
+--
+-- A service row holds one merged description, the latest one, so an upsert
+-- that replaces "OpenSSH 8.4p1" with "OpenSSH 9.6p1" destroys the only record
+-- that it ever said 8.4p1. That makes "what changed since the last scan"
+-- unanswerable for any machine that kept its address, which is most of them.
+-- One append-only row per field that actually changed is enough to answer it,
+-- and costs nothing on a network that is not moving.
+CREATE TABLE IF NOT EXISTS service_changes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    mission_id INTEGER NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+    service_id INTEGER NOT NULL,
+    scan_id    INTEGER NOT NULL DEFAULT 0,
+    at         INTEGER NOT NULL,
+    field      TEXT    NOT NULL,
+    old_value  TEXT    NOT NULL DEFAULT '',
+    new_value  TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_service_changes ON service_changes(mission_id, at);
+
 CREATE TABLE IF NOT EXISTS findings (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     mission_id   INTEGER NOT NULL REFERENCES missions(id) ON DELETE CASCADE,

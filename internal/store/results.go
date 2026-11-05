@@ -354,6 +354,9 @@ func (s *Store) UpsertService(ctx context.Context, sv model.Service) (model.Serv
 			merged.ID); err != nil {
 			return err
 		}
+		if err := recordServiceChanges(ctx, tx, existing, merged); err != nil {
+			return err
+		}
 		sv = merged
 		return nil
 	})
@@ -361,6 +364,47 @@ func (s *Store) UpsertService(ctx context.Context, sv model.Service) (model.Serv
 		return model.Service{}, fmt.Errorf("store: upsert service %s:%d: %w", sv.IP, sv.Port, err)
 	}
 	return sv, nil
+}
+
+// recordServiceChanges appends one row per field whose value the scan replaced.
+//
+// The services table holds a single merged description, the latest one, so the
+// UPDATE above is the moment the previous value stops existing anywhere. Write
+// it down here and "what changed since the last scan" stays answerable for a
+// machine that kept its address, which is the common case and the one the diff
+// could not see before.
+//
+// Only the fields a reader would call a change are kept, and only when the
+// scan actually said something different. A re-scan of a network that did not
+// move writes nothing.
+func recordServiceChanges(ctx context.Context, tx *sql.Tx, old, merged model.Service) error {
+	// An unstamped write cannot be attributed to a scan, so it would only add
+	// noise a diff has no way to place in time.
+	if merged.LastScanID == 0 {
+		return nil
+	}
+	fields := []struct {
+		name     string
+		from, to string
+	}{
+		{"state", string(old.State), string(merged.State)},
+		{"name", old.Name, merged.Name},
+		{"product", old.Product, merged.Product},
+		{"version", old.Version, merged.Version},
+	}
+	for _, f := range fields {
+		if f.from == f.to {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO service_changes (mission_id, service_id, scan_id, at, field, old_value, new_value)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			merged.MissionID, merged.ID, merged.LastScanID, ms(merged.LastSeen),
+			f.name, f.from, f.to); err != nil {
+			return fmt.Errorf("store: record service change: %w", err)
+		}
+	}
+	return nil
 }
 
 // mergeService keeps the richer of the two descriptions: a fingerprint result

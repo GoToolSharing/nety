@@ -197,7 +197,26 @@ func (s *Store) ScanDiff(ctx context.Context, from, to model.Scan) (model.ScanDi
 		labels[a.ID] = a.Label
 	}
 
-	d := differ{ends: ends, atA: atA, atB: atB, labels: labels}
+	// What the services used to say. A service row keeps only its latest
+	// merged description, so this is the only record that a product or a
+	// version ever changed on a machine that kept its address.
+	changes, err := s.serviceChangesBetween(ctx, to.MissionID, atA, atB)
+	if err != nil {
+		return out, err
+	}
+
+	// A comparison reaching back before the history existed cannot see a
+	// version change on an address that did not move, and has to admit it
+	// rather than report that nothing changed.
+	hadHistory, err := s.recordingChangesAt(ctx, atA)
+	if err != nil {
+		return out, err
+	}
+
+	d := differ{
+		ends: ends, atA: atA, atB: atB, labels: labels,
+		changes: changes, beforeHistory: !hadHistory,
+	}
 	d.hosts(hosts, &out)
 	d.services(services, &out)
 	d.findings(findings, &out)
@@ -224,6 +243,13 @@ type differ struct {
 	machines  map[int64]string
 	hostnames map[int64]string
 	assetOf   map[int64]int64
+	// beforeHistory is set when the earlier scan ran before this mission
+	// started recording service changes, which is the one case where a
+	// version change on a machine that kept its address is still invisible.
+	beforeHistory bool
+	// changes holds what a service said before the later scan replaced it,
+	// keyed by service id then by field name.
+	changes map[int64]map[string]recordedChange
 	// unstamped records that at least one row carries no last_scan_id, which
 	// is a row neither side of the diff can account for.
 	unstamped bool
@@ -368,16 +394,30 @@ func (d *differ) services(services []model.Service, out *model.ScanDiff) {
 			out.Counts.PortsOpened++
 			continue
 		}
+		prevProduct, prevVersion := before.Product, before.Version
+		if before.ID == sv.ID {
+			// The same database row on both sides, which is every machine
+			// that kept its address. The row itself was overwritten, so what
+			// it used to say comes from the change history instead.
+			rec, ok := d.changes[sv.ID]
+			if !ok {
+				continue
+			}
+			if c, ok := rec["product"]; ok {
+				prevProduct = c.From
+			}
+			if c, ok := rec["version"]; ok {
+				prevVersion = c.From
+			}
+		}
 		// An unchanged port is not news, so only a different product or
-		// version string earns a row. When the machine did not move, before
-		// and sv are the same database row and this can never fire: see the
-		// caveat built below.
-		if before.Product == sv.Product && before.Version == sv.Version {
+		// version string earns a row.
+		if prevProduct == sv.Product && prevVersion == sv.Version {
 			continue
 		}
 		row := d.serviceRow(model.DiffChanged, sv)
-		row.PreviousProduct = before.Product
-		row.PreviousVersion = before.Version
+		row.PreviousProduct = prevProduct
+		row.PreviousVersion = prevVersion
 		if before.IP != sv.IP {
 			row.PreviousIP = before.IP
 		}
@@ -481,10 +521,10 @@ func (d *differ) findingRow(change model.DiffChange, f model.Finding) model.Scan
 // does not take an empty group for a guarantee.
 func (d *differ) caveats(out model.ScanDiff) []string {
 	var c []string
-	if d.sameAddress {
-		c = append(c, "A re-scan updates each result in place rather than storing a second copy, "+
-			"so a product or version that changed on a machine which kept its address cannot be "+
-			"recovered after the fact. The version group only shows machines that also moved.")
+	if d.sameAddress && d.beforeHistory {
+		c = append(c, "Part of this comparison predates the recording of service changes, "+
+			"so a product or version that changed on a machine which kept its address before "+
+			"that point cannot be recovered. Changes from here on are recorded as they happen.")
 	}
 	if d.unstamped {
 		c = append(c, "Some rows carry no scan stamp, from an import or a version of NETY that "+
@@ -567,4 +607,79 @@ func ipSortKey(s string) (uint32, bool) {
 		}
 	}
 	return v, octet == 4
+}
+
+// recordedChange is one field a scan replaced on a service.
+type recordedChange struct {
+	From string
+	To   string
+	At   time.Time
+}
+
+// serviceChangesBetween returns what each service said before the later scan
+// rewrote it, for the changes recorded after the earlier scan ended.
+//
+// The result is keyed by service id and then by field, and holds the oldest
+// value in the window rather than the most recent one: if a service went from
+// 8.4 to 9.0 to 9.6 between the two scans, what the earlier scan saw is 8.4.
+func (s *Store) serviceChangesBetween(ctx context.Context, missionID int64, after, upto time.Time) (map[int64]map[string]recordedChange, error) {
+	rows, err := s.r.QueryContext(ctx, `
+		SELECT service_id, field, old_value, new_value, at
+		FROM service_changes
+		WHERE mission_id = ? AND at > ? AND at <= ?
+		ORDER BY at ASC, id ASC`,
+		missionID, ms(after), ms(upto))
+	if err != nil {
+		return nil, fmt.Errorf("store: service changes: %w", err)
+	}
+	defer rows.Close()
+	out := map[int64]map[string]recordedChange{}
+	for rows.Next() {
+		var (
+			id    int64
+			field string
+			c     recordedChange
+			at    int64
+		)
+		if err := rows.Scan(&id, &field, &c.From, &c.To, &at); err != nil {
+			return nil, fmt.Errorf("store: service changes: %w", err)
+		}
+		c.At = toTime(at)
+		per, ok := out[id]
+		if !ok {
+			per = map[string]recordedChange{}
+			out[id] = per
+		}
+		if prev, seen := per[field]; seen {
+			// Keep the oldest "from" and the newest "to", so several steps in
+			// the window read as the one change the operator cares about.
+			prev.To, prev.At = c.To, c.At
+			per[field] = prev
+			continue
+		}
+		per[field] = c
+	}
+	return out, rows.Err()
+}
+
+// recordingChangesAt reports whether service changes were already being
+// recorded at the given moment.
+//
+// A database that predates the history table carries results nobody kept the
+// previous values of, so a diff reaching back past that point has to say it
+// cannot see a version change rather than report that nothing changed. The
+// stamp is written once, when the table is created.
+func (s *Store) recordingChangesAt(ctx context.Context, at time.Time) (bool, error) {
+	v, err := s.Setting(ctx, "service_changes_since")
+	if err != nil {
+		return false, err
+	}
+	if v == "" {
+		return false, nil
+	}
+	since, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		return false, nil
+	}
+	return !at.Before(toTime(since)), nil
 }

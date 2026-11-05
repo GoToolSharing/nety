@@ -345,6 +345,7 @@ func (s *Store) ResetMissionData(ctx context.Context, missionID int64) (ResetCou
 			table string
 			into  *int64
 		}{
+			{"service_changes", nil},
 			{"reach_results", &c.Reach},
 			{"findings", &c.Findings},
 			{"services", &c.Services},
@@ -356,6 +357,9 @@ func (s *Store) ResetMissionData(ctx context.Context, missionID int64) (ResetCou
 				`DELETE FROM `+step.table+` WHERE mission_id = ?`, missionID)
 			if err != nil {
 				return fmt.Errorf("store: reset %s: %w", step.table, err)
+			}
+			if step.into == nil {
+				continue
 			}
 			n, err := res.RowsAffected()
 			if err != nil {
