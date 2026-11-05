@@ -31,6 +31,7 @@ var formats = []engine.ExportFormat{
 	{ID: "csv-reach", Title: "CSV - segmentation results", Extension: "csv", ContentType: "text/csv"},
 	{ID: "csv-assets", Title: "CSV - assets", Extension: "csv", ContentType: "text/csv"},
 	{ID: "csv-matrix", Title: "CSV - segmentation matrix", Extension: "csv", ContentType: "text/csv"},
+	{ID: "csv-diff", Title: "CSV - changes since the previous scan", Extension: "csv", ContentType: "text/csv"},
 	{ID: "nmap-xml", Title: "Nmap XML", Extension: "xml", ContentType: "text/xml"},
 	{ID: "gnmap", Title: "Nmap greppable", Extension: "gnmap", ContentType: "text/plain"},
 	{ID: "targets-txt", Title: "Target list (ip:port)", Extension: "txt", ContentType: "text/plain"},
@@ -82,6 +83,8 @@ func (e *Exporter) Export(w engine.ExportWriter, format string, data model.Missi
 		return writeAssetsCSV(out, data)
 	case "csv-matrix":
 		return writeMatrixCSV(out, data)
+	case "csv-diff":
+		return writeDiffCSV(out, data)
 	case "nmap-xml":
 		return writeNmapXML(out, data)
 	case "gnmap":
@@ -157,6 +160,12 @@ func filterByNetwork(d model.MissionData, networkID int64) model.MissionData {
 		return c.SourceNetworkID == networkID || c.TargetNetworkID == networkID
 	})
 	out.Scans = filter(d.Scans, func(s model.Scan) bool { return s.NetworkID == networkID })
+	// The diff is about one network already. Keep it only when it is the one
+	// being exported, so a per-network file never carries another VLAN's
+	// changes.
+	if out.Diff != nil && out.Diff.NetworkID != networkID {
+		out.Diff = nil
+	}
 	return out
 }
 

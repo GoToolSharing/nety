@@ -672,7 +672,157 @@ type MissionData struct {
 	Findings []Finding     `json:"findings"`
 	Reach    []ReachResult `json:"reach"`
 	Matrix   []MatrixCell  `json:"matrix"`
+	// Diff is what the last scan of the network changed against the one
+	// before it. The export caller fills it in, and it stays nil when the
+	// mission has only ever been scanned once.
+	Diff *ScanDiff `json:"diff,omitempty"`
 	// ExportedAt / By are set by the exporter caller.
 	ExportedAt time.Time `json:"exported_at"`
 	ExportedBy string    `json:"exported_by"`
+}
+
+// ---------------------------------------------------------------------------
+// Scan to scan diff
+// ---------------------------------------------------------------------------
+
+// DiffChange says what happened to one row between two scans.
+type DiffChange string
+
+const (
+	// DiffAdded is a host the later scan found and the earlier one did not,
+	// or a port the later scan found open and the earlier one did not.
+	DiffAdded DiffChange = "added"
+	// DiffRemoved is the other way round: the earlier scan had it and the
+	// later one no longer does.
+	DiffRemoved DiffChange = "removed"
+	// DiffSame is a row both scans saw, unchanged. Only hosts are reported
+	// this way; an unchanged service or finding is left out of the diff.
+	DiffSame DiffChange = "same"
+	// DiffMoved is one machine seen at two different addresses, which the
+	// asset correlation is what makes recognisable.
+	DiffMoved DiffChange = "moved"
+	// DiffChanged is a service both scans saw whose product or version
+	// string is not the same any more.
+	DiffChanged DiffChange = "changed"
+)
+
+// ScanRef is the little bit of a scan the diff needs to name it.
+type ScanRef struct {
+	ID         int64      `json:"id"`
+	NetworkID  int64      `json:"network_id"`
+	Kind       ScanKind   `json:"kind"`
+	Status     ScanStatus `json:"status"`
+	CreatedAt  time.Time  `json:"created_at"`
+	StartedAt  *time.Time `json:"started_at,omitempty"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
+}
+
+// ScanRefOf reduces a scan to what the diff shows about it.
+func ScanRefOf(s Scan) ScanRef {
+	return ScanRef{
+		ID: s.ID, NetworkID: s.NetworkID, Kind: s.Kind, Status: s.Status,
+		CreatedAt: s.CreatedAt, StartedAt: s.StartedAt, FinishedAt: s.FinishedAt,
+	}
+}
+
+// ScanDiff is what changed on a network between two of its scans. From is
+// always the earlier of the two and To the later one, whichever way round the
+// caller asked for them.
+type ScanDiff struct {
+	MissionID int64 `json:"mission_id"`
+	NetworkID int64 `json:"network_id"`
+	// From is nil when there was no earlier scan to compare against, which is
+	// what the first scan of a network looks like.
+	From *ScanRef `json:"from"`
+	To   ScanRef  `json:"to"`
+	// FromPicked is true when the caller did not name the earlier scan and
+	// the server chose the most recent one before this.
+	FromPicked bool `json:"from_picked"`
+	// Message explains an empty diff in one sentence, for the UI to show
+	// instead of three empty tables.
+	Message string `json:"message,omitempty"`
+	// Caveats are what this comparison cannot see, in plain words. They come
+	// from the database keeping one row per result rather than one per scan.
+	Caveats []string `json:"caveats,omitempty"`
+	// Changed is false when the two scans found exactly the same thing.
+	Changed  bool              `json:"changed"`
+	Counts   ScanDiffCounts    `json:"counts"`
+	Hosts    []ScanDiffHost    `json:"hosts"`
+	Services []ScanDiffService `json:"services"`
+	Findings []ScanDiffFinding `json:"findings"`
+}
+
+// ScanDiffCounts is the headline of a diff, one number per group.
+type ScanDiffCounts struct {
+	HostsAdded   int `json:"hosts_added"`
+	HostsRemoved int `json:"hosts_removed"`
+	// HostsSame counts every host both scans saw, including the ones that
+	// moved; HostsMoved counts the moves alone, so it is a part of HostsSame
+	// and not a fourth group.
+	HostsSame       int `json:"hosts_same"`
+	HostsMoved      int `json:"hosts_moved"`
+	PortsOpened     int `json:"ports_opened"`
+	PortsClosed     int `json:"ports_closed"`
+	ServicesChanged int `json:"services_changed"`
+	FindingsRaised  int `json:"findings_raised"`
+	FindingsCleared int `json:"findings_cleared"`
+}
+
+// Total is how many rows the diff holds, which is what decides whether
+// anything changed at all.
+func (c ScanDiffCounts) Total() int {
+	return c.HostsAdded + c.HostsRemoved + c.HostsMoved +
+		c.PortsOpened + c.PortsClosed + c.ServicesChanged +
+		c.FindingsRaised + c.FindingsCleared
+}
+
+// ScanDiffHost is one address in the host group of a diff.
+type ScanDiffHost struct {
+	Change DiffChange `json:"change"`
+	HostID int64      `json:"host_id"`
+	IP     string     `json:"ip"`
+	// PreviousIP is where the same machine answered during the earlier scan,
+	// set only on a move.
+	PreviousIP     string `json:"previous_ip,omitempty"`
+	PreviousHostID int64  `json:"previous_host_id,omitempty"`
+	Hostname       string `json:"hostname,omitempty"`
+	MAC            string `json:"mac,omitempty"`
+	OS             string `json:"os,omitempty"`
+	AssetID        int64  `json:"asset_id,omitempty"`
+	AssetLabel     string `json:"asset_label,omitempty"`
+}
+
+// ScanDiffService is one port in the service group of a diff.
+type ScanDiffService struct {
+	Change     DiffChange `json:"change"`
+	ServiceID  int64      `json:"service_id"`
+	IP         string     `json:"ip"`
+	PreviousIP string     `json:"previous_ip,omitempty"`
+	Hostname   string     `json:"hostname,omitempty"`
+	Port       int        `json:"port"`
+	Protocol   Protocol   `json:"protocol"`
+	Name       string     `json:"name,omitempty"`
+	Product    string     `json:"product,omitempty"`
+	Version    string     `json:"version,omitempty"`
+	// Previous* carry what the earlier scan had recorded, on a changed row.
+	PreviousProduct string `json:"previous_product,omitempty"`
+	PreviousVersion string `json:"previous_version,omitempty"`
+	AssetID         int64  `json:"asset_id,omitempty"`
+	AssetLabel      string `json:"asset_label,omitempty"`
+}
+
+// ScanDiffFinding is one finding raised or cleared between the two scans.
+type ScanDiffFinding struct {
+	Change     DiffChange `json:"change"`
+	FindingID  int64      `json:"finding_id"`
+	IP         string     `json:"ip"`
+	PreviousIP string     `json:"previous_ip,omitempty"`
+	Hostname   string     `json:"hostname,omitempty"`
+	Port       int        `json:"port,omitempty"`
+	Protocol   Protocol   `json:"protocol,omitempty"`
+	CheckID    string     `json:"check_id"`
+	Title      string     `json:"title"`
+	Severity   Severity   `json:"severity"`
+	AssetID    int64      `json:"asset_id,omitempty"`
+	AssetLabel string     `json:"asset_label,omitempty"`
 }

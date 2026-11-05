@@ -30,6 +30,10 @@ export const qk = {
   scans: (missionId: number) => ['scans', missionId] as const,
   scan: (id: number) => ['scan', id] as const,
   scanLogs: (id: number) => ['scan-logs', id] as const,
+  // The baseline is part of the key: picking another scan to compare against
+  // is a different question, not a stale answer to the same one.
+  scanDiff: (missionId: number, scanId: number, against: number) =>
+    ['scan-diff', missionId, scanId, against] as const,
   profiles: ['scan-profiles'] as const,
   techniques: ['techniques'] as const,
   checks: ['checks'] as const,
@@ -192,6 +196,17 @@ export const useScan = (id: number) =>
       const s = q.state.data
       return s && (s.status === 'running' || s.status === 'queued') ? 10_000 : false
     },
+  })
+
+/**
+ * What changed between this scan and an earlier one. `against` 0 means "let
+ * the server pick the previous completed scan of the same network".
+ */
+export const useScanDiff = (missionId: number, scanId: number, against = 0) =>
+  useQuery({
+    queryKey: qk.scanDiff(missionId, scanId, against),
+    queryFn: () => api.scanDiff(missionId, scanId, against || undefined),
+    enabled: missionId > 0 && scanId > 0,
   })
 
 export function useCreateScan(missionId: number) {

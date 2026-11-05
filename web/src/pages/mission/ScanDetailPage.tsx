@@ -28,6 +28,7 @@ import {
 import { Drawer } from "@/components/ui/Modal";
 import { Mono, ProgressBar, RelativeTime, Tabs } from "@/components/common";
 import ScanControls from "@/components/scan/ScanControls";
+import ScanDiffPanel from "@/components/scan/ScanDiffPanel";
 import LogPane from "@/components/scan/LogPane";
 import ServiceDetail from "@/components/ServiceDetail";
 import {
@@ -663,6 +664,13 @@ export default function ScanDetailPage() {
             )}
           </div>
         </Card>
+      </div>
+
+      {/* What this scan changed against the one before it. Below the live
+          tables: during the run the operator watches results land, and the
+          comparison is what they read once it has finished. */}
+      <div className="mt-4">
+        <ScanDiffPanel scan={scan} missionId={missionId} />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 pb-6 text-xs text-muted">

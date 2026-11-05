@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -378,6 +379,120 @@ func (a *API) handleMatrix(w http.ResponseWriter, r *http.Request, u model.User)
 	a.ok(w, resp)
 }
 
+// handleScanDiff answers what changed between two scans of the same network.
+//
+// The scan in the path is one end of the comparison and `against` the other.
+// Which of the two is the baseline is decided by when they ran, not by how
+// they were passed, so the answer always names both ends explicitly.
+func (a *API) handleScanDiff(w http.ResponseWriter, r *http.Request, u model.User) {
+	m, ok := a.requireMission(w, r, u)
+	if !ok {
+		return
+	}
+	scanID, ok := a.pathScanID(w, r)
+	if !ok {
+		return
+	}
+	sc, err := a.Store.Scan(r.Context(), scanID)
+	if err != nil {
+		a.failStore(w, err, "scan")
+		return
+	}
+	if sc.MissionID != m.ID {
+		// Do not confirm a scan of another mission exists.
+		a.fail(w, http.StatusNotFound, "not_found", "scan not found")
+		return
+	}
+
+	against := queryInt64(r, "against")
+	picked := against == 0
+	var other model.Scan
+	switch {
+	case picked:
+		other, err = a.Store.PreviousScan(r.Context(), sc)
+		if errors.Is(err, store.ErrNotFound) {
+			// Not an error: this is simply the first pass over the network.
+			a.ok(w, model.ScanDiff{
+				MissionID: m.ID, NetworkID: sc.NetworkID,
+				To: model.ScanRefOf(sc), FromPicked: true,
+				Message: "no earlier completed scan of this network to compare with",
+			})
+			return
+		}
+		if err != nil {
+			a.failStore(w, err, "scan")
+			return
+		}
+	case against == sc.ID:
+		a.fail(w, http.StatusBadRequest, "invalid", "a scan cannot be compared with itself")
+		return
+	default:
+		other, err = a.Store.Scan(r.Context(), against)
+		if err != nil {
+			a.failStore(w, err, "scan")
+			return
+		}
+		if other.MissionID != m.ID {
+			a.fail(w, http.StatusNotFound, "not_found", "scan not found")
+			return
+		}
+		if other.NetworkID != sc.NetworkID {
+			a.fail(w, http.StatusBadRequest, "invalid",
+				"the two scans are on different networks, so there is nothing in common to compare")
+			return
+		}
+	}
+
+	diff, err := a.Store.ScanDiff(r.Context(), other, sc)
+	if err != nil {
+		a.failStore(w, err, "scan diff")
+		return
+	}
+	diff.FromPicked = picked
+	a.ok(w, diff)
+}
+
+// exportDiff works out which pair of scans the diff in an export is about.
+//
+// `scan_id` and `against` name them. With neither, it is the last completed
+// scan of the mission against the one before it on the same network, which is
+// what an operator means by "what changed". A mission scanned only once has no
+// diff, and the sheet comes out with its header alone.
+func (a *API) exportDiff(r *http.Request, missionID, networkID int64) *model.ScanDiff {
+	ctx := r.Context()
+	var (
+		to  model.Scan
+		err error
+	)
+	if id := queryInt64(r, "scan_id"); id != 0 {
+		if to, err = a.Store.Scan(ctx, id); err != nil || to.MissionID != missionID {
+			return nil
+		}
+	} else if to, err = a.Store.LatestCompletedScan(ctx, missionID, networkID); err != nil {
+		return nil
+	}
+
+	var from model.Scan
+	picked := queryInt64(r, "against") == 0
+	if picked {
+		if from, err = a.Store.PreviousScan(ctx, to); err != nil {
+			return nil
+		}
+	} else if from, err = a.Store.Scan(ctx, queryInt64(r, "against")); err != nil ||
+		from.MissionID != missionID || from.NetworkID != to.NetworkID {
+		return nil
+	}
+
+	diff, err := a.Store.ScanDiff(ctx, from, to)
+	if err != nil {
+		// An export that cannot work out the diff is still worth sending.
+		a.Log.Warn("cannot build the export diff", "mission", missionID, "error", err)
+		return nil
+	}
+	diff.FromPicked = picked
+	return &diff
+}
+
 // handleExport streams a mission in the requested format.
 func (a *API) handleExport(w http.ResponseWriter, r *http.Request, u model.User) {
 	m, ok := a.requireMission(w, r, u)
@@ -401,6 +516,7 @@ func (a *API) handleExport(w http.ResponseWriter, r *http.Request, u model.User)
 		return
 	}
 	data.ExportedBy = u.Username
+	data.Diff = a.exportDiff(r, m.ID, networkID)
 
 	filename := export.Filename(data, format, networkID)
 	w.Header().Set("Content-Type", meta.ContentType)

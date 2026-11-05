@@ -294,6 +294,72 @@ func writeMatrixCSV(w io.Writer, d model.MissionData) error {
 	return cw.Error()
 }
 
+// writeDiffCSV renders what changed between the last two scans of a network:
+// the sheet an operator opens on the second morning to see what moved.
+//
+// The three groups share one file with a `group` column rather than three
+// files, because they are one answer and a reader sorts through them together.
+// Hosts that answered at the same address both times are left out: this sheet
+// is the change, and the inventory is already in the other ones.
+func writeDiffCSV(w io.Writer, d model.MissionData) error {
+	cw, err := csvWriter(w)
+	if err != nil {
+		return err
+	}
+	defer cw.Flush()
+
+	if err := cw.Write([]string{
+		"group", "change", "from_scan", "to_scan", "network", "asset",
+		"ip", "previous_ip", "hostname", "port", "protocol", "service",
+		"product", "previous_product", "version", "previous_version",
+		"severity", "check_id", "title",
+	}); err != nil {
+		return err
+	}
+	if d.Diff == nil || d.Diff.From == nil {
+		return cw.Error()
+	}
+
+	diff := *d.Diff
+	network := netName(networkNames(d), diff.NetworkID)
+	from, to := itoa64(diff.From.ID), itoa64(diff.To.ID)
+	row := func(group, change string, rest ...string) error {
+		return cw.Write(append([]string{group, change, from, to, network}, rest...))
+	}
+
+	for _, h := range diff.Hosts {
+		if h.Change == model.DiffSame {
+			continue
+		}
+		if err := row("host", string(h.Change), h.AssetLabel,
+			h.IP, h.PreviousIP, h.Hostname, "", "", "",
+			"", "", "", "", "", "", ""); err != nil {
+			return err
+		}
+	}
+	for _, s := range diff.Services {
+		if err := row("service", string(s.Change), s.AssetLabel,
+			s.IP, s.PreviousIP, s.Hostname, itoa(s.Port), string(s.Protocol), s.Name,
+			s.Product, s.PreviousProduct, s.Version, s.PreviousVersion,
+			"", "", ""); err != nil {
+			return err
+		}
+	}
+	for _, f := range diff.Findings {
+		port := ""
+		if f.Port != 0 {
+			port = itoa(f.Port)
+		}
+		if err := row("finding", string(f.Change), f.AssetLabel,
+			f.IP, f.PreviousIP, f.Hostname, port, string(f.Protocol), "",
+			"", "", "", "",
+			string(f.Severity), f.CheckID, f.Title); err != nil {
+			return err
+		}
+	}
+	return cw.Error()
+}
+
 // writeTargets emits a plain ip:port list, ready to pipe into another tool.
 func writeTargets(w io.Writer, d model.MissionData) error {
 	seen := make(map[string]bool, len(d.Services))
@@ -370,6 +436,8 @@ func servicesByHost(d model.MissionData) map[int64][]model.Service {
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
+
+func itoa64(n int64) string { return strconv.FormatInt(n, 10) }
 
 // triageLabel renders a status for a human reading a spreadsheet.
 func triageLabel(s model.TriageStatus) string {

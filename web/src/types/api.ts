@@ -860,3 +860,100 @@ export type LiveEvent =
   | (EventEnvelope<ReachResult> & { type: 'reach' })
   | (EventEnvelope<Asset> & { type: 'asset' })
   | (EventEnvelope<Network> & { type: 'network' })
+
+// ---------------------------------------------------------------------------
+// Scan to scan diff
+// ---------------------------------------------------------------------------
+
+/** What happened to one row between the two scans being compared. */
+export type DiffChange = 'added' | 'removed' | 'same' | 'moved' | 'changed'
+
+/** Just enough of a scan to name it in a diff. */
+export interface ScanRef {
+  id: number
+  network_id: number
+  kind: ScanKind
+  status: ScanStatus
+  created_at: string
+  started_at?: string
+  finished_at?: string
+}
+
+export interface ScanDiffCounts {
+  hosts_added: number
+  hosts_removed: number
+  /** Every host both scans saw, moves included. */
+  hosts_same: number
+  /** The moves alone, a part of hosts_same rather than a fourth group. */
+  hosts_moved: number
+  ports_opened: number
+  ports_closed: number
+  services_changed: number
+  findings_raised: number
+  findings_cleared: number
+}
+
+export interface ScanDiffHost {
+  change: DiffChange
+  host_id: number
+  ip: string
+  /** Where the same machine answered during the earlier scan, on a move. */
+  previous_ip?: string
+  previous_host_id?: number
+  hostname?: string
+  mac?: string
+  os?: string
+  asset_id?: number
+  asset_label?: string
+}
+
+export interface ScanDiffService {
+  change: DiffChange
+  service_id: number
+  ip: string
+  previous_ip?: string
+  hostname?: string
+  port: number
+  protocol: Protocol
+  name?: string
+  product?: string
+  version?: string
+  previous_product?: string
+  previous_version?: string
+  asset_id?: number
+  asset_label?: string
+}
+
+export interface ScanDiffFinding {
+  change: DiffChange
+  finding_id: number
+  ip: string
+  previous_ip?: string
+  hostname?: string
+  port?: number
+  protocol?: Protocol
+  check_id: string
+  title: string
+  severity: Severity
+  asset_id?: number
+  asset_label?: string
+}
+
+/** GET /api/missions/{id}/scans/{scanID}/diff */
+export interface ScanDiff {
+  mission_id: number
+  network_id: number
+  /** Null when there was no earlier scan of this network to compare with. */
+  from: ScanRef | null
+  to: ScanRef
+  /** True when the server chose `from` because the caller did not name one. */
+  from_picked: boolean
+  message?: string
+  /** What the comparison cannot see, in plain words. */
+  caveats?: string[]
+  changed: boolean
+  counts: ScanDiffCounts
+  hosts: ScanDiffHost[] | null
+  services: ScanDiffService[] | null
+  findings: ScanDiffFinding[] | null
+}

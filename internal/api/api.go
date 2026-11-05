@@ -126,6 +126,9 @@ func (a *API) routes() {
 	a.mux.Handle("POST /api/scans/{id}/stop", write(a.handleStopScan))
 	a.mux.Handle("POST /api/scans/{id}/retry-failed", write(a.handleRetryScan))
 	a.mux.Handle("GET /api/scans/{id}/logs", auth(a.handleScanLogs))
+	// Mission scoped on purpose: a diff reads two scans at once, and the
+	// mission in the path is what the membership check hangs off.
+	a.mux.Handle("GET /api/missions/{id}/scans/{scanID}/diff", auth(a.handleScanDiff))
 
 	a.mux.Handle("GET /api/missions/{id}/hosts", auth(a.handleListHosts))
 	a.mux.Handle("GET /api/missions/{id}/services", auth(a.handleListServices))
@@ -402,6 +405,17 @@ func (a *API) pathID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil || id <= 0 {
 		a.fail(w, http.StatusBadRequest, "invalid", "invalid id")
+		return 0, false
+	}
+	return id, true
+}
+
+// pathScanID reads the {scanID} segment of a mission-scoped scan route, where
+// {id} is already taken by the mission.
+func (a *API) pathScanID(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	id, err := strconv.ParseInt(r.PathValue("scanID"), 10, 64)
+	if err != nil || id <= 0 {
+		a.fail(w, http.StatusBadRequest, "invalid", "invalid scan id")
 		return 0, false
 	}
 	return id, true

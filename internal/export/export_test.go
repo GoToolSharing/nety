@@ -306,3 +306,88 @@ func TestIPOrdering(t *testing.T) {
 		t.Fatal("malformed values must sort last-ish without panicking")
 	}
 }
+
+// diffSample is a mission whose last scan found a new host, closed a port,
+// moved a machine to another address and cleared a finding.
+func diffSample() model.MissionData {
+	d := sampleData()
+	finished := time.Date(2026, 11, 4, 9, 0, 0, 0, time.UTC)
+	from := model.ScanRef{ID: 7, NetworkID: 2, Kind: model.ScanDiscovery,
+		Status: model.ScanCompleted, CreatedAt: finished, FinishedAt: &finished}
+	d.Diff = &model.ScanDiff{
+		MissionID: 1, NetworkID: 2, From: &from, FromPicked: true, Changed: true,
+		To: model.ScanRef{ID: 9, NetworkID: 2, Kind: model.ScanDiscovery,
+			Status: model.ScanCompleted, CreatedAt: finished},
+		Counts: model.ScanDiffCounts{HostsAdded: 1, HostsSame: 1, HostsMoved: 1,
+			PortsClosed: 1, ServicesChanged: 1, FindingsCleared: 1},
+		Hosts: []model.ScanDiffHost{
+			{Change: model.DiffAdded, HostID: 12, IP: "10.20.0.9", Hostname: "srv-new"},
+			{Change: model.DiffMoved, HostID: 11, IP: "10.20.0.8", PreviousIP: "10.20.0.7",
+				AssetID: 100, AssetLabel: "srv-web"},
+			{Change: model.DiffSame, HostID: 13, IP: "10.20.0.1"},
+		},
+		Services: []model.ScanDiffService{
+			{Change: model.DiffRemoved, ServiceID: 22, IP: "10.20.0.8", Port: 161,
+				Protocol: model.UDP, Name: "snmp"},
+			{Change: model.DiffChanged, ServiceID: 21, IP: "10.20.0.8", PreviousIP: "10.20.0.7",
+				Port: 443, Protocol: model.TCP, Name: "http", Product: "nginx",
+				PreviousProduct: "nginx", Version: "1.24.0", PreviousVersion: "1.18.0"},
+		},
+		Findings: []model.ScanDiffFinding{
+			{Change: model.DiffRemoved, FindingID: 31, IP: "10.20.0.8",
+				CheckID: "tls-expired", Title: "Expired certificate", Severity: model.SevLow},
+		},
+	}
+	return d
+}
+
+func TestCSVDiffListsWhatChanged(t *testing.T) {
+	var buf bytes.Buffer
+	if err := New().Export(&buf, "csv-diff", diffSample(), 0); err != nil {
+		t.Fatalf("export: %v", err)
+	}
+	body := bytes.TrimPrefix(buf.Bytes(), []byte{0xEF, 0xBB, 0xBF})
+	rows, err := csv.NewReader(bytes.NewReader(body)).ReadAll()
+	if err != nil {
+		t.Fatalf("csv parse: %v", err)
+	}
+	// Header, two hosts (the unchanged one is left out), two services and one
+	// finding.
+	if len(rows) != 6 {
+		t.Fatalf("expected 6 rows, got %d: %v", len(rows), rows)
+	}
+	if rows[0][0] != "group" || rows[0][1] != "change" {
+		t.Fatalf("unexpected header: %v", rows[0])
+	}
+	for _, r := range rows[1:] {
+		if len(r) != len(rows[0]) {
+			t.Fatalf("row has %d fields, header has %d: %v", len(r), len(rows[0]), r)
+		}
+		if r[2] != "7" || r[3] != "9" {
+			t.Fatalf("every row must name the two scans, got %v", r[:4])
+		}
+	}
+	joined := string(body)
+	for _, want := range []string{"moved", "10.20.0.7", "1.18.0", "tls-expired"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("the diff sheet should mention %q:\n%s", want, joined)
+		}
+	}
+}
+
+// TestNetworkFilterDropsAnotherNetworksDiff keeps a per-network export from
+// carrying the changes of a VLAN it is not about.
+func TestNetworkFilterDropsAnotherNetworksDiff(t *testing.T) {
+	var buf bytes.Buffer
+	if err := New().Export(&buf, "csv-diff", diffSample(), 1); err != nil {
+		t.Fatalf("export: %v", err)
+	}
+	body := bytes.TrimPrefix(buf.Bytes(), []byte{0xEF, 0xBB, 0xBF})
+	rows, err := csv.NewReader(bytes.NewReader(body)).ReadAll()
+	if err != nil {
+		t.Fatalf("csv parse: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("the diff of network 2 has no place in an export of network 1: %v", rows)
+	}
+}

@@ -20,6 +20,7 @@ import type {
   ReachResult,
   Role,
   Scan,
+  ScanDiff,
   ScanInput,
   ScanLogLine,
   ScanProfileInfo,
@@ -241,6 +242,15 @@ export const api = {
         query: { after, limit },
       }),
     ),
+  /**
+   * What changed between two scans of the same network. Leaving `against`
+   * out lets the server pick the most recent earlier completed scan, and the
+   * answer says which one that was.
+   */
+  scanDiff: (missionId: number, scanId: number, against?: number) =>
+    request<ScanDiff>(`api/missions/${missionId}/scans/${scanId}/diff`, {
+      query: { against },
+    }),
   scanProfiles: async () =>
     list(await request<ScanProfileInfo[] | null>('api/scan-profiles')),
   techniques: async () => list(await request<TechniqueInfo[] | null>('api/techniques')),

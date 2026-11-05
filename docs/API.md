@@ -82,6 +82,52 @@ A scan object carries `status` (`queued|running|paused|completed|failed|cancelle
 `phase`, `progress` (0..1), `phases[]` (`{phase,total,done,failed,active,started}`),
 `stats`, `resumable`, and the timestamps.
 
+### Diff between two scans
+
+`GET /api/missions/{id}/scans/{scanID}/diff?against=<other scan id>` - what
+changed on a network between two of its scans. Without `against`, the server
+compares with the most recent earlier **completed** scan of the same network and
+says so in `from_picked`. Both scans must be on the same network.
+
+```jsonc
+{
+  "mission_id": 1, "network_id": 2,
+  "from": { "id": 7, "network_id": 2, "kind": "discovery", "status": "completed",
+            "created_at": "...", "finished_at": "..." },   // null on a first scan
+  "to":   { "id": 9, ... },
+  "from_picked": true,          // the server chose `from`
+  "changed": true,
+  "message": "",                // set when there is nothing to show
+  "caveats": ["..."],           // what the comparison cannot see
+  "counts": {
+    "hosts_added": 1, "hosts_removed": 1, "hosts_same": 24, "hosts_moved": 1,
+    "ports_opened": 2, "ports_closed": 1, "services_changed": 1,
+    "findings_raised": 1, "findings_cleared": 1
+  },
+  "hosts":    [{ "change": "moved", "host_id": 11, "ip": "10.20.0.8",
+                 "previous_ip": "10.20.0.7", "asset_id": 100, "asset_label": "srv-web" }],
+  "services": [{ "change": "changed", "service_id": 21, "ip": "10.20.0.8", "port": 443,
+                 "protocol": "tcp", "product": "nginx", "version": "1.24.0",
+                 "previous_version": "1.18.0" }],
+  "findings": [{ "change": "removed", "finding_id": 31, "ip": "10.20.0.8",
+                 "check_id": "tls-expired", "severity": "low", "title": "..." }]
+}
+```
+
+`change` is `added`, `removed`, `same`, `moved` or `changed`. A host is matched
+on its address **and** on its asset, so a machine that took a new lease reads as
+`moved` with both addresses rather than as one host gone and another appeared;
+its ports and findings follow it. Only hosts are reported as `same`: an
+unchanged port or finding is left out.
+
+**What a diff cannot see.** There is no per-scan copy of a result row. A
+re-scan merges into the row that is already there and stamps `last_scan_id`, so
+a product or version that changed on a machine which kept its address cannot be
+recovered after the fact; `services_changed` only covers machines that also
+moved. Presence is worked out from `last_scan_id` together with `first_seen` and
+the end time of the scan that stamped the row, which assumes a scan of a network
+covers the whole network. `caveats` says all of this in the response itself.
+
 ## Results
 
 `GET /api/missions/{id}/hosts?network_id=`
@@ -178,12 +224,19 @@ findings and machines CSVs, the Excel workbook, the JSON dump and the reports.
 
 ## Exports
 
-`GET /api/missions/{id}/export?format=<id>&network_id=` - streams a file with
-`Content-Disposition`.
+`GET /api/missions/{id}/export?format=<id>&network_id=&scan_id=&against=` -
+streams a file with `Content-Disposition`.
 `GET /api/export-formats` - `[{id, title, extension, content_type}]`
 
 Formats: `json`, `csv-hosts`, `csv-services`, `csv-findings`, `csv-reach`,
-`csv-assets`, `nmap-xml`, `gnmap`, `targets-txt`, `markdown`, `html`, `xlsx`.
+`csv-assets`, `csv-matrix`, `csv-diff`, `nmap-xml`, `gnmap`, `targets-txt`,
+`markdown`, `html`, `xlsx`.
+
+**The diff travels with the export.** `csv-diff` is the sheet of what changed,
+and the JSON dump carries the same thing under `diff`. `scan_id` and `against`
+name the two scans; with neither, it is the last completed scan of the mission
+against the one before it on the same network. A mission scanned only once has
+no diff, and `csv-diff` comes out with its header alone.
 
 **Exports are complete.** Unlike the listings, an export carries every row of
 the mission, skipped hosts and their services, findings and segmentation

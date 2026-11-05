@@ -13,13 +13,15 @@ import type { ExportFormat } from '@/types/api'
 
 /** Short, honest descriptions of what each built-in format is good for. */
 const FORMAT_BLURB: Record<string, string> = {
-  json: 'The whole mission as one JSON document - networks, scans, hosts, services, assets, findings, reachability and matrix.',
+  json: 'The whole mission as one JSON document - networks, scans, hosts, services, assets, findings, reachability, matrix and the latest scan diff.',
   'csv-hosts': 'One row per host: IP, MAC, vendor, hostname, OS, network.',
   'csv-services': 'One row per service: address, port, protocol, product, version, TLS and HTTP summary.',
   'csv-findings': 'One row per finding, with severity, evidence and remediation.',
   'csv-reach': 'One row per reachability test: source, target, technique, status.',
   'csv-assets': 'One row per asset with its addresses and identity keys.',
   'csv-matrix': 'The source × target grid: how many services each network could reach in the next.',
+  'csv-diff':
+    'What the last scan of a network changed against the one before it: hosts that appeared or went away, ports that opened or closed, findings raised or cleared.',
   'nmap-xml': 'Nmap XML, for tools that already ingest nmap output.',
   gnmap: 'Grepable nmap output.',
   'targets-txt': 'Plain list of live addresses - feed it to your next tool.',
