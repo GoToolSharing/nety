@@ -48,6 +48,16 @@ export interface MissionInput {
   archived?: boolean
 }
 
+/** What a mission reset removed. */
+export interface MissionResetCounts {
+  scans: number
+  hosts: number
+  services: number
+  findings: number
+  assets: number
+  reach: number
+}
+
 /** Per-network counters of a mission summary, keyed by network id. */
 export interface NetworkCounts {
   hosts?: number

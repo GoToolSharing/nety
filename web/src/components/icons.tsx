@@ -289,6 +289,13 @@ export const AuditIcon = (p: IconProps) => (
   </Icon>
 )
 
+export const SettingsIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" />
+  </Icon>
+)
+
 export const TrunkIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M3 7h18M3 12h18M3 17h18" />

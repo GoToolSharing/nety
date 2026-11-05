@@ -19,6 +19,7 @@ import AssetsPage from '@/pages/mission/AssetsPage'
 import MatrixPage from '@/pages/mission/MatrixPage'
 import ExportsPage from '@/pages/mission/ExportsPage'
 import TeamPage from '@/pages/mission/TeamPage'
+import SettingsPage from '@/pages/mission/SettingsPage'
 import HelpPage from '@/pages/HelpPage'
 import UsersPage from '@/pages/admin/UsersPage'
 import AuditPage from '@/pages/admin/AuditPage'
@@ -89,6 +90,7 @@ export default function App() {
           <Route path="matrix" element={<MatrixPage />} />
           <Route path="exports" element={<ExportsPage />} />
           <Route path="team" element={<TeamPage />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
         {/* Outside a mission, but kept inside the same two-pane layout so the
             sidebar never disappears from under the operator. */}

@@ -312,3 +312,62 @@ func (s *Store) DeleteNetwork(ctx context.Context, id int64) error {
 		return affected(res)
 	})
 }
+
+// ResetCounts says what a reset removed, so the operator sees the size of
+// what they just discarded rather than a bare confirmation.
+type ResetCounts struct {
+	Scans    int64 `json:"scans"`
+	Hosts    int64 `json:"hosts"`
+	Services int64 `json:"services"`
+	Findings int64 `json:"findings"`
+	Assets   int64 `json:"assets"`
+	Reach    int64 `json:"reach"`
+}
+
+// ResetMissionData empties a mission of everything a scan produced and keeps
+// everything the operator configured.
+//
+// What goes: the scans with their work units and their logs, the hosts, the
+// services, the findings, the assets with their identity evidence, the
+// segmentation results, and the layer-2 panel of each network, which is
+// itself the output of a probe.
+//
+// What stays: the mission, its scope and exclusions, its team, and its
+// networks with their interface, VLAN and addressing. Starting a mission over
+// should not mean setting up the VLANs again.
+func (s *Store) ResetMissionData(ctx context.Context, missionID int64) (ResetCounts, error) {
+	var c ResetCounts
+	err := s.tx(ctx, func(tx *sql.Tx) error {
+		// scan_work and scan_logs hang off scans, and asset_keys and
+		// asset_ips off assets, both with ON DELETE CASCADE, so deleting the
+		// parent row is enough and keeps this list short.
+		for _, step := range []struct {
+			table string
+			into  *int64
+		}{
+			{"reach_results", &c.Reach},
+			{"findings", &c.Findings},
+			{"services", &c.Services},
+			{"hosts", &c.Hosts},
+			{"assets", &c.Assets},
+			{"scans", &c.Scans},
+		} {
+			res, err := tx.ExecContext(ctx,
+				`DELETE FROM `+step.table+` WHERE mission_id = ?`, missionID)
+			if err != nil {
+				return fmt.Errorf("store: reset %s: %w", step.table, err)
+			}
+			n, err := res.RowsAffected()
+			if err != nil {
+				return fmt.Errorf("store: reset %s: %w", step.table, err)
+			}
+			*step.into = n
+		}
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE networks SET l2 = '{}' WHERE mission_id = ?`, missionID); err != nil {
+			return fmt.Errorf("store: reset network l2: %w", err)
+		}
+		return nil
+	})
+	return c, err
+}

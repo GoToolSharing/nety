@@ -13,6 +13,7 @@ import type {
   Mission,
   MissionInput,
   MissionMember,
+  MissionResetCounts,
   MissionSummary,
   Network,
   NetworkInput,
@@ -187,6 +188,13 @@ export const api = {
   patchMission: (id: number, body: Partial<MissionInput>) =>
     request<Mission>(`api/missions/${id}`, { method: 'PATCH', body }),
   deleteMission: (id: number) => request<void>(`api/missions/${id}`, { method: 'DELETE' }),
+  // The mission name has to be typed back, so the server refuses a reset that
+  // was fired from the wrong tab.
+  resetMission: (id: number, confirm: string) =>
+    request<MissionResetCounts>(`api/missions/${id}/reset`, {
+      method: 'POST',
+      body: { confirm },
+    }),
   // The handler answers the people as well as their ids: listing every account
   // is admin-only, so an operator needs the names to come back with the ids.
   missionMembers: async (id: number) => {

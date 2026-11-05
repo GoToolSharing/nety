@@ -99,6 +99,7 @@ func (a *API) routes() {
 	a.mux.Handle("GET /api/missions/{id}", auth(a.handleGetMission))
 	a.mux.Handle("PATCH /api/missions/{id}", write(a.handleUpdateMission))
 	a.mux.Handle("DELETE /api/missions/{id}", a.adminOnly(a.handleDeleteMission))
+	a.mux.Handle("POST /api/missions/{id}/reset", a.adminOnly(a.handleResetMission))
 	a.mux.Handle("GET /api/missions/{id}/members", auth(a.handleGetMembers))
 	a.mux.Handle("PUT /api/missions/{id}/members", a.adminOnly(a.handleSetMembers))
 	a.mux.Handle("GET /api/missions/{id}/summary", auth(a.handleMissionSummary))

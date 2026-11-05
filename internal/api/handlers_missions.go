@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"net/netip"
 	"strings"
@@ -131,6 +132,47 @@ func (a *API) handleDeleteMission(w http.ResponseWriter, r *http.Request, u mode
 	}
 	a.audit(r, u, 0, "mission.deleted", m.Name)
 	a.ok(w, map[string]bool{"ok": true})
+}
+
+// handleResetMission empties a mission of everything the scans produced and
+// keeps everything the operator configured. It is the step before handing a
+// mission back for a second pass, and the one case where losing results is
+// the point, so it is deliberate: administrators only, and the caller has to
+// name the mission it is about to empty.
+func (a *API) handleResetMission(w http.ResponseWriter, r *http.Request, u model.User) {
+	m, ok := a.requireMission(w, r, u)
+	if !ok {
+		return
+	}
+	var req struct {
+		Confirm string `json:"confirm"`
+	}
+	if !a.decode(w, r, &req) {
+		return
+	}
+	if !strings.EqualFold(strings.TrimSpace(req.Confirm), m.Name) {
+		a.fail(w, http.StatusBadRequest, "invalid",
+			"type the mission name to confirm")
+		return
+	}
+	// A reset while work is in flight would race the runner: units would come
+	// back and write rows into a mission that is supposed to be empty.
+	for _, id := range a.Runner.Running() {
+		if sc, err := a.Store.Scan(r.Context(), id); err == nil && sc.MissionID == m.ID {
+			a.fail(w, http.StatusConflict, "busy", "a scan is still running on this mission; stop it first")
+			return
+		}
+	}
+	counts, err := a.Store.ResetMissionData(r.Context(), m.ID)
+	if err != nil {
+		a.failStore(w, err, "mission")
+		return
+	}
+	a.audit(r, u, m.ID, "mission.reset", fmt.Sprintf(
+		"%s: %d scans, %d hosts, %d services, %d findings, %d assets, %d segmentation results",
+		m.Name, counts.Scans, counts.Hosts, counts.Services, counts.Findings,
+		counts.Assets, counts.Reach))
+	a.ok(w, counts)
 }
 
 func (a *API) handleGetMembers(w http.ResponseWriter, r *http.Request, u model.User) {

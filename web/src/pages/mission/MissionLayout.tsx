@@ -30,6 +30,7 @@ import {
   OverviewIcon,
   ScanIcon,
   ServiceIcon,
+  SettingsIcon,
   UsersIcon,
 } from '@/components/icons'
 
@@ -138,6 +139,7 @@ function MissionSections({ missionId }: { missionId: number }) {
     { to: `${base}/matrix`, label: 'Segmentation matrix', icon: <MatrixIcon /> },
     { to: `${base}/exports`, label: 'Exports', icon: <ExportIcon /> },
     { to: `${base}/team`, label: 'Team', icon: <UsersIcon />, count: members.data?.members.length },
+    { to: `${base}/settings`, label: 'Settings', icon: <SettingsIcon /> },
   ]
 
   return (
