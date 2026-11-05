@@ -153,9 +153,9 @@ export interface InterfaceInfo {
 // Scans
 // ---------------------------------------------------------------------------
 
-export type ScanKind = 'discovery' | 'segmentation' | 'l2probe'
+export type ScanKind = 'discovery' | 'segmentation' | 'l2probe' | 'checks'
 
-export const SCAN_KINDS: ScanKind[] = ['discovery', 'segmentation', 'l2probe']
+export const SCAN_KINDS: ScanKind[] = ['discovery', 'segmentation', 'l2probe', 'checks']
 
 export type ScanStatus =
   | 'queued'

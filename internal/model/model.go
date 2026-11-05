@@ -103,6 +103,9 @@ const (
 	ScanDiscovery    ScanKind = "discovery"    // full mapping of the current network
 	ScanSegmentation ScanKind = "segmentation" // replay other networks' services from here
 	ScanL2Probe      ScanKind = "l2probe"      // passive/active L2 recon (CDP/LLDP/DTP/VLAN brute)
+	// ScanChecks re-runs detection and the checks over what previous scans
+	// already inventoried, without discovering or port-scanning anything.
+	ScanChecks ScanKind = "checks"
 )
 
 type ScanStatus string

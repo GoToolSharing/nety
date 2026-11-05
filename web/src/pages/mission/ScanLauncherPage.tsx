@@ -17,7 +17,14 @@ import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/cn'
 import { humanizeId } from '@/lib/format'
-import { AlertIcon, MatrixIcon, NetworkIcon, ScanIcon, TrunkIcon } from '@/components/icons'
+import {
+  AlertIcon,
+  FindingIcon,
+  MatrixIcon,
+  NetworkIcon,
+  ScanIcon,
+  TrunkIcon,
+} from '@/components/icons'
 import type { ScanKind, ScanOptions, TechniqueInfo } from '@/types/api'
 
 // ---------------------------------------------------------------------------
@@ -94,6 +101,13 @@ const KINDS: { id: ScanKind; title: string; blurb: string; icon: React.ReactNode
     blurb:
       'Listen for CDP/LLDP/DTP/STP and 802.1Q tags on this port. Passive by default, silent.',
     icon: <TrunkIcon width={18} height={18} />,
+  },
+  {
+    id: 'checks',
+    title: 'Checks only',
+    blurb:
+      'Re-run detection and the checks over what is already inventoried here. No discovery, no port scan.',
+    icon: <FindingIcon width={18} height={18} />,
   },
 ]
 
@@ -175,7 +189,11 @@ export default function ScanLauncherPage() {
 
   useEffect(() => {
     const kindFromQuery = searchParams.get('kind')
-    if (kindFromQuery === 'segmentation' || kindFromQuery === 'l2probe') {
+    if (
+      kindFromQuery === 'segmentation' ||
+      kindFromQuery === 'l2probe' ||
+      kindFromQuery === 'checks'
+    ) {
       setKind(kindFromQuery)
     }
   }, [searchParams])
@@ -345,7 +363,7 @@ export default function ScanLauncherPage() {
         {/* ---------------- kind ---------------- */}
         <Card>
           <CardHeader title="What do you want to run?" />
-          <CardBody className="grid gap-3 sm:grid-cols-3">
+          <CardBody className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {KINDS.map((k) => (
               <button
                 key={k.id}
@@ -421,7 +439,7 @@ export default function ScanLauncherPage() {
         </Card>
 
         {/* ---------------- profile ---------------- */}
-        {kind !== 'l2probe' && (
+        {kind !== 'l2probe' && kind !== 'checks' && (
           <Card>
             <CardHeader
               title="Profile"
@@ -460,7 +478,7 @@ export default function ScanLauncherPage() {
         )}
 
         {/* ---------------- targets & options ---------------- */}
-        {kind !== 'l2probe' && (
+        {kind !== 'l2probe' && kind !== 'checks' && (
           <Card>
             <CardHeader
               title="Targets and parameters"
@@ -781,6 +799,90 @@ export default function ScanLauncherPage() {
                 value={vlanRange}
                 onChange={(e) => setVlanRange(e.target.value)}
               />
+            </CardBody>
+          </Card>
+        )}
+
+        {kind === 'checks' && (
+          <Card>
+            <CardHeader
+              title="Checks only"
+              description="Works from the hosts and services already stored for this network."
+            />
+            <CardBody className="space-y-5">
+              <InlineAlert tone="info">
+                Nothing is discovered and no port is scanned. The scan walks the inventory this
+                network already has and runs the phases you pick below. Run it when the mapping
+                was done with the checks switched off, or to pick up checks added since.
+                <br />
+                <br />
+                Running it twice changes nothing twice: hosts, services and findings are keyed on
+                what identifies them, so a second pass refreshes the rows that are there instead
+                of adding more, and it leaves your statuses and notes alone.
+              </InlineAlert>
+
+              <fieldset className="grid gap-3 sm:grid-cols-3">
+                <legend className="field-label">Phases</legend>
+                <Checkbox
+                  label="Service detection"
+                  hint="Re-identify each known service. Off keeps the versions you already have."
+                  checked={opts.service_detection}
+                  onChange={(e) => set('service_detection', e.target.checked)}
+                />
+                <Checkbox
+                  label="Identity collection"
+                  hint="Refresh the evidence that ties an address to a machine."
+                  checked={opts.identity_collection}
+                  onChange={(e) => set('identity_collection', e.target.checked)}
+                />
+                <Checkbox
+                  label="Checks"
+                  hint="The misconfiguration checks that produce findings."
+                  checked={opts.checks}
+                  onChange={(e) => set('checks', e.target.checked)}
+                />
+              </fieldset>
+
+              <div className="rounded-md border border-warn/50 bg-warn/5 p-3">
+                <Toggle
+                  danger
+                  disabled={!opts.checks}
+                  checked={opts.allow_default_creds}
+                  onChange={(v) => set('allow_default_creds', v)}
+                  label={
+                    <span className="flex items-center gap-2">
+                      Try vendor default credentials
+                      <Badge tone="warn">
+                        <AlertIcon width={11} height={11} />
+                        intrusive
+                      </Badge>
+                    </span>
+                  }
+                  hint={
+                    opts.checks
+                      ? "The only check family that authenticates. A short, capped list of vendor defaults is tried, so nothing gets locked out - but these are real login attempts and they land in the target's logs. Off by default; agree it with the client."
+                      : 'Turn on Checks above to enable this: it is one of the checks, so it has nothing to run in.'
+                  }
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <TextField
+                  label="Timeout (ms)"
+                  type="number"
+                  min={100}
+                  value={opts.timeout_ms}
+                  onChange={(e) => set('timeout_ms', Number(e.target.value))}
+                />
+                <TextField
+                  label="Concurrency"
+                  type="number"
+                  min={1}
+                  hint="Workers running checks in parallel."
+                  value={opts.concurrency}
+                  onChange={(e) => set('concurrency', Number(e.target.value))}
+                />
+              </div>
             </CardBody>
           </Card>
         )}

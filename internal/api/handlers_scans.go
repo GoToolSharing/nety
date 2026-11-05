@@ -120,7 +120,7 @@ func (a *API) handleCreateScan(w http.ResponseWriter, r *http.Request, u model.U
 		req.Kind = model.ScanDiscovery
 	}
 	switch req.Kind {
-	case model.ScanDiscovery, model.ScanSegmentation, model.ScanL2Probe:
+	case model.ScanDiscovery, model.ScanSegmentation, model.ScanL2Probe, model.ScanChecks:
 	default:
 		a.fail(w, http.StatusBadRequest, "invalid", "unknown scan kind")
 		return

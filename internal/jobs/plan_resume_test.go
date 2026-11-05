@@ -8,6 +8,7 @@ import (
 
 	"github.com/GoToolSharing/nety/internal/engine"
 	"github.com/GoToolSharing/nety/internal/model"
+	"github.com/GoToolSharing/nety/internal/store"
 )
 
 type stubInspector struct{}
@@ -229,5 +230,83 @@ func TestSegmentationLeavesSkippedHostsOut(t *testing.T) {
 	}
 	if seen[skipped.ID] {
 		t.Fatal("a skipped host was still planned as a segmentation target")
+	}
+}
+
+// The operator ran a discovery with the checks switched off, then decided to
+// test what it found. A checks scan works from the inventory: no discovery,
+// no port scan, and nothing duplicated when it is run twice.
+func TestChecksScanWorksFromTheInventory(t *testing.T) {
+	h := newHarness(t, Engines{
+		NetInspector:  stubInspector{},
+		Fingerprinter: &fakeFingerprinter{},
+		Checker:       fakeChecker{},
+	})
+	ctx := context.Background()
+
+	host, err := h.st.UpsertHost(ctx, model.Host{
+		MissionID: h.mis.ID, NetworkID: h.net.ID, IP: "10.0.0.7",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.st.UpsertService(ctx, model.Service{
+		MissionID: h.mis.ID, NetworkID: h.net.ID, HostID: host.ID,
+		IP: "10.0.0.7", Port: 80, Protocol: model.TCP, State: model.PortOpen,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	opts := defaultOptions()
+	opts.ServiceDetection, opts.IdentityCollection, opts.Checks = true, false, true
+	run := func() model.Scan {
+		t.Helper()
+		sc, err := h.st.CreateScan(ctx, model.Scan{
+			MissionID: h.mis.ID, NetworkID: h.net.ID,
+			Kind: model.ScanChecks, Options: opts,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := h.runner.Start(ctx, sc.ID); err != nil {
+			t.Fatalf("start: %v", err)
+		}
+		done := h.waitStatus(t, sc.ID, 20*time.Second, model.ScanCompleted, model.ScanFailed)
+		if done.Status != model.ScanCompleted {
+			t.Fatalf("scan failed: %s", done.Error)
+		}
+		return done
+	}
+
+	first := run()
+	for _, p := range first.Phases {
+		switch p.Phase {
+		case model.PhaseL2, model.PhaseDiscovery, model.PhasePortsTCP, model.PhasePortsUDP:
+			t.Fatalf("a checks scan planned %s, which it has no business doing", p.Phase)
+		}
+	}
+	findings, err := h.st.ListFindings(ctx, store.FindingFilter{MissionID: h.mis.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(findings) == 0 {
+		t.Fatal("the checks scan produced no finding")
+	}
+
+	// Running it again refreshes the same rows rather than adding more.
+	run()
+	again, err := h.st.ListFindings(ctx, store.FindingFilter{MissionID: h.mis.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(again) != len(findings) {
+		t.Fatalf("a second checks scan duplicated findings: %d then %d", len(findings), len(again))
+	}
+	services, err := h.st.ListServices(ctx, store.ServiceFilter{MissionID: h.mis.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(services) != 1 {
+		t.Fatalf("a second checks scan duplicated services: %d", len(services))
 	}
 }

@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/netip"
 	"strings"
@@ -49,6 +50,8 @@ func phasesFor(kind model.ScanKind) []model.WorkPhase {
 		return []model.WorkPhase{model.PhaseL2, model.PhaseSegment}
 	case model.ScanL2Probe:
 		return []model.WorkPhase{model.PhaseL2}
+	case model.ScanChecks:
+		return []model.WorkPhase{model.PhaseFingerprint, model.PhaseIdentity, model.PhaseChecks}
 	default:
 		return []model.WorkPhase{
 			model.PhaseL2, model.PhaseDiscovery,
@@ -90,8 +93,10 @@ func (r *Runner) plan(ctx context.Context, sc model.Scan) error {
 	// missing its main phase, ran the L2 recon, found nothing to do and
 	// reported itself completed. Per-phase, a resume finishes the plan.
 
-	// L2 recon of the switch port we are plugged into.
-	if r.eng.NetInspector != nil && net.Interface != "" {
+	// L2 recon of the switch port we are plugged into. A checks scan works
+	// from the inventory and never touches the wire at layer 2, so it is the
+	// one kind that skips this.
+	if sc.Kind != model.ScanChecks && r.eng.NetInspector != nil && net.Interface != "" {
 		has, err := r.phaseHasWork(ctx, sc.ID, model.PhaseL2)
 		if err != nil {
 			return err
@@ -116,6 +121,8 @@ func (r *Runner) plan(ctx context.Context, sc model.Scan) error {
 		return r.planSegment(ctx, sc)
 	case model.ScanL2Probe:
 		return nil
+	case model.ScanChecks:
+		return r.planChecks(ctx, sc)
 	}
 
 	// The scanning phases are fed by discovery, so once any of them exists the
@@ -458,29 +465,7 @@ func (r *Runner) generate(ctx context.Context, sc model.Scan, finished model.Wor
 		if !sc.Options.ServiceDetection {
 			return nil
 		}
-		services, err := r.st.ListServices(ctx, store.ServiceFilter{
-			MissionID: sc.MissionID, NetworkID: sc.NetworkID,
-		})
-		if err != nil {
-			return err
-		}
-		var units []fingerprintPayload
-		for _, sv := range services {
-			if sv.Confidence >= 80 && sv.LastScanID == sc.ID {
-				continue // already identified during this scan
-			}
-			units = append(units, fingerprintPayload{ServiceID: sv.ID})
-		}
-		raw, err := marshalUnits(units)
-		if err != nil {
-			return err
-		}
-		n, err := r.st.AddWork(ctx, sc.ID, model.PhaseFingerprint, raw)
-		if err != nil {
-			return err
-		}
-		r.logScan(ctx, sc, "info", fmt.Sprintf("service detection planned: %d services", n))
-		return nil
+		return r.addFingerprintUnits(ctx, sc)
 
 	case model.PhaseFingerprint:
 		if !sc.Options.IdentityCollection {
@@ -524,6 +509,72 @@ func (r *Runner) phaseHasWork(ctx context.Context, scanID int64, want ...model.W
 		}
 	}
 	return false, nil
+}
+
+// addFingerprintUnits plans one unit per known service of the scan's network.
+func (r *Runner) addFingerprintUnits(ctx context.Context, sc model.Scan) error {
+	services, err := r.st.ListServices(ctx, store.ServiceFilter{
+		MissionID: sc.MissionID, NetworkID: sc.NetworkID,
+	})
+	if err != nil {
+		return err
+	}
+	var units []fingerprintPayload
+	for _, sv := range services {
+		if sv.Confidence >= 80 && sv.LastScanID == sc.ID {
+			continue // already identified during this scan
+		}
+		units = append(units, fingerprintPayload{ServiceID: sv.ID})
+	}
+	raw, err := marshalUnits(units)
+	if err != nil {
+		return err
+	}
+	n, err := r.st.AddWork(ctx, sc.ID, model.PhaseFingerprint, raw)
+	if err != nil {
+		return err
+	}
+	r.logScan(ctx, sc, "info", fmt.Sprintf("service detection planned: %d services", n))
+	return nil
+}
+
+// planChecks seeds a scan that works from what previous scans already found.
+//
+// There is no discovery and no port scan here: the operator mapped the
+// network once, often with the checks switched off, and now wants the
+// detection and the checks run over that inventory. The three phases already
+// chain to one another exactly as they do after a port scan, so all this has
+// to do is feed the first one that is enabled.
+//
+// Nothing is duplicated by running it twice: hosts, services and findings are
+// all keyed on what identifies them, so a second pass updates the rows that
+// are there instead of adding more, and it leaves the operator's triage
+// alone.
+func (r *Runner) planChecks(ctx context.Context, sc model.Scan) error {
+	// Any of the three phases existing means the plan is already under way.
+	started, err := r.phaseHasWork(ctx, sc.ID,
+		model.PhaseFingerprint, model.PhaseIdentity, model.PhaseChecks)
+	if err != nil || started {
+		return err
+	}
+
+	hosts, err := r.st.ListHosts(ctx, sc.MissionID, sc.NetworkID)
+	if err != nil {
+		return err
+	}
+	if len(hosts) == 0 {
+		return errors.New("nothing to work from: run a discovery scan on this network first")
+	}
+
+	switch {
+	case sc.Options.ServiceDetection:
+		return r.addFingerprintUnits(ctx, sc)
+	case sc.Options.IdentityCollection:
+		return r.addHostUnits(ctx, sc, model.PhaseIdentity, "identity collection")
+	case sc.Options.Checks:
+		return r.addHostUnits(ctx, sc, model.PhaseChecks, "checks")
+	}
+	return errors.New("nothing to run: enable service detection, identity collection or checks")
 }
 
 func (r *Runner) addHostUnits(ctx context.Context, sc model.Scan, phase model.WorkPhase, label string) error {
