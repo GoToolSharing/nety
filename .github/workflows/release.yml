@@ -22,7 +22,11 @@ jobs:
       matrix:
         arch: [amd64, arm64]
     steps:
+      # Full history: the version falls back to `git describe` on a manual
+      # run, and a shallow clone has no tags to describe against.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -50,7 +54,7 @@ jobs:
           version="${GITHUB_REF_NAME}"
           case "$version" in
             v*) ;;
-            *) version="$(git describe --tags --always)" ;;
+            *) version="$(git describe --tags --always 2>/dev/null || echo dev)" ;;
           esac
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
