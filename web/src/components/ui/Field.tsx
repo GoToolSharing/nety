@@ -234,10 +234,15 @@ export function Toggle({
           disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
         )}
       >
+        {/* left-0.5 is not decoration. Without a `left`, an absolutely
+            positioned box falls back to its static position, and a <button>
+            centres its text by default: the knob started from the middle of
+            the track, so the checked offset pushed it out of the pill and into
+            the gap before the label. */}
         <span
           className={cn(
-            'absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white transition-transform',
-            checked ? 'translate-x-[18px]' : 'translate-x-0.5',
+            'absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform',
+            checked ? 'translate-x-[14px]' : 'translate-x-0',
           )}
         />
       </button>

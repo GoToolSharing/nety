@@ -86,9 +86,21 @@ function PhaseRow({
           />
           <span
             className={cn("truncate", phase.started ? "text-fg" : "text-faint")}
+            title={PHASE_LABELS[phase.phase] ?? humanizeId(phase.phase)}
           >
             {PHASE_LABELS[phase.phase] ?? humanizeId(phase.phase)}
           </span>
+        </span>
+        <span className="shrink-0 tabular text-xs text-muted">
+          {formatNumber(phase.done)} / {formatNumber(total)}
+        </span>
+      </div>
+
+      {/* The counters sit on their own line rather than beside the phase name.
+          This card is a narrow sidebar: on one line the name was cut to
+          "Service fingerprin..." and the badges still had to squeeze. */}
+      {(phase.failed > 0 || isActive) && (
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-3.5">
           {phase.failed > 0 && (
             <Badge tone="crit" title={`${phase.failed} work units failed`}>
               {formatNumber(phase.failed)} failed
@@ -97,11 +109,8 @@ function PhaseRow({
           {isActive && (
             <Badge tone="accent">{formatNumber(phase.active)} in flight</Badge>
           )}
-        </span>
-        <span className="shrink-0 tabular text-xs text-muted">
-          {formatNumber(phase.done)} / {formatNumber(total)}
-        </span>
-      </div>
+        </div>
+      )}
       <ProgressBar
         className="mt-1.5"
         height="h-1.5"

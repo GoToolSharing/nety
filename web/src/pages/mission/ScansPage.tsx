@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useDeleteScan, useNetworks, useScans } from '@/lib/queries'
 import { useMissionId } from '@/lib/hooks'
 import { useAuth } from '@/state/auth'
@@ -8,9 +8,9 @@ import { Card, PageHeader } from '@/components/ui/Card'
 import { IconButton, LinkButton } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/Feedback'
-import { Badge, ScanStatusBadge } from '@/components/ui/Badge'
+import { ScanStatusBadge } from '@/components/ui/Badge'
 import { FilterChips, ProgressBar, RelativeTime, SearchInput } from '@/components/common'
-import ScanControls, { hasScanControls } from '@/components/scan/ScanControls'
+import ScanControls from '@/components/scan/ScanControls'
 import { useToast } from '@/components/ui/Toast'
 import { formatDuration, formatNumber, formatPercent } from '@/lib/format'
 import { PlusIcon, ScanIcon, TrashIcon } from '@/components/icons'
@@ -18,16 +18,23 @@ import type { Scan, ScanStatus } from '@/types/api'
 
 type StatusFilter = 'all' | 'active' | ScanStatus
 
-/** What the scan is busy with, shown under its status badge. */
-function phaseLabel(s: Scan): string {
-  if (s.status === 'running' && s.eta_seconds) {
-    return `${s.phase || 'running'} · ETA ${formatDuration(s.eta_seconds)}`
-  }
-  return s.status === 'running' || s.status === 'paused' ? s.phase || '' : ''
+/**
+ * What the scan is busy with. It used to sit under the status badge, where it
+ * repeated what the row already says under the scan number and stretched the
+ * column. It is the progress bar's tooltip now, and the detail page shows the
+ * phases in full.
+ */
+function progressTitle(s: Scan): string {
+  const pct = `${formatPercent(s.progress)} done`
+  if (s.status !== 'running' && s.status !== 'paused') return pct
+  const parts = [s.phase || s.status]
+  if (s.status === 'running' && s.eta_seconds) parts.push(`ETA ${formatDuration(s.eta_seconds)}`)
+  return `${pct} · ${parts.join(' · ')}`
 }
 
 export default function ScansPage() {
   const missionId = useMissionId()
+  const navigate = useNavigate()
   const { canWrite } = useAuth()
   const toast = useToast()
   const scans = useScans(missionId)
@@ -151,21 +158,30 @@ export default function ScansPage() {
                   <th className="text-right">Services</th>
                   <th className="text-right">Findings</th>
                   <th>Started</th>
-                  {/* Pinned to the right edge: the table is wider than a
-                      laptop screen and the controls must stay reachable. */}
-                  <th className="sticky right-0 z-20 w-px border-l border-border bg-surface text-right">
-                    Actions
-                  </th>
+                  {/* Three labelled buttons used to live here and the column
+                      had to be pinned to the right edge to stay reachable,
+                      which cropped the column before it. Icons fit, so the
+                      column travels with the table again. */}
+                  <th className="w-px text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {visible.map((s) => (
-                  <tr key={s.id}>
+                  <tr
+                    key={s.id}
+                    // The whole row opens the scan. The number stays a real
+                    // link so middle click and "open in a new tab" still work,
+                    // and the actions cell stops the click before it gets
+                    // here.
+                    onClick={() => navigate(`../scans/${s.id}`)}
+                    className="cursor-pointer"
+                  >
                     <td>
                       <Link
                         to={`../scans/${s.id}`}
                         className="font-medium hover:underline"
                         title={`Profile: ${s.options?.profile ?? '-'}`}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         #{s.id}
                       </Link>
@@ -178,31 +194,20 @@ export default function ScansPage() {
                       {netName.get(s.network_id) ?? `network ${s.network_id}`}
                     </td>
                     <td>
-                      <div className="flex items-center gap-1.5">
-                        <ScanStatusBadge status={s.status} />
-                        {s.status !== 'completed' && s.resumable && s.started_at && (
-                          <Badge tone="info" title="This scan can continue where it stopped">
-                            resumable
-                          </Badge>
-                        )}
-                      </div>
-                      {/* The phase sits under the badge rather than under the
-                          bar: it is a sentence, and a sentence under a 6px bar
-                          pushed the bar off the row's centre line. */}
-                      {s.error ? (
+                      {/* One badge, never two. "resumable" said what the
+                          Resume control next to it already says, and the
+                          second badge was what made this column wide. */}
+                      <ScanStatusBadge status={s.status} />
+                      {s.error && (
                         <div
-                          className="mt-0.5 max-w-[240px] truncate text-xs text-crit"
+                          className="mt-0.5 max-w-[200px] truncate text-xs text-crit"
                           title={s.error}
                         >
                           {s.error}
                         </div>
-                      ) : phaseLabel(s) ? (
-                        <div className="mt-0.5 max-w-[240px] truncate text-[11px] text-faint">
-                          {phaseLabel(s)}
-                        </div>
-                      ) : null}
+                      )}
                     </td>
-                    <td className="align-middle">
+                    <td className="align-middle" title={progressTitle(s)}>
                       {/* One line, vertically centred: bar and percentage and
                           nothing else, so the bar lines up with the status
                           badge and the counts on either side of it. */}
@@ -238,31 +243,25 @@ export default function ScansPage() {
                     <td className="text-muted">
                       <RelativeTime value={s.started_at ?? s.created_at} />
                     </td>
-                    <td className="sticky right-0 z-10 border-l border-border bg-surface">
-                      {/* Fixed slots: whatever combination of controls a row
-                          shows, Open and the delete button stay in the same
-                          column down the whole table. */}
-                      <div className="flex items-center justify-end gap-2">
-                        {/* The slot is only reserved where something fills
-                            it. A finished scan has no control, and holding the
-                            room open left a gap before Open. */}
-                        {canWrite && hasScanControls(s, false) && (
-                          <div className="flex items-center justify-end gap-2">
-                            <ScanControls
-                              scan={s}
-                              missionId={missionId}
-                              size="sm"
-                              showRetry={false}
-                            />
-                          </div>
+                    {/* A click on a control must not also open the scan. */}
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        {canWrite && (
+                          <ScanControls
+                            scan={s}
+                            missionId={missionId}
+                            compact
+                            showRetry={false}
+                          />
                         )}
-                        <LinkButton to={`../scans/${s.id}`} size="sm" className="w-[4.5rem]">
-                          Open
-                        </LinkButton>
+                        {/* The bin keeps its slot on a running scan, where it
+                            is not offered, so it stays in one column down the
+                            whole table. */}
                         <div className="w-8 shrink-0">
                           {canWrite && s.status !== 'running' && (
                             <IconButton
                               label={`Delete scan ${s.id}`}
+                              className="hover:bg-crit/15 hover:text-crit"
                               onClick={() => setDeleting(s)}
                             >
                               <TrashIcon />
@@ -299,10 +298,16 @@ export default function ScansPage() {
         }}
       />
 
-      {canWrite && visible.length > 0 && (
+      {visible.length > 0 && (
         <p className="mt-3 text-xs text-faint">
-          Tip: a paused scan shows <strong className="text-muted">Resume</strong>, never “start”
-          - resuming replays only the pending work units.
+          Tip: click a row to open the scan.
+          {canWrite && (
+            <>
+              {' '}
+              A paused scan offers <strong className="text-muted">Resume</strong>, never a
+              restart - it replays only the pending work units.
+            </>
+          )}
         </p>
       )}
     </PageContainer>

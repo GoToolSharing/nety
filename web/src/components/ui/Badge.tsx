@@ -29,7 +29,11 @@ export function Badge({
     <span
       title={title}
       className={cn(
-        'inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium leading-4',
+        // A badge is a label, never a paragraph: let it wrap and "36 in flight"
+        // breaks across two lines inside its own border as soon as the column
+        // gets tight.
+        'inline-flex items-center gap-1 whitespace-nowrap rounded border px-1.5 py-0.5',
+        'text-[11px] font-medium leading-4',
         TONES[tone],
         className,
       )}
