@@ -442,6 +442,7 @@ func (s *Store) ServicesForHost(ctx context.Context, hostID int64) ([]model.Serv
 
 const findingCols = `id, mission_id, network_id, host_id, service_id, ip, port,
 	protocol, check_id, title, severity, description, evidence, remediation, refs,
+	triage_status, triage_note, triage_by, triage_at,
 	first_seen, last_seen, last_scan_id`
 
 func scanFinding(sc interface{ Scan(...any) error }) (model.Finding, error) {
@@ -450,18 +451,29 @@ func scanFinding(sc interface{ Scan(...any) error }) (model.Finding, error) {
 		refs        string
 		first, last int64
 	)
+	var triageAt sql.NullInt64
 	err := sc.Scan(&f.ID, &f.MissionID, &f.NetworkID, &f.HostID, &f.ServiceID, &f.IP,
 		&f.Port, &f.Protocol, &f.CheckID, &f.Title, &f.Severity, &f.Description,
-		&f.Evidence, &f.Remediation, &refs, &first, &last, &f.LastScanID)
+		&f.Evidence, &f.Remediation, &refs,
+		&f.Triage.Status, &f.Triage.Note, &f.Triage.UpdatedBy, &triageAt,
+		&first, &last, &f.LastScanID)
 	if err != nil {
 		return model.Finding{}, err
 	}
 	jsonDec(refs, &f.References)
+	f.Triage.UpdatedAt = toTimePtr(triageAt)
+	if f.Triage.Status == "" {
+		f.Triage.Status = model.TriageTodo
+	}
 	f.FirstSeen, f.LastSeen = toTime(first), toTime(last)
 	return f, nil
 }
 
 // UpsertFinding inserts a finding or refreshes an existing one.
+//
+// The triage columns are absent from the DO UPDATE below on purpose: they
+// belong to the operator, so re-running the checks refreshes the evidence and
+// leaves the verdict written on top of it intact.
 func (s *Store) UpsertFinding(ctx context.Context, f model.Finding) (model.Finding, error) {
 	now := time.Now().UTC()
 	if f.FirstSeen.IsZero() {
@@ -471,7 +483,7 @@ func (s *Store) UpsertFinding(ctx context.Context, f model.Finding) (model.Findi
 		f.LastSeen = now
 	}
 	err := s.tx(ctx, func(tx *sql.Tx) error {
-		res, err := tx.ExecContext(ctx, `
+		_, err := tx.ExecContext(ctx, `
 			INSERT INTO findings (mission_id, network_id, host_id, service_id, ip, port,
 			    protocol, check_id, title, severity, description, evidence, remediation,
 			    refs, first_seen, last_seen, last_scan_id)
@@ -494,27 +506,65 @@ func (s *Store) UpsertFinding(ctx context.Context, f model.Finding) (model.Findi
 		if err != nil {
 			return err
 		}
-		if id, err := res.LastInsertId(); err == nil && id != 0 {
-			f.ID = id
-			return nil
-		}
-		return tx.QueryRowContext(ctx, `SELECT id FROM findings
+		// Read the triage back rather than echoing what the caller passed in,
+		// which is blank on a scan: the row it gets must say what the operator
+		// has already recorded against this finding.
+		var triageAt sql.NullInt64
+		return tx.QueryRowContext(ctx, `SELECT id, triage_status, triage_note, triage_by, triage_at
+			FROM findings
 			WHERE mission_id = ? AND network_id = ? AND ip = ? AND port = ? AND protocol = ? AND check_id = ?`,
-			f.MissionID, f.NetworkID, f.IP, f.Port, string(f.Protocol), f.CheckID).Scan(&f.ID)
+			f.MissionID, f.NetworkID, f.IP, f.Port, string(f.Protocol), f.CheckID).
+			Scan(&f.ID, &f.Triage.Status, &f.Triage.Note, &f.Triage.UpdatedBy, &triageAt)
 	})
 	if err != nil {
 		return model.Finding{}, fmt.Errorf("store: upsert finding: %w", err)
 	}
+	if f.Triage.Status == "" {
+		f.Triage.Status = model.TriageTodo
+	}
 	return f, nil
 }
 
-// ListFindings returns the findings of a mission (networkID 0 = all).
-func (s *Store) ListFindings(ctx context.Context, missionID, networkID int64) ([]model.Finding, error) {
+// Finding loads one finding.
+func (s *Store) Finding(ctx context.Context, id int64) (model.Finding, error) {
+	row := s.r.QueryRowContext(ctx, `SELECT `+findingCols+` FROM findings WHERE id = ?`, id)
+	f, err := scanFinding(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.Finding{}, ErrNotFound
+	}
+	if err != nil {
+		return model.Finding{}, fmt.Errorf("store: finding: %w", err)
+	}
+	return f, nil
+}
+
+// FindingFilter narrows a finding listing.
+type FindingFilter struct {
+	MissionID int64
+	NetworkID int64 // 0 = all
+	HostID    int64 // 0 = all
+	// Triage narrows to one or more triage statuses, which is how the findings
+	// screen shows "what is left to decide on".
+	Triage []model.TriageStatus
+}
+
+// ListFindings returns the findings matching the filter.
+func (s *Store) ListFindings(ctx context.Context, f FindingFilter) ([]model.Finding, error) {
 	q := `SELECT ` + findingCols + ` FROM findings WHERE mission_id = ?`
-	args := []any{missionID}
-	if networkID != 0 {
+	args := []any{f.MissionID}
+	if f.NetworkID != 0 {
 		q += ` AND network_id = ?`
-		args = append(args, networkID)
+		args = append(args, f.NetworkID)
+	}
+	if f.HostID != 0 {
+		q += ` AND host_id = ?`
+		args = append(args, f.HostID)
+	}
+	if len(f.Triage) > 0 {
+		q += ` AND triage_status IN (?` + repeatComma(len(f.Triage)-1) + `)`
+		for _, t := range f.Triage {
+			args = append(args, string(t))
+		}
 	}
 	// Severity is stored as text; order it by weight for the UI.
 	q += ` ORDER BY CASE severity
@@ -527,11 +577,11 @@ func (s *Store) ListFindings(ctx context.Context, missionID, networkID int64) ([
 	defer rows.Close()
 	var out []model.Finding
 	for rows.Next() {
-		f, err := scanFinding(rows)
+		fd, err := scanFinding(rows)
 		if err != nil {
 			return nil, fmt.Errorf("store: list findings: %w", err)
 		}
-		out = append(out, f)
+		out = append(out, fd)
 	}
 	return out, rows.Err()
 }
@@ -823,6 +873,123 @@ func (s *Store) TriageCounts(ctx context.Context, missionID, networkID int64) (m
 	rows, err := s.r.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("store: triage counts: %w", err)
+	}
+	defer rows.Close()
+	out := map[model.TriageStatus]int{}
+	for _, st := range model.AllTriageStatuses {
+		out[st] = 0
+	}
+	for rows.Next() {
+		var (
+			status string
+			n      int
+		)
+		if err := rows.Scan(&status, &n); err != nil {
+			return nil, err
+		}
+		if status == "" {
+			status = string(model.TriageTodo)
+		}
+		out[model.TriageStatus(status)] += n
+	}
+	return out, rows.Err()
+}
+
+// ---------------------------------------------------------------------------
+// Finding triage
+// ---------------------------------------------------------------------------
+
+// SetFindingTriage records the operator's verdict on a finding. Passing a nil
+// status or note leaves that field alone, so the UI can update one without
+// clearing the other.
+//
+// Like service triage, this lives in the findings table but is never written
+// by UpsertFinding: re-running the checks refreshes what they saw and leaves
+// the decision made about it intact.
+func (s *Store) SetFindingTriage(ctx context.Context, findingID int64, status *model.TriageStatus, note *string, userID int64) (model.Finding, error) {
+	var out model.Finding
+	err := s.tx(ctx, func(tx *sql.Tx) error {
+		sets := []string{"triage_by = ?", "triage_at = ?"}
+		args := []any{userID, time.Now().UnixMilli()}
+		if status != nil {
+			sets = append([]string{"triage_status = ?"}, sets...)
+			args = append([]any{string(*status)}, args...)
+		}
+		if note != nil {
+			sets = append(sets, "triage_note = ?")
+			args = append(args, truncate(*note, 4000))
+		}
+		args = append(args, findingID)
+		res, err := tx.ExecContext(ctx,
+			`UPDATE findings SET `+strings.Join(sets, ", ")+` WHERE id = ?`, args...)
+		if err != nil {
+			return err
+		}
+		if err := affected(res); err != nil {
+			return err
+		}
+		row := tx.QueryRowContext(ctx, `SELECT `+findingCols+` FROM findings WHERE id = ?`, findingID)
+		out, err = scanFinding(row)
+		return err
+	})
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return model.Finding{}, ErrNotFound
+		}
+		return model.Finding{}, fmt.Errorf("store: set finding triage: %w", err)
+	}
+	return out, nil
+}
+
+// BulkSetFindingTriage applies one status to many findings at once, which is
+// how an operator clears a wave of informational checks in a single gesture.
+// Only findings of the given mission are touched, so an id from another
+// mission cannot be slipped in.
+func (s *Store) BulkSetFindingTriage(ctx context.Context, missionID int64, ids []int64, status model.TriageStatus, userID int64) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	var n int64
+	err := s.tx(ctx, func(tx *sql.Tx) error {
+		stmt, err := tx.PrepareContext(ctx,
+			`UPDATE findings SET triage_status = ?, triage_by = ?, triage_at = ?
+			 WHERE id = ? AND mission_id = ?`)
+		if err != nil {
+			return err
+		}
+		defer stmt.Close()
+		now := time.Now().UnixMilli()
+		for _, id := range ids {
+			res, err := stmt.ExecContext(ctx, string(status), userID, now, id, missionID)
+			if err != nil {
+				return err
+			}
+			if k, _ := res.RowsAffected(); k > 0 {
+				n += k
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, fmt.Errorf("store: bulk finding triage: %w", err)
+	}
+	return n, nil
+}
+
+// FindingTriageCounts reports how many findings sit in each status, for the
+// progress readout on the findings screen.
+func (s *Store) FindingTriageCounts(ctx context.Context, missionID, networkID int64) (map[model.TriageStatus]int, error) {
+	q := `SELECT triage_status, COUNT(*) FROM findings WHERE mission_id = ?`
+	args := []any{missionID}
+	if networkID != 0 {
+		q += ` AND network_id = ?`
+		args = append(args, networkID)
+	}
+	q += ` GROUP BY triage_status`
+
+	rows, err := s.r.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("store: finding triage counts: %w", err)
 	}
 	defer rows.Close()
 	out := map[model.TriageStatus]int{}

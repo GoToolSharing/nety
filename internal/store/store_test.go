@@ -374,7 +374,7 @@ func TestFindingUpsertIsStable(t *testing.T) {
 	if a.ID != b.ID {
 		t.Fatalf("expected the same finding row, got %d and %d", a.ID, b.ID)
 	}
-	all, _ := s.ListFindings(ctx, m.ID, 0)
+	all, _ := s.ListFindings(ctx, FindingFilter{MissionID: m.ID})
 	if len(all) != 1 || all[0].Evidence != "second" {
 		t.Fatalf("expected one refreshed finding, got %+v", all)
 	}

@@ -287,12 +287,23 @@ export const api = {
       query: { network_id: networkId },
     }),
 
-  findings: async (missionId: number, networkId?: number) =>
-    list(
-      await request<Finding[] | null>(`api/missions/${missionId}/findings`, {
-        query: { network_id: networkId },
-      }),
+  findings: async (
+    missionId: number,
+    params: { network_id?: number; host_id?: number; triage?: string } = {},
+  ) => list(await request<Finding[] | null>(`api/missions/${missionId}/findings`, { query: params })),
+  finding: (id: number) => request<Finding>(`api/findings/${id}`),
+
+  /** Record a status, a note, or both. A field left out is left alone. */
+  triageFinding: (id: number, body: { status?: TriageStatus; note?: string }) =>
+    request<Finding>(`api/findings/${id}`, { method: 'PATCH', body }),
+
+  /** Apply one status to a selection in a single call. */
+  triageFindingsBulk: (missionId: number, findingIds: number[], status: TriageStatus) =>
+    request<{ updated: number; status: TriageStatus }>(
+      `api/missions/${missionId}/findings/triage`,
+      { method: 'POST', body: { finding_ids: findingIds, status } },
     ),
+
   assets: async (missionId: number) =>
     list(await request<Asset[] | null>(`api/missions/${missionId}/assets`)),
   asset: (id: number) => request<Asset>(`api/assets/${id}`),

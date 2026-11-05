@@ -81,6 +81,31 @@ function patchFiltered<T extends { id: number }>(
   }
 }
 
+/**
+ * Findings are listed per filter, and triaging one can move it out of the
+ * window on screen. Patch the lists whose filter it still matches, drop it
+ * from the ones it no longer belongs to, and leave anything else to the
+ * throttled refetch.
+ */
+function patchFindingLists(qc: QueryClient, missionId: number, f: Finding): void {
+  for (const query of qc.getQueryCache().findAll({ queryKey: qk.findingsRoot(missionId) })) {
+    const params = (query.queryKey[2] ?? {}) as { network_id?: number; triage?: string }
+    const data = query.state.data as Finding[] | undefined
+    if (data === undefined) continue
+    if (params.network_id && params.network_id !== f.network_id) continue
+    if (params.triage && !params.triage.split(',').includes(f.triage?.status ?? 'todo')) {
+      if (data.some((x) => x.id === f.id)) {
+        qc.setQueryData(
+          query.queryKey,
+          data.filter((x) => x.id !== f.id),
+        )
+      }
+      continue
+    }
+    qc.setQueryData(query.queryKey, upsert(data, f))
+  }
+}
+
 /** Services are paginated server-side: patch rows already on screen and let a
  * throttled refetch bring in genuinely new ones without breaking the window. */
 function patchServicePages(qc: QueryClient, missionId: number, svc: Service): boolean {
@@ -205,7 +230,7 @@ export function applyEvent(ctx: ApplyContext, ev: LiveEvent): void {
     case 'finding': {
       const f = ev.data as Finding
       if (!f?.id) return
-      patchFiltered(qc, qk.findingsRoot(missionId), f, (flt) => flt === null || flt === f.network_id)
+      patchFindingLists(qc, missionId, f)
       if (scanId) store.addFinding(scanId, f)
       invalidator.schedule(qk.summary(missionId))
       return

@@ -352,8 +352,12 @@ func sheetServices(f *excelize.File, st xlsxStyles, d model.MissionData, names m
 
 func sheetFindings(f *excelize.File, st xlsxStyles, d model.MissionData, names map[int64]string) error {
 	const sheet = "Findings"
-	headers := []string{"Severity", "Title", "Network", "IP", "Port", "Check", "Description", "Evidence", "Remediation"}
-	widths := []float64{11, 38, 18, 16, 9, 26, 50, 50, 50}
+	// The review columns sit where they do on the Services sheet: with the
+	// identity of the row, ahead of the long text.
+	headers := []string{"Severity", "Title", "Network", "IP", "Port", "Check",
+		"Status", "Note", "Reviewed by", "Reviewed at",
+		"Description", "Evidence", "Remediation"}
+	widths := []float64{11, 38, 18, 16, 9, 26, 13, 46, 16, 20, 50, 50, 50}
 	if err := newSheet(f, st, sheet, headers, widths); err != nil {
 		return err
 	}
@@ -365,7 +369,10 @@ func sheetFindings(f *excelize.File, st xlsxStyles, d model.MissionData, names m
 		}
 		if err := writeRow(f, sheet, row, []any{
 			strings.ToUpper(string(fd.Severity)), fd.Title, netName(names, fd.NetworkID),
-			fd.IP, port, fd.CheckID, fd.Description, fd.Evidence, fd.Remediation,
+			fd.IP, port, fd.CheckID,
+			triageLabel(fd.Triage.Status), fd.Triage.Note,
+			fd.Triage.UpdatedByName, tsPtr(fd.Triage.UpdatedAt),
+			fd.Description, fd.Evidence, fd.Remediation,
 		}); err != nil {
 			return err
 		}
@@ -375,8 +382,18 @@ func sheetFindings(f *excelize.File, st xlsxStyles, d model.MissionData, names m
 				return err
 			}
 		}
-		from, _ := excelize.CoordinatesToCellName(7, row)
-		to, _ := excelize.CoordinatesToCellName(9, row)
+		if style, ok := st.triage[fd.Triage.Status]; ok {
+			cell, _ := excelize.CoordinatesToCellName(7, row)
+			if err := f.SetCellStyle(sheet, cell, cell, style); err != nil {
+				return err
+			}
+		}
+		noteCell, _ := excelize.CoordinatesToCellName(8, row)
+		if err := f.SetCellStyle(sheet, noteCell, noteCell, st.wrap); err != nil {
+			return err
+		}
+		from, _ := excelize.CoordinatesToCellName(11, row)
+		to, _ := excelize.CoordinatesToCellName(13, row)
 		if err := f.SetCellStyle(sheet, from, to, st.wrap); err != nil {
 			return err
 		}

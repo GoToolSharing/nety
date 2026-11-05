@@ -426,7 +426,7 @@ func (s *Store) MissionData(ctx context.Context, missionID, networkID int64) (mo
 	if d.Assets, err = s.ListAssets(ctx, missionID); err != nil {
 		return d, err
 	}
-	if d.Findings, err = s.ListFindings(ctx, missionID, networkID); err != nil {
+	if d.Findings, err = s.ListFindings(ctx, FindingFilter{MissionID: missionID, NetworkID: networkID}); err != nil {
 		return d, err
 	}
 	if d.Reach, err = s.ListReach(ctx, missionID, 0); err != nil {

@@ -249,7 +249,7 @@ func TestScanStreamsResultsLive(t *testing.T) {
 			t.Fatalf("service was not fingerprinted: %+v", sv)
 		}
 	}
-	findings, _ := h.st.ListFindings(context.Background(), h.mis.ID, 0)
+	findings, _ := h.st.ListFindings(context.Background(), store.FindingFilter{MissionID: h.mis.ID})
 	if len(findings) == 0 {
 		t.Fatal("no finding was recorded")
 	}

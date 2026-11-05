@@ -47,19 +47,16 @@ func (a *API) handleGetHost(w http.ResponseWriter, r *http.Request, u model.User
 			asset = &v
 		}
 	}
-	findings, err := a.Store.ListFindings(r.Context(), host.MissionID, host.NetworkID)
+	findings, err := a.Store.ListFindings(r.Context(), store.FindingFilter{
+		MissionID: host.MissionID, NetworkID: host.NetworkID, HostID: host.ID,
+	})
 	if err != nil {
 		a.failStore(w, err, "findings")
 		return
 	}
-	mine := findings[:0]
-	for _, f := range findings {
-		if f.HostID == host.ID {
-			mine = append(mine, f)
-		}
-	}
 	a.ok(w, map[string]any{
-		"host": host, "services": services, "asset": asset, "findings": mine,
+		"host": host, "services": services, "asset": asset,
+		"findings": fillTriageAuthors(a, r, findings, func(f *model.Finding) *model.Triage { return &f.Triage }),
 	})
 }
 
@@ -79,19 +76,11 @@ func (a *API) handleListServices(w http.ResponseWriter, r *http.Request, u model
 		Limit:     queryInt(r, "limit", 0),
 		Offset:    queryInt(r, "offset", 0),
 	}
-	for _, v := range q["triage"] {
-		for _, part := range strings.Split(v, ",") {
-			st := model.TriageStatus(strings.TrimSpace(part))
-			if st == "" {
-				continue
-			}
-			if !model.ValidTriageStatus(st) {
-				a.fail(w, http.StatusBadRequest, "invalid", "unknown triage status "+string(st))
-				return
-			}
-			filter.Triage = append(filter.Triage, st)
-		}
+	statuses, ok := a.triageQuery(w, r)
+	if !ok {
+		return
 	}
+	filter.Triage = statuses
 	if filter.Protocol != "" && filter.Protocol != model.TCP && filter.Protocol != model.UDP {
 		a.fail(w, http.StatusBadRequest, "invalid", "protocol must be tcp or udp")
 		return
@@ -104,36 +93,59 @@ func (a *API) handleListServices(w http.ResponseWriter, r *http.Request, u model
 		a.failStore(w, err, "services")
 		return
 	}
-	a.ok(w, a.fillTriageAuthors(r, services))
+	a.ok(w, fillTriageAuthors(a, r, services, func(sv *model.Service) *model.Triage { return &sv.Triage }))
+}
+
+// triageQuery reads the repeatable, comma separated `triage` parameter shared
+// by the service and finding listings. It answers false once it has already
+// written the error response.
+func (a *API) triageQuery(w http.ResponseWriter, r *http.Request) ([]model.TriageStatus, bool) {
+	var out []model.TriageStatus
+	for _, v := range r.URL.Query()["triage"] {
+		for _, part := range strings.Split(v, ",") {
+			st := model.TriageStatus(strings.TrimSpace(part))
+			if st == "" {
+				continue
+			}
+			if !model.ValidTriageStatus(st) {
+				a.fail(w, http.StatusBadRequest, "invalid", "unknown triage status "+string(st))
+				return nil, false
+			}
+			out = append(out, st)
+		}
+	}
+	return out, true
 }
 
 // fillTriageAuthors resolves the triage author names in one pass rather than
-// one query per row.
-func (a *API) fillTriageAuthors(r *http.Request, services []model.Service) []model.Service {
+// one query per row. pick points at the triage record carried by each item,
+// which is the only thing services and findings have in common here.
+func fillTriageAuthors[T any](a *API, r *http.Request, items []T, pick func(*T) *model.Triage) []T {
 	need := false
-	for _, sv := range services {
-		if sv.Triage.UpdatedBy != 0 {
+	for i := range items {
+		if pick(&items[i]).UpdatedBy != 0 {
 			need = true
 			break
 		}
 	}
 	if !need {
-		return services
+		return items
 	}
 	users, err := a.Store.ListUsers(r.Context())
 	if err != nil {
-		return services
+		return items
 	}
 	byID := make(map[int64]string, len(users))
 	for _, u := range users {
 		byID[u.ID] = firstNonEmptyString(u.DisplayName, u.Username)
 	}
-	for i := range services {
-		if name, ok := byID[services[i].Triage.UpdatedBy]; ok {
-			services[i].Triage.UpdatedByName = name
+	for i := range items {
+		t := pick(&items[i])
+		if name, ok := byID[t.UpdatedBy]; ok {
+			t.UpdatedByName = name
 		}
 	}
-	return services
+	return items
 }
 
 func (a *API) handleListFindings(w http.ResponseWriter, r *http.Request, u model.User) {
@@ -141,12 +153,21 @@ func (a *API) handleListFindings(w http.ResponseWriter, r *http.Request, u model
 	if !ok {
 		return
 	}
-	findings, err := a.Store.ListFindings(r.Context(), m.ID, queryInt64(r, "network_id"))
+	statuses, ok := a.triageQuery(w, r)
+	if !ok {
+		return
+	}
+	findings, err := a.Store.ListFindings(r.Context(), store.FindingFilter{
+		MissionID: m.ID,
+		NetworkID: queryInt64(r, "network_id"),
+		HostID:    queryInt64(r, "host_id"),
+		Triage:    statuses,
+	})
 	if err != nil {
 		a.failStore(w, err, "findings")
 		return
 	}
-	a.ok(w, findings)
+	a.ok(w, fillTriageAuthors(a, r, findings, func(f *model.Finding) *model.Triage { return &f.Triage }))
 }
 
 func (a *API) handleListAssets(w http.ResponseWriter, r *http.Request, u model.User) {

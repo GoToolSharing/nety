@@ -182,6 +182,37 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		// Findings get the same operator-owned record as services. Written out
+		// in full rather than sharing code with the entry above: a migration
+		// is a historical record of what ran, and it should not change shape
+		// because a later one needed something slightly different.
+		name: "finding triage columns",
+		apply: func(ctx context.Context, tx *sql.Tx) error {
+			cols := map[string]string{
+				"triage_status": "TEXT NOT NULL DEFAULT 'todo'",
+				"triage_note":   "TEXT NOT NULL DEFAULT ''",
+				"triage_by":     "INTEGER NOT NULL DEFAULT 0",
+				"triage_at":     "INTEGER",
+			}
+			existing, err := tableColumns(ctx, tx, "findings")
+			if err != nil {
+				return err
+			}
+			for name, decl := range cols {
+				if existing[name] {
+					continue
+				}
+				if _, err := tx.ExecContext(ctx,
+					fmt.Sprintf(`ALTER TABLE findings ADD COLUMN %s %s`, name, decl)); err != nil {
+					return err
+				}
+			}
+			_, err = tx.ExecContext(ctx,
+				`CREATE INDEX IF NOT EXISTS idx_findings_triage ON findings(mission_id, triage_status)`)
+			return err
+		},
+	},
 }
 
 // tableColumns lists the columns a table currently has.

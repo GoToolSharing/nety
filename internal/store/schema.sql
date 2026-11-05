@@ -232,12 +232,21 @@ CREATE TABLE IF NOT EXISTS findings (
     evidence     TEXT    NOT NULL DEFAULT '',
     remediation  TEXT    NOT NULL DEFAULT '',
     refs         TEXT    NOT NULL DEFAULT '[]',
+    -- Operator triage. Written only through the triage endpoints, never by a
+    -- scan, so re-running the checks never erases the manual verdict on them.
+    triage_status TEXT    NOT NULL DEFAULT 'todo',
+    triage_note   TEXT    NOT NULL DEFAULT '',
+    triage_by     INTEGER NOT NULL DEFAULT 0,
+    triage_at     INTEGER,
     first_seen   INTEGER NOT NULL,
     last_seen    INTEGER NOT NULL,
     last_scan_id INTEGER NOT NULL DEFAULT 0,
     UNIQUE (mission_id, network_id, ip, port, protocol, check_id)
 );
 CREATE INDEX IF NOT EXISTS idx_findings_mission ON findings(mission_id, severity);
+-- idx_findings_triage is created by the migration, not here, for the same
+-- reason as idx_services_triage above: this file also runs against databases
+-- that predate the triage columns.
 
 CREATE TABLE IF NOT EXISTS reach_results (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,

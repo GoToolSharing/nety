@@ -299,6 +299,20 @@ func writeMarkdown(w io.Writer, d model.MissionData) error {
 			if err := p("### [%s] %s - %s\n\n", strings.ToUpper(string(f.Severity)), mdEscape(f.Title), loc); err != nil {
 				return err
 			}
+			// The operator's verdict goes above the check's own text: a reader
+			// wants to know whether this one was confirmed before reading why
+			// the check fired.
+			if err := p("_Review: %s_", triageLabel(f.Triage.Status)); err != nil {
+				return err
+			}
+			if note := strings.TrimSpace(f.Triage.Note); note != "" {
+				if err := p(" - %s", mdEscape(note)); err != nil {
+					return err
+				}
+			}
+			if err := p("\n\n"); err != nil {
+				return err
+			}
 			if f.Description != "" {
 				if err := p("%s\n\n", f.Description); err != nil {
 					return err
@@ -678,6 +692,25 @@ func writeHTML(w io.Writer, d model.MissionData) error {
 				f.Severity, strings.ToUpper(string(f.Severity)), e(f.Title), e(loc)); err != nil {
 				return err
 			}
+			// The operator's verdict goes above the check's own text: a reader
+			// wants to know whether this one was confirmed before reading why
+			// the check fired.
+			status := f.Triage.Status
+			if status == "" {
+				status = model.TriageTodo
+			}
+			if err := p(`<p class="review"><span class="triage triage-%s">%s</span>`,
+				e(string(status)), e(triageLabel(status))); err != nil {
+				return err
+			}
+			if note := strings.TrimSpace(f.Triage.Note); note != "" {
+				if err := p(` %s`, e(note)); err != nil {
+					return err
+				}
+			}
+			if err := p(`</p>`); err != nil {
+				return err
+			}
 			if f.Description != "" {
 				if err := p(`<p>%s</p>`, e(f.Description)); err != nil {
 					return err
@@ -801,6 +834,12 @@ font-weight:700;letter-spacing:.03em;color:#fff}
 .finding{border:1px solid var(--line);border-radius:10px;padding:1rem 1.25rem;margin:1rem auto;max-width:1180px}
 .finding h3{margin-top:0}
 .finding .loc{color:var(--muted);margin:.1rem 0 .6rem}
+.review{margin:.1rem 0 .7rem;color:var(--muted);font-size:.9rem}
+.triage{display:inline-block;padding:.08rem .45rem;margin-right:.35rem;border-radius:5px;
+font-size:.75rem;font-weight:700;letter-spacing:.03em;background:rgba(127,127,127,.18);color:var(--muted)}
+.triage-in_progress{background:rgba(37,99,235,.15);color:var(--low)}
+.triage-done{background:var(--blocked);color:var(--blockedfg)}
+.triage-flagged{background:var(--open);color:var(--openfg)}
 pre{background:rgba(127,127,127,.12);padding:.7rem .9rem;border-radius:8px;
 overflow:auto;font-size:.85rem;font-family:ui-monospace,Menlo,Consolas,monospace}
 .matrix td{text-align:center;font-size:.85rem}

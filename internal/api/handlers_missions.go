@@ -212,7 +212,7 @@ func (a *API) handleMissionSummary(w http.ResponseWriter, r *http.Request, u mod
 		a.failStore(w, err, "services")
 		return
 	}
-	findings, err := a.Store.ListFindings(ctx, m.ID, 0)
+	findings, err := a.Store.ListFindings(ctx, storeFindingFilter(m.ID, 0))
 	if err != nil {
 		a.failStore(w, err, "findings")
 		return

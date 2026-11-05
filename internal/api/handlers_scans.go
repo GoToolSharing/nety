@@ -377,4 +377,8 @@ func storeServiceFilter(missionID, networkID int64) store.ServiceFilter {
 	return store.ServiceFilter{MissionID: missionID, NetworkID: networkID}
 }
 
+func storeFindingFilter(missionID, networkID int64) store.FindingFilter {
+	return store.FindingFilter{MissionID: missionID, NetworkID: networkID}
+}
+
 var _ = strings.TrimSpace

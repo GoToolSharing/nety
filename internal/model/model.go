@@ -284,10 +284,10 @@ const (
 	PortOpenFiltered PortState = "open|filtered"
 )
 
-// TriageStatus is where the operator is with a service. NETY finds what is
-// exposed; going through each service by hand is still the operator's job, and
-// this is how that pass is tracked so nothing is forgotten and a re-scan does
-// not erase the work.
+// TriageStatus is where the operator is with a service or a finding. NETY
+// finds what is exposed; going through each one by hand is still the
+// operator's job, and this is how that pass is tracked so nothing is forgotten
+// and a re-scan does not erase the work.
 type TriageStatus string
 
 const (
@@ -313,8 +313,8 @@ func ValidTriageStatus(s TriageStatus) bool {
 	return false
 }
 
-// Triage is the operator's own record against a service: where they are with
-// it and what they found. It is never written by a scan.
+// Triage is the operator's own record against a service or a finding: where
+// they are with it and what they found. It is never written by a scan.
 type Triage struct {
 	Status        TriageStatus `json:"status"`
 	Note          string       `json:"note,omitempty"`
@@ -525,24 +525,28 @@ const (
 )
 
 type Finding struct {
-	ID          int64     `json:"id"`
-	MissionID   int64     `json:"mission_id"`
-	NetworkID   int64     `json:"network_id"`
-	HostID      int64     `json:"host_id"`
-	ServiceID   int64     `json:"service_id,omitempty"`
-	IP          string    `json:"ip"`
-	Port        int       `json:"port,omitempty"`
-	Protocol    Protocol  `json:"protocol,omitempty"`
-	CheckID     string    `json:"check_id"` // stable id, e.g. "smb-signing-not-required"
-	Title       string    `json:"title"`
-	Severity    Severity  `json:"severity"`
-	Description string    `json:"description"`
-	Evidence    string    `json:"evidence"`
-	Remediation string    `json:"remediation"`
-	References  []string  `json:"references,omitempty"`
-	FirstSeen   time.Time `json:"first_seen"`
-	LastSeen    time.Time `json:"last_seen"`
-	LastScanID  int64     `json:"last_scan_id"`
+	ID          int64    `json:"id"`
+	MissionID   int64    `json:"mission_id"`
+	NetworkID   int64    `json:"network_id"`
+	HostID      int64    `json:"host_id"`
+	ServiceID   int64    `json:"service_id,omitempty"`
+	IP          string   `json:"ip"`
+	Port        int      `json:"port,omitempty"`
+	Protocol    Protocol `json:"protocol,omitempty"`
+	CheckID     string   `json:"check_id"` // stable id, e.g. "smb-signing-not-required"
+	Title       string   `json:"title"`
+	Severity    Severity `json:"severity"`
+	Description string   `json:"description"`
+	Evidence    string   `json:"evidence"`
+	Remediation string   `json:"remediation"`
+	References  []string `json:"references,omitempty"`
+	// Triage is the operator's manual pass over this finding: a check firing
+	// is not the same as a problem worth reporting, and that verdict is made
+	// by hand. Owned by the operator, never written by a scan.
+	Triage     Triage    `json:"triage"`
+	FirstSeen  time.Time `json:"first_seen"`
+	LastSeen   time.Time `json:"last_seen"`
+	LastScanID int64     `json:"last_scan_id"`
 }
 
 // ---------------------------------------------------------------------------

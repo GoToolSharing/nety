@@ -118,9 +118,13 @@ func writeFindingsCSV(w io.Writer, d model.MissionData) error {
 	names := networkNames(d)
 	hosts := hostIndex(d)
 
+	// Same shape as the services sheet: the operator's own columns sit with
+	// the identity of the finding, before the text a reader scrolls through.
 	if err := cw.Write([]string{
 		"severity", "check_id", "title", "network", "ip", "hostname", "port",
-		"protocol", "description", "evidence", "remediation", "references",
+		"protocol",
+		"triage_status", "triage_note", "triage_by", "triage_at",
+		"description", "evidence", "remediation", "references",
 		"first_seen", "last_seen",
 	}); err != nil {
 		return err
@@ -134,6 +138,8 @@ func writeFindingsCSV(w io.Writer, d model.MissionData) error {
 			string(f.Severity), f.CheckID, f.Title,
 			netName(names, f.NetworkID), f.IP, hostLabel(hosts[f.HostID]),
 			port, string(f.Protocol),
+			triageLabel(f.Triage.Status), oneLine(f.Triage.Note, 2000),
+			f.Triage.UpdatedByName, tsPtr(f.Triage.UpdatedAt),
 			oneLine(f.Description, 2000), oneLine(f.Evidence, 2000),
 			oneLine(f.Remediation, 2000), strings.Join(f.References, " "),
 			ts(f.FirstSeen), ts(f.LastSeen),

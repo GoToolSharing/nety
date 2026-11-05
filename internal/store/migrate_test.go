@@ -96,3 +96,86 @@ func TestUpgradeFromAPreTriageDatabase(t *testing.T) {
 	}
 	defer again.Close()
 }
+
+// TestUpgradeFromAPreFindingTriageDatabase is the same upgrade path one
+// release later: a database that already has service triage but not the
+// finding columns must open, keep its findings, and gain the new ones.
+func TestUpgradeFromAPreFindingTriageDatabase(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "old.db")
+
+	// A findings table as it looked before findings could be triaged.
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, stmt := range []string{
+		`CREATE TABLE missions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+			client TEXT NOT NULL DEFAULT '', description TEXT NOT NULL DEFAULT '',
+			scope_cidrs TEXT NOT NULL DEFAULT '[]', exclude_cidrs TEXT NOT NULL DEFAULT '[]',
+			archived INTEGER NOT NULL DEFAULT 0, created_by INTEGER NOT NULL DEFAULT 0,
+			created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`,
+		`INSERT INTO missions (id, name, created_at, updated_at) VALUES (1, 'old mission', 1, 1)`,
+		`CREATE TABLE findings (
+			id INTEGER PRIMARY KEY AUTOINCREMENT, mission_id INTEGER NOT NULL,
+			network_id INTEGER NOT NULL, host_id INTEGER NOT NULL DEFAULT 0,
+			service_id INTEGER NOT NULL DEFAULT 0, ip TEXT NOT NULL,
+			port INTEGER NOT NULL DEFAULT 0, protocol TEXT NOT NULL DEFAULT '',
+			check_id TEXT NOT NULL, title TEXT NOT NULL, severity TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '', evidence TEXT NOT NULL DEFAULT '',
+			remediation TEXT NOT NULL DEFAULT '', refs TEXT NOT NULL DEFAULT '[]',
+			first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
+			last_scan_id INTEGER NOT NULL DEFAULT 0,
+			UNIQUE (mission_id, network_id, ip, port, protocol, check_id))`,
+		`INSERT INTO findings (mission_id, network_id, ip, port, protocol, check_id, title, severity, first_seen, last_seen)
+		 VALUES (1, 1, '10.0.0.5', 445, 'tcp', 'smb-signing-not-required', 'SMB signing not required', 'medium', 1, 1)`,
+		// The database is already past the service triage migration, so only
+		// the finding one has anything left to do.
+		`PRAGMA user_version = 1`,
+	} {
+		if _, err := raw.ExecContext(ctx, stmt); err != nil {
+			t.Fatalf("seed old schema: %v", err)
+		}
+	}
+	if err := raw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Open(path, nil)
+	if err != nil {
+		t.Fatalf("opening a pre-finding-triage database must work: %v", err)
+	}
+	defer s.Close()
+
+	findings, err := s.ListFindings(ctx, FindingFilter{MissionID: 1})
+	if err != nil {
+		t.Fatalf("list after migration: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("expected the existing finding to survive, got %d", len(findings))
+	}
+	if findings[0].Triage.Status != model.TriageTodo {
+		t.Fatalf("migrated rows should default to todo, got %q", findings[0].Triage.Status)
+	}
+
+	// And triage works on it from there.
+	status := model.TriageFlagged
+	if _, err := s.SetFindingTriage(ctx, findings[0].ID, &status, nil, 1); err != nil {
+		t.Fatalf("triage after migration: %v", err)
+	}
+	counts, err := s.FindingTriageCounts(ctx, 1, 0)
+	if err != nil || counts[model.TriageFlagged] != 1 {
+		t.Fatalf("counts after migration: %+v err=%v", counts, err)
+	}
+
+	// Re-opening is a no-op, not a second migration.
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	again, err := Open(path, nil)
+	if err != nil {
+		t.Fatalf("reopening must be idempotent: %v", err)
+	}
+	defer again.Close()
+}

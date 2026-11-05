@@ -264,11 +264,14 @@ export function TriageProgress({
   total,
   active,
   onPick,
+  noun = 'services',
 }: {
   counts: Record<TriageStatus, number>
   total: number
   active: TriageStatus[]
   onPick: (status: TriageStatus | null) => void
+  /** What is being counted, so the same bar reads right above findings. */
+  noun?: string
 }) {
   if (total === 0) return null
   const reviewed = total - (counts.todo ?? 0)
@@ -278,7 +281,7 @@ export function TriageProgress({
     <div className="rounded-md border border-border bg-surface px-3 py-2.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs font-medium text-fg">
-          {reviewed} of {total} services reviewed
+          {reviewed} of {total} {noun} reviewed
           <span className="ml-1.5 font-normal text-muted">({pct}%)</span>
         </span>
         <div className="flex flex-wrap items-center gap-1">
@@ -318,7 +321,7 @@ export function TriageProgress({
       <div
         className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-elevated"
         role="img"
-        aria-label={`${reviewed} of ${total} services reviewed`}
+        aria-label={`${reviewed} of ${total} ${noun} reviewed`}
       >
         {TRIAGE_STATUSES.filter((s) => s !== 'todo').map((s) => {
           const n = counts[s] ?? 0

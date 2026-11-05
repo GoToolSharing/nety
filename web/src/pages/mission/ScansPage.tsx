@@ -10,13 +10,21 @@ import { ConfirmDialog } from '@/components/ui/Modal'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/Feedback'
 import { Badge, ScanStatusBadge } from '@/components/ui/Badge'
 import { FilterChips, ProgressBar, RelativeTime, SearchInput } from '@/components/common'
-import ScanControls from '@/components/scan/ScanControls'
+import ScanControls, { hasScanControls } from '@/components/scan/ScanControls'
 import { useToast } from '@/components/ui/Toast'
 import { formatDuration, formatNumber, formatPercent } from '@/lib/format'
 import { PlusIcon, ScanIcon, TrashIcon } from '@/components/icons'
 import type { Scan, ScanStatus } from '@/types/api'
 
 type StatusFilter = 'all' | 'active' | ScanStatus
+
+/** What the scan is busy with, shown under its status badge. */
+function phaseLabel(s: Scan): string {
+  if (s.status === 'running' && s.eta_seconds) {
+    return `${s.phase || 'running'} · ETA ${formatDuration(s.eta_seconds)}`
+  }
+  return s.status === 'running' || s.status === 'paused' ? s.phase || '' : ''
+}
 
 export default function ScansPage() {
   const missionId = useMissionId()
@@ -178,15 +186,26 @@ export default function ScansPage() {
                           </Badge>
                         )}
                       </div>
-                      {s.error && (
-                        <div className="mt-0.5 max-w-[240px] truncate text-xs text-crit" title={s.error}>
+                      {/* The phase sits under the badge rather than under the
+                          bar: it is a sentence, and a sentence under a 6px bar
+                          pushed the bar off the row's centre line. */}
+                      {s.error ? (
+                        <div
+                          className="mt-0.5 max-w-[240px] truncate text-xs text-crit"
+                          title={s.error}
+                        >
                           {s.error}
                         </div>
-                      )}
+                      ) : phaseLabel(s) ? (
+                        <div className="mt-0.5 max-w-[240px] truncate text-[11px] text-faint">
+                          {phaseLabel(s)}
+                        </div>
+                      ) : null}
                     </td>
-                    <td>
-                      {/* Bar and percentage share one baseline, so the cell
-                          reads as a single line whatever the row height. */}
+                    <td className="align-middle">
+                      {/* One line, vertically centred: bar and percentage and
+                          nothing else, so the bar lines up with the status
+                          badge and the counts on either side of it. */}
                       <div className="flex w-[150px] items-center gap-2">
                         <ProgressBar
                           value={s.progress}
@@ -210,17 +229,10 @@ export default function ScansPage() {
                           {formatPercent(s.progress)}
                         </span>
                       </div>
-                      {/* Fixed height: a scan without a phase must not shift
-                          the bar above it out of line with the other rows. */}
-                      <div className="h-4 truncate text-[11px] leading-4 text-faint">
-                        {s.status === 'running' && s.eta_seconds
-                          ? `ETA ${formatDuration(s.eta_seconds)}`
-                          : s.phase || ''}
-                      </div>
                     </td>
-                    <td className="tabular text-right">{formatNumber(s.stats?.hosts_up ?? 0)}</td>
-                    <td className="tabular text-right">{formatNumber(s.stats?.services ?? 0)}</td>
-                    <td className="tabular text-right">
+                    <td className="tabular text-center">{formatNumber(s.stats?.hosts_up ?? 0)}</td>
+                    <td className="tabular text-center">{formatNumber(s.stats?.services ?? 0)}</td>
+                    <td className="tabular text-center">
                       {formatNumber(s.stats?.findings ?? 0)}
                     </td>
                     <td className="text-muted">
@@ -231,14 +243,19 @@ export default function ScansPage() {
                           shows, Open and the delete button stay in the same
                           column down the whole table. */}
                       <div className="flex items-center justify-end gap-2">
-                        <div className="flex w-[12.5rem] items-center justify-end gap-2">
-                          <ScanControls
-                            scan={s}
-                            missionId={missionId}
-                            size="sm"
-                            showRetry={false}
-                          />
-                        </div>
+                        {/* The slot is only reserved where something fills
+                            it. A finished scan has no control, and holding the
+                            room open left a gap before Open. */}
+                        {canWrite && hasScanControls(s, false) && (
+                          <div className="flex items-center justify-end gap-2">
+                            <ScanControls
+                              scan={s}
+                              missionId={missionId}
+                              size="sm"
+                              showRetry={false}
+                            />
+                          </div>
+                        )}
                         <LinkButton to={`../scans/${s.id}`} size="sm" className="w-[4.5rem]">
                           Open
                         </LinkButton>

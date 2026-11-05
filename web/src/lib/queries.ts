@@ -44,8 +44,8 @@ export const qk = {
     ['services', missionId, params] as const,
 
   findingsRoot: (missionId: number) => ['findings', missionId] as const,
-  findings: (missionId: number, networkId?: number) =>
-    ['findings', missionId, networkId ?? null] as const,
+  findings: (missionId: number, params: Record<string, unknown> = {}) =>
+    ['findings', missionId, params] as const,
 
   assets: (missionId: number) => ['assets', missionId] as const,
   asset: (id: number) => ['asset', id] as const,
@@ -263,11 +263,15 @@ export const useServices = (
     placeholderData: (prev) => prev,
   })
 
-export const useFindings = (missionId: number, networkId?: number) =>
+export const useFindings = (
+  missionId: number,
+  params: { network_id?: number; host_id?: number; triage?: string } = {},
+) =>
   useQuery({
-    queryKey: qk.findings(missionId, networkId),
-    queryFn: () => api.findings(missionId, networkId),
+    queryKey: qk.findings(missionId, params),
+    queryFn: () => api.findings(missionId, params),
     enabled: missionId > 0,
+    placeholderData: (prev) => prev,
   })
 
 export const useAssets = (missionId: number) =>

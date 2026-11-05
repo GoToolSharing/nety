@@ -87,7 +87,7 @@ A scan object carries `status` (`queued|running|paused|completed|failed|cancelle
 `GET /api/missions/{id}/hosts?network_id=`
 `GET /api/missions/{id}/services?network_id=&host_id=&port=&protocol=&q=&triage=&limit=&offset=`
 (`triage` takes a comma separated list of statuses)
-`GET /api/missions/{id}/findings?network_id=`
+`GET /api/missions/{id}/findings?network_id=&host_id=&triage=`
 `GET /api/missions/{id}/assets`
 `GET /api/assets/{id}` · `PATCH /api/assets/{id}` `{label?, notes?, tags?, kind?}`
 `POST /api/assets/{id}/merge` `{source_id}`
@@ -95,11 +95,12 @@ A scan object carries `status` (`queued|running|paused|completed|failed|cancelle
 `GET /api/missions/{id}/matrix` - `{networks: [...], cells: [...], techniques: [...]}`
 `GET /api/missions/{id}/reach?source_network_id=`
 
-## Service triage
+## Triage
 
-A scan says what is exposed; deciding whether each service is a problem is
-manual work. These endpoints track that pass so a long engagement keeps its
-place, and a re-scan never erases it.
+A scan says what is exposed and which checks fired; deciding whether each
+service, and each finding, is really a problem is manual work. These endpoints
+track that pass so a long engagement keeps its place, and a re-scan never
+erases it. Services and findings work the same way throughout.
 
 Statuses: `todo` (default), `in_progress`, `done`, `flagged`, `skipped`.
 
@@ -108,9 +109,12 @@ Statuses: `todo` (default), `in_progress`, `done`, `flagged`, `skipped`.
 | GET | `/api/services/{id}` | - |
 | PATCH | `/api/services/{id}` | `{status?, note?}`, either or both; a field left out is left alone |
 | POST | `/api/missions/{id}/services/triage` | `{service_ids: [], status}`, one status for a selection |
+| GET | `/api/findings/{id}` | - |
+| PATCH | `/api/findings/{id}` | `{status?, note?}`, same rules as a service |
+| POST | `/api/missions/{id}/findings/triage` | `{finding_ids: [], status}`, one status for a selection |
 | GET | `/api/missions/{id}/triage?network_id=` | counts per status, plus `total` and `reviewed` |
 
-Triage is carried on every service object under `triage`:
+Triage is carried on every service and every finding object under `triage`:
 
 ```jsonc
 "triage": {
@@ -121,8 +125,20 @@ Triage is carried on every service object under `triage`:
 }
 ```
 
-It is never written by a scan, and it is exported in the services CSV, the
-Excel workbook, the JSON dump and the reports.
+The summary counts the two passes separately, because they are done
+separately: the services stay at the top level and the findings sit beside
+them under `findings`.
+
+```jsonc
+{
+  "counts": {"todo": 42, "done": 7, ...}, "total": 49, "reviewed": 7,
+  "statuses": ["todo", "in_progress", "done", "flagged", "skipped"],
+  "findings": {"counts": {"todo": 3, ...}, "total": 3, "reviewed": 0}
+}
+```
+
+Triage is never written by a scan, and it is exported in the services and
+findings CSVs, the Excel workbook, the JSON dump and the reports.
 
 ## Exports
 

@@ -403,7 +403,7 @@ export interface MissionMember {
   disabled: boolean
 }
 
-/** model.TriageStatus - where the operator is with a service. */
+/** model.TriageStatus - where the operator is with a service or a finding. */
 export type TriageStatus = 'todo' | 'in_progress' | 'done' | 'flagged' | 'skipped'
 
 export const TRIAGE_STATUSES: TriageStatus[] = [
@@ -414,7 +414,10 @@ export const TRIAGE_STATUSES: TriageStatus[] = [
   'skipped',
 ]
 
-/** model.Triage - the operator's own record against a service, never written by a scan. */
+/**
+ * model.Triage - the operator's own record against a service or a finding,
+ * never written by a scan.
+ */
 export interface Triage {
   status: TriageStatus
   note?: string
@@ -423,12 +426,21 @@ export interface Triage {
   updated_at?: string
 }
 
-/** GET /api/missions/{id}/triage */
-export interface TriageSummary {
+/** How far one pass has got, as the triage summary reports it. */
+export interface TriageCounts {
   counts: Record<TriageStatus, number>
   total: number
   reviewed: number
+}
+
+/**
+ * GET /api/missions/{id}/triage. The services stay at the top level, where
+ * they have always been, and the findings are counted separately beside them
+ * because they are reviewed separately.
+ */
+export interface TriageSummary extends TriageCounts {
   statuses: TriageStatus[]
+  findings: TriageCounts
 }
 
 export interface Service {
@@ -585,6 +597,7 @@ export const SEVERITY_RANK: Record<Severity, number> = {
 }
 
 export interface Finding {
+  triage: Triage
   id: number
   mission_id: number
   network_id: number
