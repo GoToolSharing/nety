@@ -213,17 +213,22 @@ read by `/export`: a report must not quietly drop a machine because a search
 box was left filled in.
 
 **Exports do honour the triage, and say so.** An export is usually a
-deliverable, so what the operator set aside stays out of it: a host or a
-machine marked `skipped`, with the services, findings and segmentation results
-attached to it, and any service or finding marked `skipped` or
-`false_positive`. The response carries an `omitted` object counting what was
-held back, and every human-readable format prints that count on its own front
-page, so a file that is shorter than the mission admits it without needing
-whoever opens it to remember which box was ticked.
+deliverable, so two things stay out of it by default.
 
-`include_dismissed=1` asks for the whole record instead, which is what a
-handover to another tester needs. The mission bundle (`/bundle`) is unaffected
-either way: a backup always carries everything.
+| Left out | Brought back by | What it covers |
+|---|---|---|
+| What the operator set aside | `include_dismissed=1` | a host or machine marked `skipped`, with the services, findings and segmentation results attached to it, and any service or finding marked `skipped` or `false_positive` |
+| Findings nobody has reviewed | `include_unreviewed=1` | findings still at `todo`. Findings only: a service is inventory and goes in whatever its status, and on a host or a machine `todo` means in scope rather than unexamined |
+
+The response carries an `omitted` object counting what was held back, split
+into `set_aside` and `unreviewed` because they do not mean the same thing to a
+reader: one is a decision, the other is the absence of one. Every
+human-readable format prints that count on its own front page, so a file that
+is shorter than the mission admits it without needing whoever opens it to
+remember which boxes were ticked.
+
+The mission bundle (`/bundle`) is unaffected by either: a backup always
+carries everything.
 
 **Skipped hosts.** By default the service, finding, reachability and matrix
 listings leave out the rows of a host whose triage status is `skipped`, and the

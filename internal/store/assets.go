@@ -624,6 +624,17 @@ type ExportScope struct {
 	// against is how a client ends up asking about a finding nobody meant to
 	// send. It is true whenever the export has to be the whole record.
 	IncludeDismissed bool
+
+	// IncludeUnreviewed keeps the findings still sitting at "to do": nobody
+	// has looked at them yet, and an unread check result is not a verdict to
+	// put in front of a client.
+	//
+	// Findings only. A service is inventory: the deliverable's list of open
+	// ports has to be the whole list whether or not anyone has been through
+	// it one by one, and a host or a machine uses "to do" to mean in scope
+	// rather than unexamined, so applying this to either would empty the
+	// export of most of the mission.
+	IncludeUnreviewed bool
 }
 
 // MissionData gathers a mission for export, keeping or dropping what the
@@ -650,13 +661,31 @@ func (s *Store) MissionData(ctx context.Context, missionID int64, scope ExportSc
 	if d.Hosts, err = s.ListHosts(ctx, missionID, networkID); err != nil {
 		return d, err
 	}
-	liveOnly := []model.TriageStatus(nil)
+	// Statuses to keep. Nil means every one of them.
+	//
+	// A service only ever loses the two dismissals: the list of open ports is
+	// inventory, and a deliverable's inventory has to be complete whether or
+	// not anyone has walked it row by row. A finding additionally loses "to
+	// do" unless asked for, because it is a claim, and an unread claim has no
+	// business in front of a client.
+	var serviceStatuses, findingStatuses []model.TriageStatus
 	if !keepAll {
-		liveOnly = model.LiveTriageStatuses()
+		serviceStatuses = model.LiveTriageStatuses()
+	}
+	if !keepAll || !scope.IncludeUnreviewed {
+		for _, st := range model.AllTriageStatuses {
+			if !keepAll && model.Dismissed(st) {
+				continue
+			}
+			if !scope.IncludeUnreviewed && st == model.TriageTodo {
+				continue
+			}
+			findingStatuses = append(findingStatuses, st)
+		}
 	}
 	if d.Services, err = s.ListServices(ctx, ServiceFilter{
 		MissionID: missionID, NetworkID: networkID,
-		IncludeSkippedHosts: keepAll, Triage: liveOnly,
+		IncludeSkippedHosts: keepAll, Triage: serviceStatuses,
 	}); err != nil {
 		return d, err
 	}
@@ -665,7 +694,7 @@ func (s *Store) MissionData(ctx context.Context, missionID int64, scope ExportSc
 	}
 	if d.Findings, err = s.ListFindings(ctx, FindingFilter{
 		MissionID: missionID, NetworkID: networkID,
-		IncludeSkippedHosts: keepAll, Triage: liveOnly,
+		IncludeSkippedHosts: keepAll, Triage: findingStatuses,
 	}); err != nil {
 		return d, err
 	}
@@ -678,39 +707,48 @@ func (s *Store) MissionData(ctx context.Context, missionID int64, scope ExportSc
 		return d, err
 	}
 
-	if !keepAll {
-		// The hosts and the machines are small enough to sift here, and the
-		// listings have no triage filter of their own. Counting first, then
-		// dropping, is what lets the file state what is missing.
+	if !keepAll || !scope.IncludeUnreviewed {
 		omitted := &model.OmittedRows{}
-		kept := d.Hosts[:0]
-		for _, h := range d.Hosts {
-			if h.Triage.Status == model.TriageSkipped {
-				omitted.Hosts++
-				continue
+		if !keepAll {
+			// The hosts and the machines are small enough to sift here, and
+			// the listings have no triage filter of their own. Counting
+			// first, then dropping, is what lets the file state what is
+			// missing. "To do" never drops one of these: on a machine it
+			// means in scope, not unexamined.
+			kept := d.Hosts[:0]
+			for _, h := range d.Hosts {
+				if h.Triage.Status == model.TriageSkipped {
+					omitted.SetAside.Hosts++
+					continue
+				}
+				kept = append(kept, h)
 			}
-			kept = append(kept, h)
-		}
-		d.Hosts = kept
-		keptAssets := d.Assets[:0]
-		for _, a := range d.Assets {
-			if a.Triage.Status == model.TriageSkipped {
-				omitted.Assets++
-				continue
+			d.Hosts = kept
+			keptAssets := d.Assets[:0]
+			for _, a := range d.Assets {
+				if a.Triage.Status == model.TriageSkipped {
+					omitted.SetAside.Assets++
+					continue
+				}
+				keptAssets = append(keptAssets, a)
 			}
-			keptAssets = append(keptAssets, a)
+			d.Assets = keptAssets
 		}
-		d.Assets = keptAssets
 
 		// What the filtered listings above left behind, measured against the
-		// full count rather than guessed at.
-		full, err := s.dismissedCounts(ctx, missionID, networkID)
+		// database rather than guessed at.
+		counts, err := s.omittedCounts(ctx, missionID, networkID)
 		if err != nil {
 			return d, err
 		}
-		omitted.Services = full.Services
-		omitted.Findings = full.Findings
-		omitted.Reach = full.Reach
+		if !keepAll {
+			omitted.SetAside.Services = counts.SetAside.Services
+			omitted.SetAside.Findings = counts.SetAside.Findings
+			omitted.SetAside.Reach = counts.SetAside.Reach
+		}
+		if !scope.IncludeUnreviewed {
+			omitted.Unreviewed.Findings = counts.Unreviewed.Findings
+		}
 		d.Omitted = omitted
 	}
 	if networkID != 0 {
@@ -726,49 +764,59 @@ func (s *Store) MissionData(ctx context.Context, missionID int64, scope ExportSc
 	return d, nil
 }
 
-// dismissedCounts counts the rows an export leaves out when the operator's
-// own triage is applied: the ones on a skipped host, and the ones marked
-// skipped or a false positive in their own right.
+// omittedCounts measures what an export would hold back, by reason.
 //
-// It is a count rather than a second listing: the export already holds what
-// it keeps, and loading the whole mission twice to subtract one from the
-// other would double the work of every export of a large engagement.
-func (s *Store) dismissedCounts(ctx context.Context, missionID, networkID int64) (model.OmittedRows, error) {
+// It is a count rather than a second listing: the export already holds what it
+// keeps, and loading the whole mission twice to subtract one from the other
+// would double the work of every export of a large engagement.
+func (s *Store) omittedCounts(ctx context.Context, missionID, networkID int64) (model.OmittedRows, error) {
 	var out model.OmittedRows
 	dismissed := `(` + quotedStatuses(model.DismissedTriageStatuses) + `)`
+	onSkippedHost := func(hostColumn string) string {
+		return `EXISTS (SELECT 1 FROM hosts WHERE hosts.id = ` + hostColumn +
+			` AND hosts.triage_status = '` + string(model.TriageSkipped) + `')`
+	}
 
-	count := func(table, hostColumn string) (int, error) {
+	count := func(table, where string) (int, error) {
 		q := `SELECT COUNT(*) FROM ` + table + ` WHERE mission_id = ?`
 		args := []any{missionID}
 		if networkID != 0 {
 			q += ` AND network_id = ?`
 			args = append(args, networkID)
 		}
-		q += ` AND (triage_status IN ` + dismissed +
-			` OR EXISTS (SELECT 1 FROM hosts WHERE hosts.id = ` + hostColumn +
-			` AND hosts.triage_status = '` + string(model.TriageSkipped) + `'))`
+		q += ` AND (` + where + `)`
 		var n int
 		err := s.r.QueryRowContext(ctx, q, args...).Scan(&n)
 		return n, err
 	}
 
 	var err error
-	if out.Services, err = count("services", "services.host_id"); err != nil {
-		return out, fmt.Errorf("store: count dismissed services: %w", err)
+	// Set aside: dismissed in its own right, or standing on a skipped host.
+	setAside := func(table, hostColumn string) string {
+		return `triage_status IN ` + dismissed + ` OR ` + onSkippedHost(hostColumn)
 	}
-	if out.Findings, err = count("findings", "findings.host_id"); err != nil {
-		return out, fmt.Errorf("store: count dismissed findings: %w", err)
+	if out.SetAside.Services, err = count("services", setAside("services", "services.host_id")); err != nil {
+		return out, fmt.Errorf("store: count services set aside: %w", err)
+	}
+	if out.SetAside.Findings, err = count("findings", setAside("findings", "findings.host_id")); err != nil {
+		return out, fmt.Errorf("store: count findings set aside: %w", err)
+	}
+
+	// Unreviewed: still at "to do", and not already counted above. Only
+	// findings: a service is inventory and travels whatever its status.
+	unread := `triage_status = '` + string(model.TriageTodo) + `' AND NOT ` +
+		onSkippedHost("findings.host_id")
+	if out.Unreviewed.Findings, err = count("findings", unread); err != nil {
+		return out, fmt.Errorf("store: count unreviewed findings: %w", err)
 	}
 
 	// A segmentation result has no status of its own: it is left out only
-	// when the machine it was aimed at is.
-	// The inverse of notOnASkippedHost: that helper excludes these rows, and
-	// here they are exactly what is being counted.
-	q := `SELECT COUNT(*) FROM reach_results WHERE mission_id = ?` +
-		` AND EXISTS (SELECT 1 FROM hosts WHERE hosts.id = reach_results.target_host_id` +
-		` AND hosts.triage_status = '` + string(model.TriageSkipped) + `')`
-	if err := s.r.QueryRowContext(ctx, q, missionID).Scan(&out.Reach); err != nil {
-		return out, fmt.Errorf("store: count dismissed segmentation results: %w", err)
+	// when the machine it was aimed at is. This is the inverse of
+	// notOnASkippedHost, which excludes exactly these rows.
+	q := `SELECT COUNT(*) FROM reach_results WHERE mission_id = ? AND ` +
+		onSkippedHost("reach_results.target_host_id")
+	if err := s.r.QueryRowContext(ctx, q, missionID).Scan(&out.SetAside.Reach); err != nil {
+		return out, fmt.Errorf("store: count segmentation results set aside: %w", err)
 	}
 	return out, nil
 }

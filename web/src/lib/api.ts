@@ -421,14 +421,15 @@ export const api = {
     missionId: number,
     format: string,
     networkId?: number,
-    /** Keep the rows the operator set aside. The server leaves them out. */
-    includeDismissed?: boolean,
+    /** What the server leaves out of a deliverable unless asked. */
+    keep?: { dismissed?: boolean; unreviewed?: boolean },
   ) =>
     apiUrl(
       withQuery(`api/missions/${missionId}/export`, {
         format,
         network_id: networkId,
-        include_dismissed: includeDismissed ? 1 : undefined,
+        include_dismissed: keep?.dismissed ? 1 : undefined,
+        include_unreviewed: keep?.unreviewed ? 1 : undefined,
       }),
     ),
 

@@ -622,10 +622,9 @@ func TestPasswordChangeIsEnforcedServerSide(t *testing.T) {
 	}
 }
 
-// The export is a deliverable by default, so the rows the operator decided
-// against stay out of it, and the file says how many it held back. Asking for
-// the whole record brings them back: that is the handover, not the hand-off to
-// the client.
+// The export is a deliverable by default: the rows the operator decided
+// against stay out of it, and so do the findings nobody has read. The file
+// says how many it held back, and either switch brings its own back.
 func TestExportLeavesOutWhatWasSetAside(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("alice", model.RoleOperator)
@@ -640,55 +639,100 @@ func TestExportLeavesOutWhatWasSetAside(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	keep, err := e.store.UpsertFinding(ctx, model.Finding{
+	// A service nobody triaged. It must survive every combination: the list
+	// of open ports is inventory, not a claim.
+	if _, err := e.store.UpsertService(ctx, model.Service{
 		MissionID: m.ID, NetworkID: n.ID, HostID: host.ID, IP: host.IP,
-		CheckID: "smb.signing", Title: "SMB signing not required", Severity: model.SevMedium,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	drop, err := e.store.UpsertFinding(ctx, model.Finding{
-		MissionID: m.ID, NetworkID: n.ID, HostID: host.ID, IP: host.IP,
-		CheckID: "tls.weak", Title: "Weak TLS cipher", Severity: model.SevLow,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	status := model.TriageFalsePositive
-	if _, err := e.store.SetFindingTriage(ctx, drop.ID, &status, nil, alice.user.ID); err != nil {
+		Port: 445, Protocol: model.TCP, Name: "microsoft-ds",
+	}); err != nil {
 		t.Fatal(err)
 	}
 
-	var deliverable model.MissionData
-	if st := alice.do("GET", "/api/missions/"+itoa(m.ID)+"/export?format=json",
-		nil, &deliverable); st != http.StatusOK {
-		t.Fatalf("export: %d", st)
+	newFinding := func(check, title string, sev model.Severity) model.Finding {
+		f, err := e.store.UpsertFinding(ctx, model.Finding{
+			MissionID: m.ID, NetworkID: n.ID, HostID: host.ID, IP: host.IP,
+			CheckID: check, Title: title, Severity: sev,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return f
 	}
+	keep := newFinding("smb.signing", "SMB signing not required", model.SevMedium)
+	falsePositive := newFinding("tls.weak", "Weak TLS cipher", model.SevLow)
+	unread := newFinding("http.banner", "Server banner", model.SevInfo)
+
+	flagged := model.TriageFlagged
+	if _, err := e.store.SetFindingTriage(ctx, keep.ID, &flagged, nil, alice.user.ID); err != nil {
+		t.Fatal(err)
+	}
+	fp := model.TriageFalsePositive
+	if _, err := e.store.SetFindingTriage(ctx, falsePositive.ID, &fp, nil, alice.user.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	get := func(query string) model.MissionData {
+		t.Helper()
+		var d model.MissionData
+		if st := alice.do("GET", "/api/missions/"+itoa(m.ID)+"/export?format=json"+query,
+			nil, &d); st != http.StatusOK {
+			t.Fatalf("export%s: %d", query, st)
+		}
+		return d
+	}
+
+	deliverable := get("")
 	if len(deliverable.Findings) != 1 || deliverable.Findings[0].ID != keep.ID {
-		t.Fatalf("the false positive must not be in the deliverable: %+v", deliverable.Findings)
+		t.Fatalf("only the reviewed finding belongs in the deliverable: %+v",
+			deliverable.Findings)
 	}
-	if deliverable.Omitted.Total() != 1 {
-		t.Fatalf("the export has to say what it held back, got %+v", deliverable.Omitted)
+	if len(deliverable.Services) != 1 {
+		t.Fatalf("a service is never held back for being unreviewed: %+v",
+			deliverable.Services)
+	}
+	if deliverable.Omitted.SetAside.Findings != 1 {
+		t.Fatalf("set aside: got %d, want 1", deliverable.Omitted.SetAside.Findings)
+	}
+	if deliverable.Omitted.Unreviewed.Findings != 1 {
+		t.Fatalf("unreviewed: got %d, want 1", deliverable.Omitted.Unreviewed.Findings)
 	}
 
-	var whole model.MissionData
-	if st := alice.do("GET", "/api/missions/"+itoa(m.ID)+"/export?format=json&include_dismissed=1",
-		nil, &whole); st != http.StatusOK {
-		t.Fatalf("full export: %d", st)
+	// Each switch brings back its own, and only its own.
+	withUnread := get("&include_unreviewed=1")
+	if len(withUnread.Findings) != 2 {
+		t.Fatalf("the unread finding should be back, the false positive not: %+v",
+			withUnread.Findings)
 	}
-	if len(whole.Findings) != 2 {
-		t.Fatalf("the whole record must carry both: %+v", whole.Findings)
+	for _, f := range withUnread.Findings {
+		if f.ID == falsePositive.ID {
+			t.Fatal("include_unreviewed must not bring back what was set aside")
+		}
+	}
+
+	withSetAside := get("&include_dismissed=1")
+	for _, f := range withSetAside.Findings {
+		if f.ID == unread.ID {
+			t.Fatal("include_dismissed must not bring back what nobody has read")
+		}
+	}
+
+	whole := get("&include_dismissed=1&include_unreviewed=1")
+	if len(whole.Findings) != 3 {
+		t.Fatalf("the whole record must carry all three: %+v", whole.Findings)
 	}
 	if whole.Omitted.Any() {
 		t.Fatalf("nothing was held back, so nothing should be claimed: %+v", whole.Omitted)
 	}
 
-	// And the workbook says it on its first sheet, not only in the JSON.
-	status2, body, _ := alice.raw("GET", "/api/missions/"+itoa(m.ID)+"/export?format=markdown")
-	if status2 != http.StatusOK {
-		t.Fatalf("markdown export: %d", status2)
+	// And a report says it on its own front page, not only in the JSON.
+	status, body, _ := alice.raw("GET", "/api/missions/"+itoa(m.ID)+"/export?format=markdown")
+	if status != http.StatusOK {
+		t.Fatalf("markdown export: %d", status)
 	}
 	if !strings.Contains(string(body), "left out of this export") {
 		t.Fatal("a report that is shorter than the mission has to say so on its own")
+	}
+	if !strings.Contains(string(body), "nobody had reviewed yet") {
+		t.Fatal("and has to say which of the two reasons applied")
 	}
 }

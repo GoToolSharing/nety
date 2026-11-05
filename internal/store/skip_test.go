@@ -380,7 +380,7 @@ func TestExportsKeepTheSkippedRows(t *testing.T) {
 	h, _, _, _ := parked(t, s, m.ID, "10.0.0.12")
 	skip(t, s, h.ID)
 
-	d, err := s.MissionData(ctx, m.ID, ExportScope{IncludeDismissed: true})
+	d, err := s.MissionData(ctx, m.ID, ExportScope{IncludeDismissed: true, IncludeUnreviewed: true})
 	if err != nil {
 		t.Fatalf("mission data: %v", err)
 	}

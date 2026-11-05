@@ -713,14 +713,20 @@ type MissionData struct {
 	// Omitted records what the operator's own triage kept out of this export.
 	// It travels with the data so the file itself can say it: a spreadsheet
 	// that is shorter than the mission must admit as much on its own, without
-	// needing whoever opens it to remember which box was ticked.
+	// needing whoever opens it to remember which boxes were ticked.
 	Omitted *OmittedRows `json:"omitted,omitempty"`
 }
 
-// OmittedRows counts what was left out of an export because the operator had
-// set it aside: skipped hosts and machines with everything attached to them,
-// and the services and findings marked skipped or a false positive.
+// OmittedRows is what an export held back, split by the reason, because the
+// two reasons are not the same thing to a reader. Set aside is a decision:
+// the operator looked and parked it. Unreviewed is the absence of one.
 type OmittedRows struct {
+	SetAside   OmittedCounts `json:"set_aside"`
+	Unreviewed OmittedCounts `json:"unreviewed"`
+}
+
+// OmittedCounts is one reason's worth of held-back rows, by kind.
+type OmittedCounts struct {
 	Hosts    int `json:"hosts"`
 	Assets   int `json:"assets"`
 	Services int `json:"services"`
@@ -728,17 +734,25 @@ type OmittedRows struct {
 	Reach    int `json:"reach"`
 }
 
-// Any reports whether anything at all was left out.
-func (o *OmittedRows) Any() bool {
-	return o != nil && o.Hosts+o.Assets+o.Services+o.Findings+o.Reach > 0
+// Total is how many rows this reason accounts for.
+func (c OmittedCounts) Total() int {
+	return c.Hosts + c.Assets + c.Services + c.Findings + c.Reach
 }
 
-// Total is how many rows were held back, all kinds together.
+// Any reports whether this reason held anything back.
+func (c OmittedCounts) Any() bool { return c.Total() > 0 }
+
+// Any reports whether anything at all was left out, for either reason.
+func (o *OmittedRows) Any() bool {
+	return o != nil && (o.SetAside.Any() || o.Unreviewed.Any())
+}
+
+// Total is how many rows were held back, both reasons together.
 func (o *OmittedRows) Total() int {
 	if o == nil {
 		return 0
 	}
-	return o.Hosts + o.Assets + o.Services + o.Findings + o.Reach
+	return o.SetAside.Total() + o.Unreviewed.Total()
 }
 
 // ---------------------------------------------------------------------------

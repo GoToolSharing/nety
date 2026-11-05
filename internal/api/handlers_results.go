@@ -566,15 +566,22 @@ func (a *API) handleExport(w http.ResponseWriter, r *http.Request, u model.User)
 	}
 	networkID := queryInt64(r, "network_id")
 
-	// An export is a deliverable, so what the operator set aside stays out of
-	// it by default: a skipped host or machine with everything attached to
-	// it, and the services and findings marked skipped or a false positive.
-	// `include_dismissed=1` asks for the whole record instead, which is what
-	// a handover to another tester needs. Either way the file says which of
-	// the two it is, and how many rows were held back.
+	// An export is a deliverable, so two things stay out of it by default.
+	//
+	// What the operator set aside: a skipped host or machine with everything
+	// attached to it, and the services and findings marked skipped or a false
+	// positive. `include_dismissed=1` brings them back.
+	//
+	// And the findings nobody has reviewed yet, still at "to do": an unread
+	// check result is not a verdict to put in front of a client.
+	// `include_unreviewed=1` brings those back. It is findings only: the list
+	// of open ports is inventory and travels whole.
+	//
+	// Either way the file says how many rows were held back, and why.
 	scope := store.ExportScope{
-		NetworkID:        networkID,
-		IncludeDismissed: queryYes(r, "include_dismissed"),
+		NetworkID:         networkID,
+		IncludeDismissed:  queryYes(r, "include_dismissed"),
+		IncludeUnreviewed: queryYes(r, "include_unreviewed"),
 	}
 	data, err := a.Store.MissionData(r.Context(), m.ID, scope)
 	if err != nil {
@@ -599,7 +606,8 @@ func (a *API) handleExport(w http.ResponseWriter, r *http.Request, u model.User)
 	}
 	detail := format
 	if data.Omitted.Any() {
-		detail += fmt.Sprintf(" (%d rows set aside left out)", data.Omitted.Total())
+		detail += fmt.Sprintf(" (%d rows left out: %d set aside, %d unreviewed)",
+			data.Omitted.Total(), data.Omitted.SetAside.Total(), data.Omitted.Unreviewed.Total())
 	}
 	a.audit(r, u, m.ID, "mission.exported", detail)
 }

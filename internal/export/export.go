@@ -355,18 +355,29 @@ func csvWriter(w io.Writer) (*csv.Writer, error) {
 	return csv.NewWriter(w), nil
 }
 
-// scopeLine is the one sentence every export carries about how much of the
-// mission it holds. An export that leaves out the rows the operator set
-// aside must say so itself: the file outlives the screen it was produced
-// from, and nobody reading it later knows which box was ticked.
+// scopeLine is the sentence every export carries about how much of the
+// mission it holds. An export that leaves rows out must say so itself: the
+// file outlives the screen it was produced from, and nobody reading it later
+// knows which boxes were ticked.
 func scopeLine(d model.MissionData) string {
 	if !d.Omitted.Any() {
 		if d.Omitted == nil {
-			return "Scope: the whole mission, including what was skipped or called a false positive."
+			return "Scope: the whole mission, including every row whatever its status."
 		}
-		return "Scope: the whole mission. Nothing was set aside."
+		return "Scope: the whole mission. Nothing was held back."
 	}
-	o := d.Omitted
+	var reasons []string
+	if r := countList(d.Omitted.SetAside); r != "" {
+		reasons = append(reasons, r+" set aside (skipped or called a false positive)")
+	}
+	if r := countList(d.Omitted.Unreviewed); r != "" {
+		reasons = append(reasons, r+" nobody had reviewed yet")
+	}
+	return "Scope: left out of this export: " + strings.Join(reasons, "; and ") + "."
+}
+
+// countList renders one reason's counts as "27 findings, 2 hosts".
+func countList(c model.OmittedCounts) string {
 	var parts []string
 	add := func(n int, singular, plural string) {
 		if n == 0 {
@@ -378,11 +389,10 @@ func scopeLine(d model.MissionData) string {
 		}
 		parts = append(parts, fmt.Sprintf("%d %s", n, word))
 	}
-	add(o.Findings, "finding", "findings")
-	add(o.Services, "service", "services")
-	add(o.Hosts, "host", "hosts")
-	add(o.Assets, "machine", "machines")
-	add(o.Reach, "segmentation result", "segmentation results")
-	return "Scope: left out of this export because they were skipped or called " +
-		"a false positive: " + strings.Join(parts, ", ") + "."
+	add(c.Findings, "finding", "findings")
+	add(c.Services, "service", "services")
+	add(c.Hosts, "host", "hosts")
+	add(c.Assets, "machine", "machines")
+	add(c.Reach, "segmentation result", "segmentation results")
+	return strings.Join(parts, ", ")
 }

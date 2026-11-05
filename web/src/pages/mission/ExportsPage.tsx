@@ -36,14 +36,14 @@ function FormatCard({
   format,
   missionId,
   networkId,
-  includeDismissed,
+  keep,
 }: {
   format: ExportFormat
   missionId: number
   networkId: number
-  includeDismissed: boolean
+  keep: { dismissed: boolean; unreviewed: boolean }
 }) {
-  const href = api.exportUrl(missionId, format.id, networkId || undefined, includeDismissed)
+  const href = api.exportUrl(missionId, format.id, networkId || undefined, keep)
   return (
     <a
       href={href}
@@ -80,9 +80,11 @@ export default function ExportsPage() {
   const formats = useExportFormats()
   const summary = useTriageSummary(missionId, 0)
   const [networkId, setNetworkId] = useState(0)
-  // An export is usually a deliverable, so what the operator set aside stays
-  // out of it unless they ask for the whole record.
+  // An export is usually a deliverable, so two things stay out of it unless
+  // asked for: what the operator set aside, and the findings nobody has been
+  // through yet.
   const [includeDismissed, setIncludeDismissed] = useState(false)
+  const [includeUnreviewed, setIncludeUnreviewed] = useState(false)
 
   const setAside =
     (summary.data?.counts.skipped ?? 0) +
@@ -90,6 +92,8 @@ export default function ExportsPage() {
     (summary.data?.findings.counts.skipped ?? 0) +
     (summary.data?.findings.counts.false_positive ?? 0) +
     (summary.data?.hosts.counts.skipped ?? 0)
+  const unreviewedFindings = summary.data?.findings.counts.todo ?? 0
+  const reviewedFindings = (summary.data?.findings.total ?? 0) - unreviewedFindings
 
   const scope =
     networkId === 0
@@ -129,23 +133,55 @@ export default function ExportsPage() {
             <span className="text-xs text-faint">Downloads will cover {scope}.</span>
           </div>
 
-          <div className="mt-4 border-t border-border pt-4">
-            <Toggle
-              checked={includeDismissed}
-              onChange={setIncludeDismissed}
-              label="Include what I set aside"
-              hint={
-                includeDismissed
-                  ? 'Everything goes in, including skipped hosts and machines with all their services and findings, and anything marked skipped or a false positive. This is the handover version, not the one for the client.'
-                  : 'Off: skipped hosts and machines leave with everything attached to them, and services and findings marked skipped or a false positive are left out. The file says on its own front page how many rows were held back, so a short export is never a silent one.'
-              }
-            />
-            {setAside > 0 && !includeDismissed && (
-              <p className="mt-2 text-xs text-muted">
-                {formatNumber(setAside)} rows across this mission are currently set aside and
-                will not be in the download.
-              </p>
-            )}
+          <div className="mt-4 space-y-4 border-t border-border pt-4">
+            <div>
+              <Toggle
+                checked={includeDismissed}
+                onChange={setIncludeDismissed}
+                label="Include what I set aside"
+                hint={
+                  includeDismissed
+                    ? 'Everything goes in, including skipped hosts and machines with all their services and findings, and anything marked skipped or a false positive. This is the handover version, not the one for the client.'
+                    : 'Off: skipped hosts and machines leave with everything attached to them, and services and findings marked skipped or a false positive are left out.'
+                }
+              />
+              {setAside > 0 && !includeDismissed && (
+                <p className="mt-2 text-xs text-muted">
+                  {formatNumber(setAside)} rows across this mission are set aside and will not
+                  be in the download.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Toggle
+                checked={includeUnreviewed}
+                onChange={setIncludeUnreviewed}
+                label="Include the findings I have not reviewed yet"
+                hint={
+                  includeUnreviewed
+                    ? 'Findings still at "to do" go in with the rest, exactly as the checks raised them.'
+                    : 'Off: a finding still at "to do" is a check result nobody has read, which is not a verdict to put in front of a client. Services are never filtered this way: the list of open ports is inventory and goes in whole.'
+                }
+              />
+              {unreviewedFindings > 0 && !includeUnreviewed && (
+                <p
+                  className={cn(
+                    'mt-2 text-xs',
+                    reviewedFindings === 0 ? 'text-warn' : 'text-muted',
+                  )}
+                >
+                  {reviewedFindings === 0
+                    ? `None of the ${formatNumber(unreviewedFindings)} findings has been reviewed yet, so the export would carry no finding at all. Turn this on, or go through them first.`
+                    : `${formatNumber(unreviewedFindings)} findings have not been reviewed and will not be in the download. ${formatNumber(reviewedFindings)} will.`}
+                </p>
+              )}
+            </div>
+
+            <p className="text-xs text-faint">
+              Whatever is left out, the export says on its own front page how many rows were
+              held back and why, so a short file is never a silent one.
+            </p>
           </div>
         </CardBody>
       </Card>
@@ -182,7 +218,7 @@ export default function ExportsPage() {
                 format={f}
                 missionId={missionId}
                 networkId={networkId}
-                includeDismissed={includeDismissed}
+                keep={{ dismissed: includeDismissed, unreviewed: includeUnreviewed }}
               />
             ))}
           </div>
