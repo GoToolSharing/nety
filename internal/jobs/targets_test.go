@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"net/netip"
+	"strings"
 	"testing"
 )
 
@@ -146,13 +147,69 @@ func TestChunkAddresses(t *testing.T) {
 
 func TestCountAddresses(t *testing.T) {
 	p, _ := ParseTargets([]string{"10.0.0.0/24", "192.168.0.0/16"})
-	if n := CountAddresses(p, 1<<30); n != 256+65536 {
-		t.Fatalf("got %d", n)
+	n, exact := CountAddresses(p, 1<<30)
+	if n != 256+65536 || !exact {
+		t.Fatalf("got %d exact=%v", n, exact)
 	}
-	// A huge IPv6 prefix must saturate instead of overflowing.
+	// A huge IPv6 prefix saturates, and says so rather than passing the cap
+	// off as a real count.
 	v6, _ := ParseTargets([]string{"2001:db8::/32"})
-	if n := CountAddresses(v6, 1000); n != 1000 {
-		t.Fatalf("expected the cap, got %d", n)
+	if n, exact := CountAddresses(v6, 1000); n != 1000 || exact {
+		t.Fatalf("expected a saturated inexact count, got %d exact=%v", n, exact)
+	}
+}
+
+// TestCheckScanSizeRefusesTheImpossible is the guard that was missing when a
+// scan took the server down: auto-detect put the interface's link-local
+// fe80::/64 in the scope, the planner tried to enumerate 2^64 addresses, and
+// the process was killed while building work units. The operator saw an
+// unexplained restart.
+func TestCheckScanSizeRefusesTheImpossible(t *testing.T) {
+	for _, spec := range []string{"fe80::/64", "2001:db8::/32", "::/0"} {
+		p, err := ParseTargets([]string{spec})
+		if err != nil {
+			t.Fatalf("%s: %v", spec, err)
+		}
+		err = CheckScanSize(p, nil)
+		if err == nil {
+			t.Fatalf("%s must be refused", spec)
+		}
+		if !strings.Contains(err.Error(), spec) && !strings.Contains(err.Error(), "limit") {
+			t.Fatalf("%s: the error should name the problem, got %q", spec, err)
+		}
+	}
+
+	// An IPv4 /8 is the largest allowed, and a /7 is not.
+	ok, _ := ParseTargets([]string{"10.0.0.0/8"})
+	if err := CheckScanSize(ok, nil); err != nil {
+		t.Fatalf("a /8 should be allowed: %v", err)
+	}
+	tooBig, _ := ParseTargets([]string{"10.0.0.0/7"})
+	if err := CheckScanSize(tooBig, nil); err == nil {
+		t.Fatal("a /7 should be refused")
+	}
+
+	// A sensible IPv6 segment still works.
+	v6, _ := ParseTargets([]string{"2001:db8::/112"})
+	if err := CheckScanSize(v6, nil); err != nil {
+		t.Fatalf("a /112 should be allowed: %v", err)
+	}
+}
+
+// Even called directly with a space it should never have been given, chunking
+// must stop rather than allocate until the process dies.
+func TestChunkAddressesIsBounded(t *testing.T) {
+	p, _ := ParseTargets([]string{"2001:db8::/64"})
+	var total int64
+	ChunkAddresses(p, ExcludeFilter{}, 4096, func(batch []netip.Addr) bool {
+		total += int64(len(batch))
+		return true
+	})
+	if total > MaxScanAddresses {
+		t.Fatalf("chunking emitted %d addresses, above the %d limit", total, MaxScanAddresses)
+	}
+	if total == 0 {
+		t.Fatal("chunking emitted nothing at all")
 	}
 }
 

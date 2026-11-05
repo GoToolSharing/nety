@@ -207,8 +207,23 @@ func (a *API) validateScanOptions(o *model.ScanOptions, kind model.ScanKind, net
 		if o.AutoTargets && len(o.Targets) == 0 && len(net.Prefixes) == 0 {
 			return errors.New("this network has no known prefix: set one, or give explicit targets")
 		}
-		if _, err := jobs.ParseTargets(o.Targets); err != nil {
+		targets, err := jobs.ParseTargets(o.Targets)
+		if err != nil {
 			return fmt.Errorf("targets: %w", err)
+		}
+		// Refuse an impossible scope here, where the operator is still looking
+		// at the form, rather than letting the planner discover it later.
+		// Targets typed by hand are checked as given: silently dropping a
+		// fe80::/64 would start a scan with nothing in scope and leave the
+		// operator wondering why.
+		if len(targets) > 0 {
+			if err := jobs.CheckScanSize(targets, nil); err != nil {
+				return fmt.Errorf("targets: %w", err)
+			}
+			if scannable, dropped := jobs.KeepScannable(targets); len(scannable) == 0 {
+				return fmt.Errorf("targets: %s cannot be scanned; give an address range",
+					strings.Join(jobs.PrefixStrings(dropped), ", "))
+			}
 		}
 		if _, err := jobs.ParseTargets(o.Excludes); err != nil {
 			return fmt.Errorf("exclusions: %w", err)

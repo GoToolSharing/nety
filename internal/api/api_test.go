@@ -150,6 +150,28 @@ func (c *client) do(method, path string, body, out any) int {
 	return resp.StatusCode
 }
 
+// rawPost sends a body and returns the status and the raw response, for the
+// cases where the error text itself is what is being asserted.
+func (c *client) rawPost(path string, body any) (int, []byte, http.Header) {
+	c.t.Helper()
+	buf, err := json.Marshal(body)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	req, _ := http.NewRequest("POST", c.base+path, bytes.NewReader(buf))
+	req.Header.Set("Content-Type", "application/json")
+	if c.csrf != "" {
+		req.Header.Set(csrfHeader, c.csrf)
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		c.t.Fatalf("POST %s: %v", path, err)
+	}
+	defer resp.Body.Close()
+	data, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, data, resp.Header
+}
+
 // raw performs a request without decoding, returning status and body.
 func (c *client) raw(method, path string) (int, []byte, http.Header) {
 	c.t.Helper()

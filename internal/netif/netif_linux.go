@@ -109,7 +109,13 @@ func (n *Inspector) Detect(ctx context.Context, iface string) (engine.NetContext
 		default:
 			nc.LocalIPv6 = append(nc.LocalIPv6, a)
 		}
-		nc.Prefixes = append(nc.Prefixes, p.Masked())
+		// Only prefixes that make sense as a scan scope. A link-local /64 is
+		// an addressing artefact, not a segment to enumerate: offering it as
+		// scannable scope invites a scan of 2^64 addresses. The address itself
+		// is still kept in LocalIPv6, where it is useful.
+		if scannablePrefix(p) {
+			nc.Prefixes = append(nc.Prefixes, p.Masked())
+		}
 	}
 	nc.Prefixes = dedupPrefixes(nc.Prefixes)
 	sortIPv6(nc.LocalIPv6)

@@ -116,8 +116,20 @@ func (r *Runner) plan(ctx context.Context, sc model.Scan) error {
 		return fmt.Errorf("no target to scan: set targets explicitly or enable auto targets on a network with known prefixes")
 	}
 	filter := NewExcludeFilter(excludes)
-	r.logScan(ctx, sc, "info", fmt.Sprintf("scope: %s (%d addresses)",
-		strings.Join(PrefixStrings(targets), ", "), CountAddresses(targets, 1<<40)))
+
+	// Refuse an impossible scope before building a single work unit. Without
+	// this an IPv6 /64 picked up from a local interface takes the process down
+	// with it, which looks to the operator like an unexplained restart.
+	if err := CheckScanSize(targets, excludes); err != nil {
+		return err
+	}
+	count, exact := CountAddresses(targets, MaxScanAddresses)
+	size := fmt.Sprintf("%d addresses", count)
+	if !exact {
+		size = fmt.Sprintf("more than %d addresses", count)
+	}
+	r.logScan(ctx, sc, "info", fmt.Sprintf("scope: %s (%s)",
+		strings.Join(PrefixStrings(targets), ", "), size))
 
 	if sc.Options.HostDiscovery {
 		var units []discoveryPayload
@@ -223,6 +235,13 @@ func (r *Runner) resolveTargets(ctx context.Context, sc model.Scan, net model.Ne
 	targets, err := ParseTargets(specs)
 	if err != nil {
 		return nil, nil, err
+	}
+	// Auto-targets come from what was detected on the interface, which
+	// includes addressing that is not a scan scope.
+	targets, dropped := KeepScannable(targets)
+	if len(dropped) > 0 {
+		r.log.Info("jobs: prefixes dropped from the scope, not scannable",
+			"scan", sc.ID, "prefixes", PrefixStrings(dropped))
 	}
 
 	excludes, err := r.exclusions(ctx, sc, net)

@@ -144,21 +144,84 @@ func lastAddr(p netip.Prefix) netip.Addr {
 	return addr
 }
 
-// CountAddresses reports how many addresses a prefix list covers, capped at
-// max to keep the arithmetic cheap for very wide IPv6 prefixes.
-func CountAddresses(prefixes []netip.Prefix, cap int64) int64 {
+// MaxScanAddresses is the largest space a single scan may enumerate: 2^24,
+// the size of an IPv4 /8.
+//
+// It is a safety limit, not a performance one. The planner materialises a work
+// unit per chunk of addresses, so an unbounded space is not a slow scan but a
+// process that allocates until the kernel kills it. That is exactly what an
+// IPv6 /64 picked up from a local interface does.
+const MaxScanAddresses int64 = 1 << 24
+
+// CountAddresses reports how many addresses a prefix list covers. The second
+// return value is false when the real total is larger than limit, so a caller
+// can tell "exactly this many" from "at least this many" instead of printing a
+// cap as though it were a count.
+func CountAddresses(prefixes []netip.Prefix, limit int64) (int64, bool) {
 	var total int64
 	for _, p := range prefixes {
 		bits := p.Addr().BitLen() - p.Bits()
 		if bits >= 62 {
-			return cap
+			return limit, false
 		}
 		total += int64(1) << uint(bits)
-		if total >= cap {
-			return cap
+		if total > limit {
+			return limit, false
 		}
 	}
-	return total
+	return total, true
+}
+
+// Scannable reports whether a prefix is something a scan can enumerate.
+//
+// Auto-targets take their prefixes from what was detected on the interface,
+// and older networks were saved with the link-local fe80::/64 among them.
+// Filtering here means those keep working instead of failing on every scan
+// until someone edits them by hand.
+func Scannable(p netip.Prefix) bool {
+	a := p.Addr()
+	switch {
+	case a.IsLoopback(), a.IsLinkLocalUnicast(), a.IsLinkLocalMulticast(), a.IsMulticast(), a.IsUnspecified():
+		return false
+	}
+	if a.Is4() || a.Is4In6() {
+		return true
+	}
+	// 2^16 addresses, the same order as an IPv4 /16.
+	return p.Bits() >= 112
+}
+
+// KeepScannable drops the prefixes a scan could never enumerate, returning
+// what was dropped so the caller can say so in the log.
+func KeepScannable(prefixes []netip.Prefix) (keep, dropped []netip.Prefix) {
+	for _, p := range prefixes {
+		if Scannable(p) {
+			keep = append(keep, p)
+		} else {
+			dropped = append(dropped, p)
+		}
+	}
+	return keep, dropped
+}
+
+// CheckScanSize refuses a target space that cannot be enumerated, with a
+// message that names the offending prefix instead of leaving the operator to
+// guess why their scan died.
+func CheckScanSize(prefixes []netip.Prefix, excludes []netip.Prefix) error {
+	for _, p := range prefixes {
+		if bits := p.Addr().BitLen() - p.Bits(); bits >= 62 {
+			return fmt.Errorf(
+				"%s covers 2^%d addresses and cannot be scanned; give a narrower range "+
+					"(an IPv6 segment is scanned as a /112 or smaller, and a link-local "+
+					"fe80::/64 is never a scan target)", p, bits)
+		}
+	}
+	if n, exact := CountAddresses(prefixes, MaxScanAddresses); !exact || n > MaxScanAddresses {
+		return fmt.Errorf(
+			"the scope covers more than %d addresses, which is above the per-scan limit; "+
+				"split it into several scans or narrow the targets", MaxScanAddresses)
+	}
+	return nil
 }
 
 // ExcludeFilter decides whether an address is in scope.
@@ -208,15 +271,22 @@ func IterateAddresses(prefixes []netip.Prefix, f ExcludeFilter, fn func(netip.Ad
 	}
 }
 
-// ChunkAddresses splits the address space into slices of at most size
-// addresses, calling fn for each chunk. Used to build resumable work units.
+// ChunkAddresses splits the space into slices of at most size addresses. It
+// stops after MaxScanAddresses so a caller that forgot to validate its input
+// cannot take the process down with it.
 func ChunkAddresses(prefixes []netip.Prefix, f ExcludeFilter, size int, fn func([]netip.Addr) bool) {
 	if size <= 0 {
 		size = 256
 	}
+	var emitted int64
 	batch := make([]netip.Addr, 0, size)
 	stopped := false
 	IterateAddresses(prefixes, f, func(a netip.Addr) bool {
+		if emitted >= MaxScanAddresses {
+			stopped = true
+			return false
+		}
+		emitted++
 		batch = append(batch, a)
 		if len(batch) >= size {
 			cp := make([]netip.Addr, len(batch))
