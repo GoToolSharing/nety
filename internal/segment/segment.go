@@ -1,6 +1,7 @@
-// Package segment answers the question a VLAN segmentation audit exists to answer:
+// Package segment answers the question a network segmentation audit exists to answer:
 // plugged into network S, which of the services inventoried on networks T != S can
-// actually be reached, and how.
+// actually be reached, and how. The boundary between S and T is whatever the client
+// built it out of: a VLAN, a firewall zone, a plain subnet.
 //
 // For every (target, technique) pair it emits one model.ReachResult as soon as the
 // verdict is known, so the operator watches the reachability matrix fill up live.

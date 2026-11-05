@@ -123,7 +123,7 @@ export default function OverviewPage() {
         <Card className="mt-5">
           <EmptyState
             icon={<NetworkIcon width={20} height={20} />}
-            title="Create a network for the VLAN you are plugged into"
+            title="Create a network for the segment you are plugged into"
             description="A network records the segment you are attached to: its interface, addressing, gateway, DNS and the passive L2 recon of the switch port. Everything else in the mission hangs off it."
             action={
               canWrite && (
@@ -193,7 +193,7 @@ export default function OverviewPage() {
           <Card className="mt-4">
             <CardHeader
               title="Findings by network"
-              description="Which VLAN carries the exposure, worst first. Each bar is one network, stacked critical first and scaled against the busiest network."
+              description="Which segment carries the exposure, worst first. Each bar is one network, stacked critical first and scaled against the busiest network."
               actions={
                 <LinkButton to={`${base}/findings`} size="sm">
                   All findings
@@ -289,7 +289,7 @@ export default function OverviewPage() {
             <Card>
               <CardHeader
                 title="Networks"
-                description="Each VLAN or attachment point you declared"
+                description="Each segment or attachment point you declared"
                 actions={
                   <LinkButton to={`${base}/networks`} size="sm">
                     Manage

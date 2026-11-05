@@ -242,7 +242,7 @@ export default function MatrixPage() {
           <EmptyState
             icon={<MatrixIcon width={20} height={20} />}
             title="No segmentation result yet"
-            description="Plug into one VLAN, declare it as a network, then launch a segmentation scan: NETY replays every service discovered on the other networks from where you stand and fills this grid live."
+            description="Plug into one segment, declare it as a network, then launch a segmentation scan: NETY replays every service discovered on the other networks from where you stand and fills this grid live."
             action={
               <LinkButton to="../scans/new?kind=segmentation" variant="primary">
                 Launch a segmentation scan
@@ -474,7 +474,7 @@ export default function MatrixPage() {
             <Card className="mt-4">
               <CardHeader
                 title="Service × source network"
-                description="One row per service discovered on another VLAN; one column per position you tested from."
+                description="One row per service discovered on another segment; one column per position you tested from."
                 actions={
                   <SearchInput
                     value={query}

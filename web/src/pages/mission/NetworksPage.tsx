@@ -185,7 +185,7 @@ function NetworkFormModal({
       onClose={onClose}
       size="lg"
       title={existing ? `Edit ${existing.name}` : 'New network'}
-      description="One network per VLAN or attachment point you plug into."
+      description="One network per segment you plug into: a VLAN, a firewall zone, a plain subnet."
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
@@ -607,7 +607,7 @@ export default function NetworksPage() {
     <PageContainer>
       <PageHeader
         title="Networks"
-        description="The VLANs and attachment points of this mission, with the passive L2 recon of each switch port."
+        description="The segments of this mission, with the passive L2 recon of each switch port."
         actions={
           canWrite && (
             <Button
@@ -653,7 +653,7 @@ export default function NetworksPage() {
           <Card>
             <EmptyState
               icon={<NetworkIcon width={20} height={20} />}
-              title="Create a network for the VLAN you are plugged into"
+              title="Create a network for the segment you are plugged into"
               description="Plug into the segment, then let NETY auto-detect the interface: it reads the addressing, gateway, DNS and DHCP lease and pre-fills everything. Repeat for each VLAN you visit."
               action={
                 canWrite && (

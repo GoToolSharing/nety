@@ -38,7 +38,7 @@ missions), `viewer` (read-only on their missions).
 `GET /api/missions/{id}/members` · `PUT /api/missions/{id}/members` `{user_ids: []}`
 `GET /api/missions/{id}/summary`: counts per network, severity totals, matrix size
 
-## Networks (one per VLAN / attachment point)
+## Networks (one per segment, which is to say one per attachment point)
 
 `GET /api/missions/{id}/networks`
 `POST /api/missions/{id}/networks` `{name, vlan_id?, description?, interface?, local_ip?, prefixes?, gateway?, dns_servers?}`

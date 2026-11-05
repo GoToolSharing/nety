@@ -1,5 +1,5 @@
-// Command nety is the NETY server: an internal-network mapping and VLAN segmentation
-// testing platform.
+// Command nety is the NETY server: an internal-network mapping and network
+// segmentation testing platform.
 //
 //	nety serve                 start the web platform
 //	nety user add <name>       create an account
@@ -69,7 +69,7 @@ func run(args []string) error {
 }
 
 func usage() {
-	fmt.Fprint(os.Stderr, `NETY - internal network mapping and VLAN segmentation testing
+	fmt.Fprint(os.Stderr, `NETY: internal network mapping and network segmentation testing
 
 Usage:
   nety serve [flags]            start the web platform

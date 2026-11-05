@@ -2,8 +2,10 @@
 
 <img src="docs/images/logo.svg" alt="NETY" width="420">
 
-**Map every VLAN on an internal pentest, then measure which ones can actually
-reach each other.**
+**Network segmentation testing for internal pentests. Measured, not assumed.**
+
+Map every segment you can reach (VLANs, firewall zones, subnets), then find
+out which of them can actually talk to each other.
 
 [![CI](https://github.com/GoToolSharing/nety/actions/workflows/ci.yml/badge.svg)](https://github.com/GoToolSharing/nety/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/GoToolSharing/nety?color=0ea5e9)](https://github.com/GoToolSharing/nety/releases/latest)
@@ -11,14 +13,21 @@ reach each other.**
 
 </div>
 
-You plug into a switch port, NETY maps that segment and fingerprints everything
-on it. You move to the next VLAN and repeat. Then, from any one of them, it
+You plug in somewhere, NETY maps that segment and fingerprints everything on
+it. You move to the next one and repeat. Then, from any one of them, it
 replays every service it found elsewhere and tells you exactly which flows
 cross the boundary, by plain routing or by working around the filtering.
 
+A VLAN on its own filters nothing: it is a layer-2 split of a broadcast
+domain. What actually holds, or does not, is the layer-3 filtering between
+segments, and that is the same test whether the boundary is a VLAN, a firewall
+zone, a DMZ or a guest SSID. The VLAN-specific part, the passive CDP, LLDP and
+DTP recon and the 802.1Q hopping techniques, is there too, and is simply
+skipped where there is no switch port to read.
+
 One static Go binary, an authenticated web interface, and no `nmap` or
 `masscan` subprocess: the scanning is native, so results stream out as they are
-found instead of landing in a file at the end. A colleague on the same VLAN
+found instead of landing in a file at the end. A colleague on the same network
 opens your IP in a browser, signs in, and watches the same scan live.
 
 ![Mission overview](docs/images/overview.png)
@@ -48,11 +57,16 @@ make test    # the whole test suite
 
 ## How it works
 
-### 1. One network per VLAN
+### 1. One network per segment
 
-Declare each attachment point. A passive layer-2 capture reads CDP and LLDP,
-the native and voice VLAN, the 802.1Q tags on the wire, and whether the port
-offers DTP. A port that negotiates trunking is a finding in itself.
+Declare each point you attach to: a VLAN access port, a firewall zone, a plain
+subnet.
+
+On a switch port there is a passive layer-2 capture as well, reading CDP and
+LLDP, the native and voice VLAN, the 802.1Q tags on the wire, and whether the
+port offers DTP. A port that negotiates trunking is a finding in itself. Where
+there is no switch port, over Wi-Fi or behind a firewall, that step is skipped
+and everything else works the same.
 
 ![Networks and switch-port recon](docs/images/networks.png)
 
@@ -66,7 +80,7 @@ exactly where it stopped. Kill the process mid-scan and it comes back as
 
 ![Live scan](docs/images/scan.png)
 
-### 3. Repeat on every VLAN
+### 3. Repeat on every segment
 
 Move the cable, add a network, scan again. Machines keep one identity across
 days and IP changes: NETY correlates the SMB server GUID, SNMP engine ID, SSH
@@ -76,10 +90,10 @@ brand-new one.
 
 ### 4. Test the segmentation
 
-From where you are plugged in now, every service discovered on the other VLANs
-is retried, several ways each: plain routing, ICMP, privileged source ports,
-IPv6, an alternate gateway, fragmentation, and optionally 802.1Q and DTP. The
-matrix is the deliverable.
+From where you are plugged in now, every service discovered on the other
+segments is retried, several ways each: plain routing, ICMP, privileged source
+ports, IPv6, an alternate gateway, fragmentation, and, where the boundary is a
+VLAN and you enable them, 802.1Q and DTP. The matrix is the deliverable.
 
 ![Segmentation matrix](docs/images/matrix.png)
 
@@ -115,7 +129,7 @@ the triage, the notes and the pending work units intact.
 | **Native scanning** | Stateless SYN with AF_PACKET and BPF, connect fallback, UDP with protocol payloads. No subprocess. |
 | **Live results** | Every host, port, service and finding is persisted and pushed to the browser the moment it is found. |
 | **Resumable** | A scan is a queue of work units. Pause, crash or reboot, it picks up where it stopped. |
-| **Stable identities** | Machines keep one entry across days, IP changes and VLANs. |
+| **Stable identities** | Machines keep one entry across days, IP changes and segments. |
 | **65 checks** | SMB signing, null sessions, anonymous LDAP, open Redis and Mongo, IPMI cipher zero, exposed admin consoles, weak TLS and more. |
 | **Segmentation matrix** | Reachability measured, not assumed, with the technique that got through named. |
 | **Multi-user** | Accounts, roles, an audit log, and a shared live view. |

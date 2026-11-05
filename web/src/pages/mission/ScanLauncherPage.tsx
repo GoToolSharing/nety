@@ -370,7 +370,7 @@ export default function ScanLauncherPage() {
         <Card>
           <EmptyState
             icon={<NetworkIcon width={20} height={20} />}
-            title="Create a network for the VLAN you are plugged into"
+            title="Create a network for the segment you are plugged into"
             description="A scan always runs from a network: it tells NETY which interface to use, which prefixes are local and what the switch port looks like."
             action={
               <LinkButton to="../networks" variant="primary">
@@ -712,8 +712,8 @@ export default function ScanLauncherPage() {
                 Nothing is discovered and no address is scanned. The test replays the
                 hosts and services <strong>already inventoried</strong> on the networks
                 you pick, from where you are plugged in now, and records what answers.
-                Scan each VLAN once from inside it, then come here from each position in
-                turn: one run per direction fills that row of the matrix.
+                Scan each segment once from inside it, then come here from each position
+                in turn: one run per direction fills that row of the matrix.
               </InlineAlert>
 
               <div>
@@ -723,8 +723,8 @@ export default function ScanLauncherPage() {
                 </p>
                 {otherNetworks.length === 0 ? (
                   <InlineAlert tone="warn">
-                    This mission has only one network. Add the other VLAN and discover it
-                    from inside before testing segmentation.
+                    This mission has only one network. Add the other segment and discover
+                    it from inside before testing segmentation.
                   </InlineAlert>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -772,7 +772,7 @@ export default function ScanLauncherPage() {
                   <InlineAlert tone="warn" className="mt-3">
                     {sourceIds.length > 0
                       ? 'Nothing has been discovered on the networks you ticked, so there is nothing to replay. Run a discovery from inside each of them first, or tick a network that has results.'
-                      : 'No other network has any result yet. Plug into each VLAN in turn and run a discovery there, then come back and test segmentation.'}
+                      : 'No other network has any result yet. Plug into each segment in turn and run a discovery there, then come back and test segmentation.'}
                   </InlineAlert>
                 )}
                 {reachableTargets.services > 0 && (

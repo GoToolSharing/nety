@@ -26,5 +26,5 @@
         font-size="54" font-weight="700" letter-spacing="6" fill="#0ea5e9">NETY</text>
   <text x="127" y="94"
         font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-        font-size="14.5" font-weight="500" letter-spacing="0.6" fill="#8b94a3">map the VLANs, then prove the boundary</text>
+        font-size="14" font-weight="500" letter-spacing="0.5" fill="#8b94a3">map the segments, then prove the boundary</text>
 </svg>

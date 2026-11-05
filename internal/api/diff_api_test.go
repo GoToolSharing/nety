@@ -9,7 +9,7 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// A scan of a VLAN only means something next to the previous one, which is what this
+// A scan of a segment only means something next to the previous one, which is what this
 // route answers. The seeding below walks the two passes in order so the finish stamps
 // come out in the right order too.
 

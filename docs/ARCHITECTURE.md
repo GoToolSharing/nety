@@ -8,16 +8,18 @@ they are found.
 
 ## Workflow
 
-1. Operator plugs into VLAN A and creates a *Network* "VLAN A" in the mission.
+1. Operator plugs into segment A and creates a *Network* for it in the mission.
+   A segment is whatever the boundary happens to be: a VLAN, a firewall zone, a
+   plain subnet.
    NETY auto-detects interface/IP/prefix/gateway/DNS/DHCP and passively sniffs
    CDP/LLDP/DTP/STP/802.1Q to learn about the switch port.
 2. Launches a *discovery* scan: host discovery → port scan → service
    fingerprinting → identity collection → asset correlation → light checks.
-3. Repeats on VLAN B, C, …
-4. Launches *segmentation* scans: plugged on VLAN B, NETY replays every service
+3. Repeats on segment B, C, …
+4. Launches *segmentation* scans: plugged on segment B, NETY replays every service
    discovered on the other networks using several techniques and fills a
    source→target reachability matrix.
-5. *Assets* give machines a stable identity across days, IPs and VLANs, so a
+5. *Assets* give machines a stable identity across days, IPs and segments, so a
    re-scan the next day does not produce a brand-new inventory.
 6. Everything exports to JSON, CSV, Nmap XML, gnmap, Markdown, HTML, XLSX, txt.
 
@@ -107,7 +109,7 @@ Node, nmap or anything else on the host.
 | `internal/identity` | identity evidence collectors + asset correlator | `identity.NewCollector(log)`, `identity.NewCorrelator()` |
 | `internal/checks` | light misconfiguration checks | `checks.New(log) engine.Checker` |
 | `internal/netif` | interfaces, routes, VLAN sub-interfaces, L2 sniffing | `netif.New(log) engine.NetInspector` |
-| `internal/segment` | inter-VLAN reachability & bypass techniques | `segment.New(log, ps, ni) engine.SegmentTester` |
+| `internal/segment` | cross-segment reachability and bypass techniques | `segment.New(log, ps, ni) engine.SegmentTester` |
 | `internal/export` | export formats | `export.New() engine.Exporter` |
 | `internal/store` | SQLite persistence (modernc, pure Go) | `store.Open(path) (*store.Store, error)` |
 | `internal/bus` | in-process event bus → WebSocket | `bus.New()` |

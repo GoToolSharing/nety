@@ -114,7 +114,7 @@ Practical notes:
 
 ## Sharing it with a colleague
 
-NETY serves HTTPS on every interface, so a colleague on the same VLAN just
+NETY serves HTTPS on every interface, so a colleague on the same network just
 opens your address. The startup log lists the URLs.
 
 ```
@@ -168,9 +168,34 @@ can accidentally flood a client network from the web interface.
 
 ## Segmentation testing
 
-1. Map each VLAN with a discovery scan first: segmentation has nothing to
+### What is actually being tested
+
+A VLAN filters nothing. It is an 802.1Q split of a layer-2 broadcast domain,
+and two VLANs are separated only in the sense that a broadcast in one does not
+reach the other. Whatever routes between them, a router, a layer-3 switch or a
+firewall, is where the filtering lives, and that filtering is layer 3.
+
+So "testing the VLANs" means, almost always, testing the IP filtering between
+segments. That is the same test whether the segments are VLANs, firewall
+zones, a DMZ against an office network, separate subnets with no VLAN at all,
+or a guest SSID. NETY's unit is a *network*, which is a point you attach to
+rather than a VLAN, and every routing-level technique works against any
+layer-3 boundary.
+
+Two things are genuinely VLAN-specific, and NETY skips them where there is no
+switch port to read:
+
+- the passive CDP, LLDP, DTP and STP recon of the port;
+- the hopping techniques: 802.1Q sub-interfaces, DTP trunk negotiation and
+  double tagging. These attack the layer-2 split itself rather than the
+  filtering above it, which is why they are the ones that can actually make a
+  boundary disappear rather than merely find a hole in it.
+
+### Running one
+
+1. Map each segment with a discovery scan first: segmentation has nothing to
    replay otherwise.
-2. Plug into the VLAN you want to test *from*, select it, and start a
+2. Plug into the segment you want to test *from*, select it, and start a
    **segmentation** scan.
 3. The layer-2 techniques (802.1Q sub-interfaces, DTP trunk negotiation,
    double tagging) are **off by default**. They change switch-port state and
@@ -236,7 +261,7 @@ matters to the report, prove it another way.
 ## Trying it without a client network
 
 The repository carries an integration lab: three Docker networks standing in
-for VLANs, with real services on them.
+for separate segments, with real services on them.
 
 ```sh
 make lab-up      # bring the lab up

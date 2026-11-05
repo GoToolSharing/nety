@@ -393,7 +393,7 @@ export default function MissionsPage() {
                 }
                 description={
                   all.length === 0
-                    ? 'Create a mission for the engagement you are starting. You will then declare the VLAN you are plugged into as a network, and launch a discovery scan on it.'
+                    ? 'Create a mission for the engagement you are starting. You will then declare the segment you are plugged into as a network, and launch a discovery scan on it.'
                     : 'Clear the filter, or include archived missions.'
                 }
                 action={
