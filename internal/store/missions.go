@@ -75,8 +75,8 @@ func (s *Store) Mission(ctx context.Context, id int64) (model.Mission, error) {
 	return m, nil
 }
 
-// ListMissions returns every mission; when userID is non-zero and the user is
-// not an admin, only the missions they are a member of.
+// ListMissions returns every mission; when userID is non-zero and the user is not an
+// admin, only the missions they are a member of.
 func (s *Store) ListMissions(ctx context.Context, userID int64, all bool) ([]model.Mission, error) {
 	q := `SELECT ` + missionCols + ` FROM missions ORDER BY archived, updated_at DESC`
 	args := []any{}
@@ -193,8 +193,7 @@ func (s *Store) IsMissionMember(ctx context.Context, missionID, userID int64) (b
 	return n > 0, nil
 }
 
-// ---------------------------------------------------------------------------
-// Networks
+// --------------------------------------------------------------------------- Networks
 // ---------------------------------------------------------------------------
 
 const networkCols = `id, mission_id, name, vlan_id, description, iface, local_ip,
@@ -301,8 +300,8 @@ func (s *Store) UpdateNetwork(ctx context.Context, n model.Network) error {
 	})
 }
 
-// DeleteNetwork removes a network. Hosts/services keep their network_id but
-// become orphaned; callers should delete them explicitly when that matters.
+// DeleteNetwork removes a network. Hosts/services keep their network_id but become
+// orphaned; callers should delete them explicitly when that matters.
 func (s *Store) DeleteNetwork(ctx context.Context, id int64) error {
 	return s.tx(ctx, func(tx *sql.Tx) error {
 		res, err := tx.ExecContext(ctx, `DELETE FROM networks WHERE id = ?`, id)
@@ -313,8 +312,8 @@ func (s *Store) DeleteNetwork(ctx context.Context, id int64) error {
 	})
 }
 
-// ResetCounts says what a reset removed, so the operator sees the size of
-// what they just discarded rather than a bare confirmation.
+// ResetCounts says what a reset removed, so the operator sees the size of what they just
+// discarded rather than a bare confirmation.
 type ResetCounts struct {
 	Scans    int64 `json:"scans"`
 	Hosts    int64 `json:"hosts"`
@@ -324,23 +323,22 @@ type ResetCounts struct {
 	Reach    int64 `json:"reach"`
 }
 
-// ResetMissionData empties a mission of everything a scan produced and keeps
-// everything the operator configured.
+// ResetMissionData empties a mission of everything a scan produced and keeps everything
+// the operator configured.
 //
-// What goes: the scans with their work units and their logs, the hosts, the
-// services, the findings, the assets with their identity evidence, the
-// segmentation results, and the layer-2 panel of each network, which is
-// itself the output of a probe.
+// What goes: the scans with their work units and their logs, the hosts, the services, the
+// findings, the assets with their identity evidence, the segmentation results, and the
+// layer-2 panel of each network, which is itself the output of a probe.
 //
-// What stays: the mission, its scope and exclusions, its team, and its
-// networks with their interface, VLAN and addressing. Starting a mission over
-// should not mean setting up the VLANs again.
+// What stays: the mission, its scope and exclusions, its team, and its networks with
+// their interface, VLAN and addressing. Starting a mission over should not mean setting
+// up the VLANs again.
 func (s *Store) ResetMissionData(ctx context.Context, missionID int64) (ResetCounts, error) {
 	var c ResetCounts
 	err := s.tx(ctx, func(tx *sql.Tx) error {
-		// scan_work and scan_logs hang off scans, and asset_keys and
-		// asset_ips off assets, both with ON DELETE CASCADE, so deleting the
-		// parent row is enough and keeps this list short.
+		// scan_work and scan_logs hang off scans, and asset_keys and asset_ips off
+		// assets, both with ON DELETE CASCADE, so deleting the parent row is enough and
+		// keeps this list short.
 		for _, step := range []struct {
 			table string
 			into  *int64

@@ -37,14 +37,14 @@ func snmpGetPayload(version int64, community string, reqID int64, oid []byte) []
 // snmpV2cPayload is an SNMPv2c GET of sysDescr.0 with community "public".
 func snmpV2cPayload() []byte { return snmpGetPayload(1, snmpCommunity, snmpReqIDv2c, oidSysDescr) }
 
-// snmpV1Payload is the same GET in SNMPv1. Plenty of embedded agents, printers
-// and PDUs still speak v1 only and drop v2c messages silently.
+// snmpV1Payload is the same GET in SNMPv1. Plenty of embedded agents, printers and PDUs
+// still speak v1 only and drop v2c messages silently.
 func snmpV1Payload() []byte { return snmpGetPayload(0, snmpCommunity, snmpReqIDv1, oidSysDescr) }
 
-// snmpV3Payload is an SNMPv3 discovery message: USM with an empty engine ID,
-// empty user and no auth/priv, reportable flag set. Any v3 agent answers with a
-// Report PDU carrying its authoritative engine ID, boots and time - regardless
-// of credentials. The engine ID is a very stable asset identity key.
+// snmpV3Payload is an SNMPv3 discovery message: USM with an empty engine ID, empty user
+// and no auth/priv, reportable flag set. Any v3 agent answers with a Report PDU carrying
+// its authoritative engine ID, boots and time, regardless of credentials. The engine ID
+// is a very stable asset identity key.
 func snmpV3Payload() []byte {
 	globals := encSeq(
 		encInt(snmpMsgIDv3),
@@ -326,8 +326,8 @@ func decodeSNMPv3(resp []byte) *Result {
 	return r
 }
 
-// snmpReportOID pulls the first varbind OID out of a Report PDU; it tells us
-// why the agent rejected us (unknown engine id, unknown user, ...).
+// snmpReportOID pulls the first varbind OID out of a Report PDU; it tells us why the
+// agent rejected us (unknown engine id, unknown user, ...).
 func snmpReportOID(pduBody []byte, r *Result) {
 	t, rest, ok := parseTLV(pduBody) // request-id
 	if !ok || t.tag != tagInteger {

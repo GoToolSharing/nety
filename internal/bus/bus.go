@@ -1,11 +1,11 @@
-// Package bus is the in-process publish/subscribe hub that carries live scan
-// events from the scan runner to the WebSocket clients.
+// Package bus is the in-process publish/subscribe hub that carries live scan events from
+// the scan runner to the WebSocket clients.
 //
-// Requirement R1 (docs/ARCHITECTURE.md) says no result may wait for the end of
-// a scan, so the runner publishes here the moment a row is written. Delivery
-// is best effort by design: a slow browser must never stall a scan, so a
-// subscriber whose buffer is full misses events and is told how many (the UI
-// then refetches the affected table rather than showing a stale view).
+// Requirement R1 (docs/ARCHITECTURE.md) says no result may wait for the end of a scan, so
+// the runner publishes here the moment a row is written. Delivery is best effort by
+// design: a slow browser must never stall a scan, so a subscriber whose buffer is full
+// misses events and is told how many (the UI then refetches the affected table rather
+// than showing a stale view).
 package bus
 
 import (
@@ -42,8 +42,8 @@ func New() *Bus {
 	return &Bus{subs: make(map[int64]*Subscription)}
 }
 
-// Subscribe returns a subscription receiving the events of one mission
-// (missionID 0 subscribes to everything, used by the admin dashboard).
+// Subscribe returns a subscription receiving the events of one mission (missionID 0
+// subscribes to everything, used by the admin dashboard).
 func (b *Bus) Subscribe(missionID int64, buffer int) *Subscription {
 	if buffer <= 0 {
 		buffer = DefaultBuffer
@@ -117,8 +117,8 @@ func (b *Bus) Close() {
 // C is the channel to range over. It is closed when the subscription ends.
 func (s *Subscription) C() <-chan model.Event { return s.ch }
 
-// Dropped reports how many events this subscriber missed because it could not
-// keep up. A non-zero value tells the client to resynchronise.
+// Dropped reports how many events this subscriber missed because it could not keep up. A
+// non-zero value tells the client to resynchronise.
 func (s *Subscription) Dropped() int64 { return s.dropped.Load() }
 
 // Close detaches the subscription.

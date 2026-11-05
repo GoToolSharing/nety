@@ -34,8 +34,8 @@ func hasScheme(schemes []string, want string) bool {
 	return false
 }
 
-// httpNTLMPlan returns the (at most maxHTTPNTLMRequests) requests worth
-// trying on s to obtain an NTLM CHALLENGE, or nil.
+// httpNTLMPlan returns the (at most maxHTTPNTLMRequests) requests worth trying on s to
+// obtain an NTLM CHALLENGE, or nil.
 func httpNTLMPlan(s model.Service) []httpNTLMReq {
 	if s.Protocol != model.TCP {
 		return nil

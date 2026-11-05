@@ -5,9 +5,9 @@ import (
 	"strings"
 )
 
-// UDPPayloads returns the protocol-specific probe payloads sent to a UDP
-// port, in sending order. Ports without a dedicated probe get a single empty
-// datagram. The returned slices must not be modified.
+// UDPPayloads returns the protocol-specific probe payloads sent to a UDP port, in sending
+// order. Ports without a dedicated probe get a single empty datagram. The returned slices
+// must not be modified.
 func UDPPayloads(port uint16) [][]byte {
 	if p, ok := udpPayloads[port]; ok {
 		return p
@@ -130,8 +130,8 @@ func nbstatQuery() []byte {
 	return append(b, 0x00, 0x00, 0x21, 0x00, 0x01)
 }
 
-// snmpGetSysDescr builds an SNMP GetRequest for sysDescr.0 with community
-// "public" (version 0 = v1, 1 = v2c).
+// snmpGetSysDescr builds an SNMP GetRequest for sysDescr.0 with community "public"
+// (version 0 = v1, 1 = v2c).
 func snmpGetSysDescr(version byte) []byte {
 	oid := []byte{0x06, 0x08, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x01, 0x01, 0x00}
 	varbind := ber(0x30, append(oid, 0x05, 0x00))
@@ -160,8 +160,8 @@ func cldapRootDSE() []byte {
 	return ber(0x30, concat([]byte{0x02, 0x01, 0x01}, search))
 }
 
-// kerberosASReq builds a minimal AS-REQ for an unlikely principal; KDCs
-// answer with a KRB-ERROR (which proves the service and leaks the realm).
+// kerberosASReq builds a minimal AS-REQ for an unlikely principal; KDCs answer with a
+// KRB-ERROR (which proves the service and leaks the realm).
 func kerberosASReq() []byte {
 	gs := func(s string) []byte { return ber(0x1b, []byte(s)) }
 	integer := func(v int) []byte {
@@ -200,8 +200,8 @@ func kerberosASReq() []byte {
 	return ber(0x6a, req)
 }
 
-// ikeV1MainMode builds an ISAKMP (IKEv1) Main Mode SA proposal
-// (3DES/SHA1/PSK/MODP1024), which any IKEv1 responder answers.
+// ikeV1MainMode builds an ISAKMP (IKEv1) Main Mode SA proposal (3DES/SHA1/PSK/MODP1024),
+// which any IKEv1 responder answers.
 func ikeV1MainMode() []byte {
 	attrs := []byte{
 		0x80, 0x01, 0x00, 0x05, // encryption 3DES-CBC

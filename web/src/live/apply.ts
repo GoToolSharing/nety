@@ -93,7 +93,9 @@ function patchFiltered<T extends { id: number }>(
  */
 function patchFindingLists(qc: QueryClient, missionId: number, f: Finding): boolean {
   let unseen = false
-  for (const query of qc.getQueryCache().findAll({ queryKey: qk.findingsRoot(missionId) })) {
+  for (const query of qc
+    .getQueryCache()
+    .findAll({ queryKey: qk.findingsRoot(missionId) })) {
     const params = (query.queryKey[2] ?? {}) as { network_id?: number; triage?: string }
     const data = query.state.data as Finding[] | undefined
     if (data === undefined) continue
@@ -144,7 +146,9 @@ function patchListedRows<T extends { id: number }>(
  * throttled refetch bring in genuinely new ones without breaking the window. */
 function patchServicePages(qc: QueryClient, missionId: number, svc: Service): boolean {
   let touched = false
-  for (const query of qc.getQueryCache().findAll({ queryKey: qk.servicesRoot(missionId) })) {
+  for (const query of qc
+    .getQueryCache()
+    .findAll({ queryKey: qk.servicesRoot(missionId) })) {
     const page = query.state.data as ServicePage | undefined
     if (!page?.items) continue
     const i = page.items.findIndex((s) => s.id === svc.id)

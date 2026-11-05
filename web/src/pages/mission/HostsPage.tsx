@@ -90,8 +90,8 @@ function HostDrawer({
               {host.triage?.status === 'skipped' && (
                 <p className="mt-1.5 text-xs text-muted">
                   This address is out of the way: its services, its findings and the
-                  segmentation tests aimed at it are hidden from the other screens. Nothing
-                  was deleted, and nothing written on them was touched.
+                  segmentation tests aimed at it are hidden from the other screens.
+                  Nothing was deleted, and nothing written on them was touched.
                 </p>
               )}
             </section>
@@ -105,12 +105,17 @@ function HostDrawer({
               </KeyValue>
               <KeyValue label="MAC / vendor" mono>
                 {host.mac || '-'}
-                {host.vendor ? <span className="text-muted"> · {host.vendor}</span> : null}
+                {host.vendor ? (
+                  <span className="text-muted"> · {host.vendor}</span>
+                ) : null}
               </KeyValue>
               <KeyValue label="Hostname">
                 {host.hostname || '-'}
                 {(host.hostnames ?? []).length > 1 && (
-                  <span className="text-muted"> ({(host.hostnames ?? []).join(', ')})</span>
+                  <span className="text-muted">
+                    {' '}
+                    ({(host.hostnames ?? []).join(', ')})
+                  </span>
                 )}
               </KeyValue>
               <KeyValue label="Domain">{host.domain || '-'}</KeyValue>
@@ -200,7 +205,11 @@ function HostDrawer({
       <Drawer
         open={!!openService}
         onClose={() => setOpenService(null)}
-        title={openService ? `${openService.ip}:${openService.port}/${openService.protocol}` : ''}
+        title={
+          openService
+            ? `${openService.ip}:${openService.port}/${openService.protocol}`
+            : ''
+        }
         subtitle={openService?.name}
       >
         {openService && <ServiceDetail service={openService} />}
@@ -391,7 +400,7 @@ export default function HostsPage() {
             description={
               query || address
                 ? 'Clear the search, widen the address filter or pick another network.'
-                : 'Launch a discovery scan on one of your networks - hosts appear here as soon as they answer, without waiting for the scan to finish.'
+                : 'Launch a discovery scan on one of your networks: hosts appear here as soon as they answer, without waiting for the scan to finish.'
             }
             action={
               !query &&
@@ -424,12 +433,32 @@ export default function HostsPage() {
                   </th>
                   <SortHeader column="status" label="Scope" sort={sort} onSort={onSort} />
                   <SortHeader column="ip" label="IP" sort={sort} onSort={onSort} />
-                  <SortHeader column="mac" label="MAC / vendor" sort={sort} onSort={onSort} />
-                  <SortHeader column="hostname" label="Hostname" sort={sort} onSort={onSort} />
+                  <SortHeader
+                    column="mac"
+                    label="MAC / vendor"
+                    sort={sort}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    column="hostname"
+                    label="Hostname"
+                    sort={sort}
+                    onSort={onSort}
+                  />
                   <SortHeader column="os" label="OS" sort={sort} onSort={onSort} />
-                  <SortHeader column="network" label="Network" sort={sort} onSort={onSort} />
+                  <SortHeader
+                    column="network"
+                    label="Network"
+                    sort={sort}
+                    onSort={onSort}
+                  />
                   <th>Discovered by</th>
-                  <SortHeader column="last_seen" label="Last seen" sort={sort} onSort={onSort} />
+                  <SortHeader
+                    column="last_seen"
+                    label="Last seen"
+                    sort={sort}
+                    onSort={onSort}
+                  />
                 </tr>
               </thead>
               <tbody>
@@ -486,7 +515,9 @@ export default function HostsPage() {
                     <td className="max-w-[220px] truncate text-muted" title={h.os}>
                       {h.os || '-'}
                     </td>
-                    <td className="text-muted">{netName.get(h.network_id) ?? h.network_id}</td>
+                    <td className="text-muted">
+                      {netName.get(h.network_id) ?? h.network_id}
+                    </td>
                     <td className="max-w-[240px] truncate text-xs text-muted">
                       {(h.discovered_by ?? []).join(', ') || '-'}
                     </td>

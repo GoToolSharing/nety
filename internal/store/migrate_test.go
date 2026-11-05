@@ -10,13 +10,12 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// TestUpgradeFromAPreTriageDatabase is the upgrade path: someone has been
-// using NETY for a week, pulls a new build, and their database must open.
+// TestUpgradeFromAPreTriageDatabase is the upgrade path: someone has been using NETY for
+// a week, pulls a new build, and their database must open.
 //
-// schema.sql runs against existing databases as well as new ones, so anything
-// in it that references a column added later fails the startup for exactly the
-// people who already have data. This builds a database in the old shape and
-// opens it with the current code.
+// schema.sql runs against existing databases as well as new ones, so anything in it that
+// references a column added later fails the startup for exactly the people who already
+// have data. This builds a database in the old shape and opens it with the current code.
 func TestUpgradeFromAPreTriageDatabase(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "old.db")
@@ -98,9 +97,9 @@ func TestUpgradeFromAPreTriageDatabase(t *testing.T) {
 	defer again.Close()
 }
 
-// TestUpgradeFromAPreFindingTriageDatabase is the same upgrade path one
-// release later: a database that already has service triage but not the
-// finding columns must open, keep its findings, and gain the new ones.
+// TestUpgradeFromAPreFindingTriageDatabase is the same upgrade path one release later: a
+// database that already has service triage but not the finding columns must open, keep
+// its findings, and gain the new ones.
 func TestUpgradeFromAPreFindingTriageDatabase(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "old.db")
@@ -131,8 +130,8 @@ func TestUpgradeFromAPreFindingTriageDatabase(t *testing.T) {
 			UNIQUE (mission_id, network_id, ip, port, protocol, check_id))`,
 		`INSERT INTO findings (mission_id, network_id, ip, port, protocol, check_id, title, severity, first_seen, last_seen)
 		 VALUES (1, 1, '10.0.0.5', 445, 'tcp', 'smb-signing-not-required', 'SMB signing not required', 'medium', 1, 1)`,
-		// The database is already past the service triage migration, so only
-		// the finding one has anything left to do.
+		// The database is already past the service triage migration, so only the finding
+		// one has anything left to do.
 		`PRAGMA user_version = 1`,
 	} {
 		if _, err := raw.ExecContext(ctx, stmt); err != nil {
@@ -181,9 +180,9 @@ func TestUpgradeFromAPreFindingTriageDatabase(t *testing.T) {
 	defer again.Close()
 }
 
-// TestUpgradeFromAPreHostTriageDatabase is the same upgrade path one release
-// later again: a database that can triage services and findings but not hosts
-// or machines must open, keep what it has, and gain the new columns.
+// TestUpgradeFromAPreHostTriageDatabase is the same upgrade path one release later again:
+// a database that can triage services and findings but not hosts or machines must open,
+// keep what it has, and gain the new columns.
 func TestUpgradeFromAPreHostTriageDatabase(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "old.db")
@@ -282,9 +281,9 @@ func TestUpgradeFromAPreHostTriageDatabase(t *testing.T) {
 	defer again.Close()
 }
 
-// A database that already carries every triage column but no service history
-// has to gain the table and the stamp that says when the recording started,
-// without disturbing anything that is already there.
+// A database that already carries every triage column but no service history has to gain
+// the table and the stamp that says when the recording started, without disturbing
+// anything that is already there.
 func TestUpgradeToServiceChangeHistory(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "v3.db")
@@ -357,10 +356,10 @@ func TestUpgradeToServiceChangeHistory(t *testing.T) {
 	}
 }
 
-// A database at version 4 has every address it ever saw but no key to sort or
-// filter them by. The upgrade must add the column and fill it from the
-// addresses already stored, so the first listing after the upgrade comes back
-// in address order rather than all tied on an empty key.
+// A database at version 4 has every address it ever saw but no key to sort or filter them
+// by. The upgrade must add the column and fill it from the addresses already stored, so
+// the first listing after the upgrade comes back in address order rather than all tied on
+// an empty key.
 func TestUpgradeToTheAddressSortKey(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "v4.db")
@@ -439,8 +438,8 @@ func TestUpgradeToTheAddressSortKey(t *testing.T) {
 		}
 	}
 
-	// The filter works on every backfilled table, which is the proof that the
-	// key was written and not just the column added.
+	// The filter works on every backfilled table, which is the proof that the key was
+	// written and not just the column added.
 	f, err := ParseAddressFilter("10.0.0.0/24")
 	if err != nil {
 		t.Fatal(err)

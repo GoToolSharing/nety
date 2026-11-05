@@ -150,8 +150,8 @@ func (c *client) do(method, path string, body, out any) int {
 	return resp.StatusCode
 }
 
-// rawPost sends a body and returns the status and the raw response, for the
-// cases where the error text itself is what is being asserted.
+// rawPost sends a body and returns the status and the raw response, for the cases where
+// the error text itself is what is being asserted.
 func (c *client) rawPost(path string, body any) (int, []byte, http.Header) {
 	c.t.Helper()
 	buf, err := json.Marshal(body)
@@ -211,8 +211,7 @@ func (c *client) createNetwork(missionID int64, name string) model.Network {
 
 func itoa(v int64) string { return strconv.FormatInt(v, 10) }
 
-// ---------------------------------------------------------------------------
-// tests
+// --------------------------------------------------------------------------- tests
 // ---------------------------------------------------------------------------
 
 func TestAnonymousAccessIsRefused(t *testing.T) {
@@ -292,8 +291,8 @@ func TestCSRFIsEnforced(t *testing.T) {
 }
 
 // TestMissionIsolation is the one that matters on a shared engagement box:
-// a user must not see another team's mission, and must not be able to tell
-// whether it exists.
+// a user must not see another team's mission, and must not be able to tell whether it
+// exists.
 func TestMissionIsolation(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("alice", model.RoleOperator)
@@ -451,16 +450,16 @@ func TestScanLifecycleEndpoints(t *testing.T) {
 		t.Fatalf("a new scan should be queued, got %q", sc.Status)
 	}
 
-	// Pausing or stopping something that is not running is a clear conflict,
-	// not a silent success.
+	// Pausing or stopping something that is not running is a clear conflict, not a silent
+	// success.
 	for _, action := range []string{"pause", "stop"} {
 		if got := alice.do("POST", "/api/scans/"+itoa(sc.ID)+"/"+action, nil, nil); got != http.StatusConflict {
 			t.Fatalf("%s on an idle scan should be a conflict, got %d", action, got)
 		}
 	}
 
-	// With no engines wired the scan completes immediately, which is enough to
-	// exercise the endpoint and the audit trail.
+	// With no engines wired the scan completes immediately, which is enough to exercise
+	// the endpoint and the audit trail.
 	if got := alice.do("POST", "/api/scans/"+itoa(sc.ID)+"/start", nil, nil); got != http.StatusOK {
 		t.Fatalf("start: %d", got)
 	}
@@ -536,8 +535,8 @@ func TestEngineMissingIsReportedClearly(t *testing.T) {
 	e.newUser("alice", model.RoleOperator)
 	alice := e.login("alice")
 
-	// The env wires no engines, so interface listing must say so rather than
-	// panicking on a nil interface.
+	// The env wires no engines, so interface listing must say so rather than panicking on
+	// a nil interface.
 	status, body, _ := alice.raw("GET", "/api/interfaces")
 	if status != http.StatusNotImplemented {
 		t.Fatalf("expected 501, got %d", status)
@@ -571,9 +570,9 @@ func TestInvalidBodyIsRejected(t *testing.T) {
 	}
 }
 
-// TestPasswordChangeIsEnforcedServerSide checks that an account flagged for a
-// password change really cannot do anything else: the flag is a security
-// control, not a hint for the client.
+// TestPasswordChangeIsEnforcedServerSide checks that an account flagged for a password
+// change really cannot do anything else: the flag is a security control, not a hint for
+// the client.
 func TestPasswordChangeIsEnforcedServerSide(t *testing.T) {
 	e := newEnv(t)
 	u := e.newUser("newcomer", model.RoleOperator)
@@ -622,9 +621,9 @@ func TestPasswordChangeIsEnforcedServerSide(t *testing.T) {
 	}
 }
 
-// The export is a deliverable by default: the rows the operator decided
-// against stay out of it, and so do the findings nobody has read. The file
-// says how many it held back, and either switch brings its own back.
+// The export is a deliverable by default: the rows the operator decided against stay out
+// of it, and so do the findings nobody has read. The file says how many it held back, and
+// either switch brings its own back.
 func TestExportLeavesOutWhatWasSetAside(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("alice", model.RoleOperator)
@@ -639,8 +638,8 @@ func TestExportLeavesOutWhatWasSetAside(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// A service nobody triaged. It must survive every combination: the list
-	// of open ports is inventory, not a claim.
+	// A service nobody triaged. It must survive every combination: the list of open ports
+	// is inventory, not a claim.
 	if _, err := e.store.UpsertService(ctx, model.Service{
 		MissionID: m.ID, NetworkID: n.ID, HostID: host.ID, IP: host.IP,
 		Port: 445, Protocol: model.TCP, Name: "microsoft-ds",

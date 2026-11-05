@@ -11,9 +11,9 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// Assets are the long-lived identities that survive IP changes between scan
-// days. The correlator (internal/identity) decides what matches what; this
-// file only stores and loads the result.
+// Assets are the long-lived identities that survive IP changes between scan days. The
+// correlator (internal/identity) decides what matches what; this file only stores and
+// loads the result.
 
 const assetCols = `id, mission_id, label, hostname, domain, os, kind, tags, notes,
 	triage_status, triage_note, triage_by, triage_at,
@@ -42,13 +42,13 @@ func scanAssetRow(sc interface{ Scan(...any) error }) (model.Asset, error) {
 	return a, nil
 }
 
-// SaveAsset inserts a new asset (ID == 0) or updates an existing one, together
-// with its keys and IPs. Keys and IPs are merged, never truncated: an asset
-// accumulates evidence across scans.
+// SaveAsset inserts a new asset (ID == 0) or updates an existing one, together with its
+// keys and IPs. Keys and IPs are merged, never truncated: an asset accumulates evidence
+// across scans.
 //
-// The triage columns are absent from both statements on purpose: they belong
-// to the operator, so the correlator seeing the machine again refreshes what
-// it knows and leaves "do not touch this one" in place.
+// The triage columns are absent from both statements on purpose: they belong to the
+// operator, so the correlator seeing the machine again refreshes what it knows and leaves
+// "do not touch this one" in place.
 func (s *Store) SaveAsset(ctx context.Context, a model.Asset) (model.Asset, error) {
 	now := time.Now().UTC()
 	if a.FirstSeen.IsZero() {
@@ -74,8 +74,8 @@ func (s *Store) SaveAsset(ctx context.Context, a model.Asset) (model.Asset, erro
 			if a.ID, err = res.LastInsertId(); err != nil {
 				return err
 			}
-			// The row carries the column default; mirror it on the value we
-			// hand back so callers never see an empty status.
+			// The row carries the column default; mirror it on the value we hand back so
+			// callers never see an empty status.
 			a.Triage = model.Triage{Status: model.TriageTodo}
 		} else {
 			if _, err := tx.ExecContext(ctx, `
@@ -86,9 +86,9 @@ func (s *Store) SaveAsset(ctx context.Context, a model.Asset) (model.Asset, erro
 				a.Notes, ms(a.LastSeen), a.ID); err != nil {
 				return err
 			}
-			// Read the triage back rather than echoing what the caller passed
-			// in, which is blank on a scan: the asset it gets must say what
-			// the operator has already decided about this machine.
+			// Read the triage back rather than echoing what the caller passed in, which
+			// is blank on a scan: the asset it gets must say what the operator has
+			// already decided about this machine.
 			var triageAt sql.NullInt64
 			if err := tx.QueryRowContext(ctx,
 				`SELECT triage_status, triage_note, triage_by, triage_at FROM assets WHERE id = ?`, a.ID).
@@ -181,23 +181,22 @@ func (s *Store) Asset(ctx context.Context, id int64) (model.Asset, error) {
 // AssetFilter narrows an asset listing.
 type AssetFilter struct {
 	MissionID int64
-	// Address keeps only the machines that answer at that address, or
-	// somewhere in that subnet. An asset holds its addresses in asset_ips
-	// rather than on the row itself, so this is a test on those.
+	// Address keeps only the machines that answer at that address, or somewhere in that
+	// subnet. An asset holds its addresses in asset_ips rather than on the row itself, so
+	// this is a test on those.
 	Address AddressFilter
-	// Sort names the column to order by, from assetSorts; anything else falls
-	// back to the default order. Desc reverses it.
+	// Sort names the column to order by, from assetSorts; anything else falls back to the
+	// default order. Desc reverses it.
 	Sort string
 	Desc bool
 }
 
-// assetAddressCount counts the addresses a machine has been seen at. It is
-// both a sortable column and the thing that makes a multi-homed machine worth
-// looking at first.
+// assetAddressCount counts the addresses a machine has been seen at. It is both a
+// sortable column and the thing that makes a multi-homed machine worth looking at first.
 const assetAddressCount = `(SELECT COUNT(*) FROM asset_ips WHERE asset_ips.asset_id = assets.id)`
 
-// assetSorts is the allowlist of columns the assets table can be ordered by,
-// keyed by the name the API accepts.
+// assetSorts is the allowlist of columns the assets table can be ordered by, keyed by the
+// name the API accepts.
 var assetSorts = map[string][]string{
 	"label":     {"label"},
 	"kind":      {"kind"},
@@ -210,21 +209,19 @@ var assetSorts = map[string][]string{
 
 var defaultAssetOrder = []string{"label"}
 
-// ListAssets returns every asset of a mission with keys and IPs attached, in
-// the default order. The correlator needs this full list to resolve an
-// observation.
+// ListAssets returns every asset of a mission with keys and IPs attached, in the default
+// order. The correlator needs this full list to resolve an observation.
 func (s *Store) ListAssets(ctx context.Context, missionID int64) ([]model.Asset, error) {
 	return s.ListAssetsFiltered(ctx, AssetFilter{MissionID: missionID})
 }
 
-// ListAssetsFiltered returns the assets matching the filter, keys and IPs
-// attached.
+// ListAssetsFiltered returns the assets matching the filter, keys and IPs attached.
 func (s *Store) ListAssetsFiltered(ctx context.Context, f AssetFilter) ([]model.Asset, error) {
 	q := `SELECT ` + assetCols + ` FROM assets WHERE mission_id = ?`
 	args := []any{f.MissionID}
 	if clause, vals := f.Address.where("asset_ips.ip", "asset_ips.ip_sort"); clause != "" {
-		// The condition starts with AND, which belongs to the outer query and
-		// not to the EXISTS, so it is spliced in rather than appended.
+		// The condition starts with AND, which belongs to the outer query and not to the
+		// EXISTS, so it is spliced in rather than appended.
 		q += ` AND EXISTS (SELECT 1 FROM asset_ips WHERE asset_ips.asset_id = assets.id` +
 			clause + `)`
 		args = append(args, vals...)
@@ -319,8 +316,8 @@ func (s *Store) loadAssetDetails(ctx context.Context, assets []*model.Asset) err
 	return ipRows.Err()
 }
 
-// AssetByKey finds the asset holding a given identity key, if any. Used as a
-// fast path by the correlator for very strong keys.
+// AssetByKey finds the asset holding a given identity key, if any. Used as a fast path by
+// the correlator for very strong keys.
 func (s *Store) AssetByKey(ctx context.Context, missionID int64, kind model.EvidenceKind, value string) (model.Asset, error) {
 	var id int64
 	err := s.r.QueryRowContext(ctx,
@@ -388,21 +385,19 @@ func (s *Store) MergeAssets(ctx context.Context, dstID, srcID int64) error {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// Asset triage
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Asset
+// triage ---------------------------------------------------------------------------
 
-// SetAssetTriage records the operator's pass over a machine. Passing a nil
-// status or note leaves that field alone, as everywhere else.
+// SetAssetTriage records the operator's pass over a machine. Passing a nil status or note
+// leaves that field alone, as everywhere else.
 //
-// A status set here is also written to every host currently attached to the
-// asset, because an asset is a machine and a host is one of its addresses: the
-// operator saying "leave that workstation alone" means all of them, not the
-// one they happened to be looking at. The note stays on the asset, where it
-// was written.
+// A status set here is also written to every host currently attached to the asset,
+// because an asset is a machine and a host is one of its addresses: the operator saying
+// "leave that workstation alone" means all of them, not the one they happened to be
+// looking at. The note stays on the asset, where it was written.
 //
-// It returns the asset and how many hosts took the status with it, so the API
-// can say what it did.
+// It returns the asset and how many hosts took the status with it, so the API can say
+// what it did.
 func (s *Store) SetAssetTriage(ctx context.Context, assetID int64, status *model.TriageStatus, note *string, userID int64) (model.Asset, int64, error) {
 	var (
 		out   model.Asset
@@ -443,9 +438,9 @@ func (s *Store) SetAssetTriage(ctx context.Context, assetID int64, status *model
 	return out, hosts, nil
 }
 
-// BulkSetAssetTriage applies one status to many machines at once, and to their
-// hosts with them. Only assets of the given mission are touched, so an id from
-// another mission cannot be slipped in.
+// BulkSetAssetTriage applies one status to many machines at once, and to their hosts with
+// them. Only assets of the given mission are touched, so an id from another mission
+// cannot be slipped in.
 func (s *Store) BulkSetAssetTriage(ctx context.Context, missionID int64, ids []int64, status model.TriageStatus, userID int64) (int64, error) {
 	if len(ids) == 0 {
 		return 0, nil
@@ -519,8 +514,7 @@ func (s *Store) AssetTriageCounts(ctx context.Context, missionID int64) (map[mod
 	return out, rows.Err()
 }
 
-// ---------------------------------------------------------------------------
-// Audit log
+// --------------------------------------------------------------------------- Audit log
 // ---------------------------------------------------------------------------
 
 // Audit records an action for traceability (who ran what against which client).
@@ -585,8 +579,7 @@ func (s *Store) AuditLog(ctx context.Context, missionID int64, limit int) ([]Aud
 	return out, rows.Err()
 }
 
-// ---------------------------------------------------------------------------
-// Settings
+// --------------------------------------------------------------------------- Settings
 // ---------------------------------------------------------------------------
 
 // Setting reads a key/value setting ("" when absent).
@@ -615,35 +608,32 @@ func (s *Store) SetSetting(ctx context.Context, key, value string) error {
 // ExportScope says how much of a mission an export carries.
 type ExportScope struct {
 	NetworkID int64
-	// IncludeDismissed keeps everything the operator has set aside: skipped
-	// hosts and machines along with the services, findings and segmentation
-	// results attached to them, and the services and findings marked skipped
-	// or a false positive in their own right.
+	// IncludeDismissed keeps everything the operator has set aside: skipped hosts and
+	// machines along with the services, findings and segmentation results attached to
+	// them, and the services and findings marked skipped or a false positive in their own
+	// right.
 	//
-	// It is false for a deliverable, where shipping rows the operator decided
-	// against is how a client ends up asking about a finding nobody meant to
-	// send. It is true whenever the export has to be the whole record.
+	// It is false for a deliverable, where shipping rows the operator decided against is
+	// how a client ends up asking about a finding nobody meant to send. It is true
+	// whenever the export has to be the whole record.
 	IncludeDismissed bool
 
-	// IncludeUnreviewed keeps the findings still sitting at "to do": nobody
-	// has looked at them yet, and an unread check result is not a verdict to
-	// put in front of a client.
+	// IncludeUnreviewed keeps the findings still sitting at "to do": nobody has looked at
+	// them yet, and an unread check result is not a verdict to put in front of a client.
 	//
-	// Findings only. A service is inventory: the deliverable's list of open
-	// ports has to be the whole list whether or not anyone has been through
-	// it one by one, and a host or a machine uses "to do" to mean in scope
-	// rather than unexamined, so applying this to either would empty the
-	// export of most of the mission.
+	// Findings only. A service is inventory: the deliverable's list of open ports has to
+	// be the whole list whether or not anyone has been through it one by one, and a host
+	// or a machine uses "to do" to mean in scope rather than unexamined, so applying this
+	// to either would empty the export of most of the mission.
 	IncludeUnreviewed bool
 }
 
-// MissionData gathers a mission for export, keeping or dropping what the
-// operator set aside. What it drops is counted, never silently absent: the
-// count travels in the data so the exported file can say so itself.
+// MissionData gathers a mission for export, keeping or dropping what the operator set
+// aside. What it drops is counted, never silently absent: the count travels in the data
+// so the exported file can say so itself.
 //
-// The scope is a required argument rather than a default, because "does this
-// deliverable contain the rows I decided against" is not a question to answer
-// by accident.
+// The scope is a required argument rather than a default, because "does this deliverable
+// contain the rows I decided against" is not a question to answer by accident.
 func (s *Store) MissionData(ctx context.Context, missionID int64, scope ExportScope) (model.MissionData, error) {
 	var d model.MissionData
 	var err error
@@ -663,11 +653,10 @@ func (s *Store) MissionData(ctx context.Context, missionID int64, scope ExportSc
 	}
 	// Statuses to keep. Nil means every one of them.
 	//
-	// A service only ever loses the two dismissals: the list of open ports is
-	// inventory, and a deliverable's inventory has to be complete whether or
-	// not anyone has walked it row by row. A finding additionally loses "to
-	// do" unless asked for, because it is a claim, and an unread claim has no
-	// business in front of a client.
+	// A service only ever loses the two dismissals: the list of open ports is inventory,
+	// and a deliverable's inventory has to be complete whether or not anyone has walked
+	// it row by row. A finding additionally loses "to do" unless asked for, because it is
+	// a claim, and an unread claim has no business in front of a client.
 	var serviceStatuses, findingStatuses []model.TriageStatus
 	if !keepAll {
 		serviceStatuses = model.LiveTriageStatuses()
@@ -710,11 +699,10 @@ func (s *Store) MissionData(ctx context.Context, missionID int64, scope ExportSc
 	if !keepAll || !scope.IncludeUnreviewed {
 		omitted := &model.OmittedRows{}
 		if !keepAll {
-			// The hosts and the machines are small enough to sift here, and
-			// the listings have no triage filter of their own. Counting
-			// first, then dropping, is what lets the file state what is
-			// missing. "To do" never drops one of these: on a machine it
-			// means in scope, not unexamined.
+			// The hosts and the machines are small enough to sift here, and the listings
+			// have no triage filter of their own. Counting first, then dropping, is what
+			// lets the file state what is missing. "To do" never drops one of these: on a
+			// machine it means in scope, not unexamined.
 			kept := d.Hosts[:0]
 			for _, h := range d.Hosts {
 				if h.Triage.Status == model.TriageSkipped {
@@ -735,8 +723,8 @@ func (s *Store) MissionData(ctx context.Context, missionID int64, scope ExportSc
 			d.Assets = keptAssets
 		}
 
-		// What the filtered listings above left behind, measured against the
-		// database rather than guessed at.
+		// What the filtered listings above left behind, measured against the database
+		// rather than guessed at.
 		counts, err := s.omittedCounts(ctx, missionID, networkID)
 		if err != nil {
 			return d, err
@@ -766,9 +754,9 @@ func (s *Store) MissionData(ctx context.Context, missionID int64, scope ExportSc
 
 // omittedCounts measures what an export would hold back, by reason.
 //
-// It is a count rather than a second listing: the export already holds what it
-// keeps, and loading the whole mission twice to subtract one from the other
-// would double the work of every export of a large engagement.
+// It is a count rather than a second listing: the export already holds what it keeps, and
+// loading the whole mission twice to subtract one from the other would double the work of
+// every export of a large engagement.
 func (s *Store) omittedCounts(ctx context.Context, missionID, networkID int64) (model.OmittedRows, error) {
 	var out model.OmittedRows
 	dismissed := `(` + quotedStatuses(model.DismissedTriageStatuses) + `)`
@@ -802,17 +790,17 @@ func (s *Store) omittedCounts(ctx context.Context, missionID, networkID int64) (
 		return out, fmt.Errorf("store: count findings set aside: %w", err)
 	}
 
-	// Unreviewed: still at "to do", and not already counted above. Only
-	// findings: a service is inventory and travels whatever its status.
+	// Unreviewed: still at "to do", and not already counted above. Only findings: a
+	// service is inventory and travels whatever its status.
 	unread := `triage_status = '` + string(model.TriageTodo) + `' AND NOT ` +
 		onSkippedHost("findings.host_id")
 	if out.Unreviewed.Findings, err = count("findings", unread); err != nil {
 		return out, fmt.Errorf("store: count unreviewed findings: %w", err)
 	}
 
-	// A segmentation result has no status of its own: it is left out only
-	// when the machine it was aimed at is. This is the inverse of
-	// notOnASkippedHost, which excludes exactly these rows.
+	// A segmentation result has no status of its own: it is left out only when the
+	// machine it was aimed at is. This is the inverse of notOnASkippedHost, which
+	// excludes exactly these rows.
 	q := `SELECT COUNT(*) FROM reach_results WHERE mission_id = ? AND ` +
 		onSkippedHost("reach_results.target_host_id")
 	if err := s.r.QueryRowContext(ctx, q, missionID).Scan(&out.SetAside.Reach); err != nil {
@@ -821,8 +809,8 @@ func (s *Store) omittedCounts(ctx context.Context, missionID, networkID int64) (
 	return out, nil
 }
 
-// quotedStatuses renders a status list for an IN clause. The values are our
-// own constants, never anything a caller supplied.
+// quotedStatuses renders a status list for an IN clause. The values are our own
+// constants, never anything a caller supplied.
 func quotedStatuses(statuses []model.TriageStatus) string {
 	parts := make([]string, 0, len(statuses))
 	for _, s := range statuses {

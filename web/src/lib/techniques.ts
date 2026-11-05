@@ -25,7 +25,12 @@ export interface TechniqueNotes {
   title: string
 }
 
-const SRC_PORT = (port: number, service: string, why: string, positive: string): TechniqueNotes => ({
+const SRC_PORT = (
+  port: number,
+  service: string,
+  why: string,
+  positive: string,
+): TechniqueNotes => ({
   title: `Source port ${port} (${service})`,
   short: `The same connection, sent from source port ${port}.`,
   why,
@@ -40,8 +45,7 @@ export const TECHNIQUE_NOTES: Record<string, TechniqueNotes> = {
   direct: {
     title: 'Direct connection',
     short: 'A plain connection with the machine as it stands.',
-    why:
-      'Nothing is bypassed here: this is the reference measurement every other technique is compared against. It separates three outcomes that are often confused: a refused connection (the packet was routed, the port is shut), a silent drop (a filter ate it) and an ICMP unreachable (no route, or administratively prohibited).',
+    why: 'Nothing is bypassed here: this is the reference measurement every other technique is compared against. It separates three outcomes that are often confused: a refused connection (the packet was routed, the port is shut), a silent drop (a filter ate it) and an ICMP unreachable (no route, or administratively prohibited).',
     positive:
       'The two networks are not separated at all for this service. Whatever the policy says, the flow is permitted.',
     manual: ['nc -vz -w 3 <target> <port>', 'nmap -Pn -sT -p <port> <target>'],
@@ -49,8 +53,7 @@ export const TECHNIQUE_NOTES: Record<string, TechniqueNotes> = {
   icmp: {
     title: 'ICMP echo',
     short: 'A ping to the host rather than to one of its services.',
-    why:
-      'ACLs are routinely written for TCP and UDP and leave ICMP permitted for troubleshooting. The host answers even when every one of its services is filtered.',
+    why: 'ACLs are routinely written for TCP and UDP and leave ICMP permitted for troubleshooting. The host answers even when every one of its services is filtered.',
     positive:
       'The boundary forwards traffic between the two networks; only the service ports are filtered. Host enumeration across the boundary is possible, and the filter is a port list rather than real isolation.',
     manual: ['ping -c 3 <target>', 'nmap -sn -PE <target>'],
@@ -94,8 +97,7 @@ export const TECHNIQUE_NOTES: Record<string, TechniqueNotes> = {
   ipv6: {
     title: 'IPv6',
     short: 'The same service, reached over the target host IPv6 address.',
-    why:
-      'Filtering is written for IPv4 and the IPv6 stack is forgotten, while modern operating systems enable IPv6 by default and autoconfigure a link-local, and often a global, address. The v6 path is then completely unfiltered.',
+    why: 'Filtering is written for IPv4 and the IPv6 stack is forgotten, while modern operating systems enable IPv6 by default and autoconfigure a link-local, and often a global, address. The v6 path is then completely unfiltered.',
     positive:
       'The segmentation policy only exists on IPv4. Everything the ACL blocks is reachable over IPv6, which is the single most common way a correctly written policy is defeated.',
     manual: [
@@ -106,9 +108,9 @@ export const TECHNIQUE_NOTES: Record<string, TechniqueNotes> = {
   },
   'gateway-route': {
     title: 'Route via the local gateway',
-    short: 'A route to the target network is installed through the local default gateway.',
-    why:
-      'A client with no route to the other network cannot reach it, which looks exactly like filtering. Adding the route shows whether the router would in fact forward the traffic. Very often it would, and the only thing separating the networks was the absence of a route on the client.',
+    short:
+      'A route to the target network is installed through the local default gateway.',
+    why: 'A client with no route to the other network cannot reach it, which looks exactly like filtering. Adding the route shows whether the router would in fact forward the traffic. Very often it would, and the only thing separating the networks was the absence of a route on the client.',
     positive:
       'The two networks are not separated by any filtering at all. The router forwards between them; the isolation was an accident of the routing table. Anyone who can set a static route, or receives a different DHCP option, crosses the boundary.',
     manual: [
@@ -120,8 +122,7 @@ export const TECHNIQUE_NOTES: Record<string, TechniqueNotes> = {
   'alt-gateway': {
     title: 'Route via another next hop',
     short: 'The route test repeated through every other router seen on the segment.',
-    why:
-      'The default gateway is usually the one with an ACL on it. Other routers, firewalls managed by another team, or a multi-homed server with forwarding enabled, sit on the same segment and forward without the same rules.',
+    why: 'The default gateway is usually the one with an ACL on it. Other routers, firewalls managed by another team, or a multi-homed server with forwarding enabled, sit on the same segment and forward without the same rules.',
     positive:
       'A second path exists around the filtering. The policy is enforced on one device while another one forwards the same traffic, so the boundary is only as strong as the next hop the client happens to pick.',
     manual: [
@@ -134,8 +135,7 @@ export const TECHNIQUE_NOTES: Record<string, TechniqueNotes> = {
   'ip-fragment': {
     title: 'Fragmented SYN',
     short: 'A TCP SYN split across several IP fragments.',
-    why:
-      'The TCP header lands in the second fragment, so a filter that only inspects the first one never sees the destination port it is supposed to match on. Devices that do not reassemble before filtering let the fragments through, and the target reassembles them into a valid SYN.',
+    why: 'The TCP header lands in the second fragment, so a filter that only inspects the first one never sees the destination port it is supposed to match on. Devices that do not reassemble before filtering let the fragments through, and the target reassembles them into a valid SYN.',
     positive:
       'The filtering device does not reassemble fragments before applying its rules. Every port-based rule on it can be evaded, so the rule set gives much less protection than it appears to.',
     manual: [
@@ -145,9 +145,9 @@ export const TECHNIQUE_NOTES: Record<string, TechniqueNotes> = {
   },
   'dot1q-subif': {
     title: '802.1Q sub-interface',
-    short: 'A tagged sub-interface is created for the target VLAN and tested from inside it.',
-    why:
-      'The test stops going through the boundary at all: if the switch port carries tagged traffic (it is a trunk, or an access port with a voice VLAN), the machine can simply join the target VLAN and become a local host there. No router, no ACL.',
+    short:
+      'A tagged sub-interface is created for the target VLAN and tested from inside it.',
+    why: 'The test stops going through the boundary at all: if the switch port carries tagged traffic (it is a trunk, or an access port with a voice VLAN), the machine can simply join the target VLAN and become a local host there. No router, no ACL.',
     positive:
       'The switch port hands out more than one VLAN. Anything plugged into that socket, including a visitor in a meeting room, can place itself inside the VLAN and talk to it as a local member. The boundary is irrelevant because the traffic never crosses it.',
     manual: [
@@ -160,9 +160,9 @@ export const TECHNIQUE_NOTES: Record<string, TechniqueNotes> = {
   },
   'dtp-trunk': {
     title: 'DTP trunk negotiation',
-    short: 'The switch port is asked to become a trunk, then tested through a sub-interface.',
-    why:
-      'Cisco switch ports left in the default dynamic mode will negotiate a trunk with whatever asks. Once the port is a trunk it carries every VLAN it is allowed to, and the machine can tag its way into any of them.',
+    short:
+      'The switch port is asked to become a trunk, then tested through a sub-interface.',
+    why: 'Cisco switch ports left in the default dynamic mode will negotiate a trunk with whatever asks. Once the port is a trunk it carries every VLAN it is allowed to, and the machine can tag its way into any of them.',
     positive:
       'The switch port was left negotiating. An attacker turns a single access socket into a trunk and reaches every VLAN that trunk carries at once. This is a finding on its own, independent of any ACL.',
     manual: [
@@ -175,12 +175,11 @@ export const TECHNIQUE_NOTES: Record<string, TechniqueNotes> = {
   'double-tag': {
     title: '802.1Q double tagging',
     short: 'A frame carrying two VLAN tags, injected straight into the target VLAN.',
-    why:
-      'A trunk strips only the outer tag. A frame tagged first with the native VLAN and then with the target VLAN comes out of the switch as a frame tagged for the target VLAN, and is delivered inside it. Nothing is routed, so no ACL is consulted.',
+    why: 'A trunk strips only the outer tag. A frame tagged first with the native VLAN and then with the target VLAN comes out of the switch as a frame tagged for the target VLAN, and is delivered inside it. Nothing is routed, so no ACL is consulted.',
     positive:
       'Frames can be injected into the target VLAN without any routing. Delivery is one way, so this proves injection rather than a two-way session: enough to spoof, flood or trigger something in the target VLAN. The fix is to make the native VLAN an unused one and to prune the trunk.',
     manual: [
-      'sudo python3 -c "from scapy.all import *; sendp(Ether(dst=\'ff:ff:ff:ff:ff:ff\')/Dot1Q(vlan=<native>)/Dot1Q(vlan=<target>)/IP(dst=\'<target-ip>\')/ICMP(), iface=\'<iface>\')"',
+      "sudo python3 -c \"from scapy.all import *; sendp(Ether(dst='ff:ff:ff:ff:ff:ff')/Dot1Q(vlan=<native>)/Dot1Q(vlan=<target>)/IP(dst='<target-ip>')/ICMP(), iface='<iface>')\"",
       'capture inside the target VLAN to confirm delivery: no answer ever comes back on this path',
     ],
   },

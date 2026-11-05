@@ -34,8 +34,8 @@ func testOpts() engine.FingerprintOptions {
 
 func newFP() engine.Fingerprinter { return New(slog.New(slog.DiscardHandler)) }
 
-// httpServer starts an HTTP (or HTTPS) server on 127.0.0.1 and returns its
-// address. cert is nil for plaintext.
+// httpServer starts an HTTP (or HTTPS) server on 127.0.0.1 and returns its address. cert
+// is nil for plaintext.
 func httpServer(t *testing.T, cert *tls.Certificate, h http.Handler) (netip.Addr, uint16) {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -446,12 +446,10 @@ func containsStr(list []string, want string) bool {
 	return false
 }
 
-// ---------------------------------------------------------------------------
-// UDP
+// --------------------------------------------------------------------------- UDP
 // ---------------------------------------------------------------------------
 
-// udpServer answers every datagram with reply(request); a nil reply sends
-// nothing back.
+// udpServer answers every datagram with reply(request); a nil reply sends nothing back.
 func udpServer(t *testing.T, reply func([]byte) []byte) (netip.Addr, uint16) {
 	t.Helper()
 	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
@@ -509,8 +507,8 @@ func TestFingerprintUDPSSDP(t *testing.T) {
 	}
 }
 
-// A UDP service that answers with bytes nothing can decode must still produce
-// a bounded, printable banner and the port-table fallback, without hanging.
+// A UDP service that answers with bytes nothing can decode must still produce a bounded,
+// printable banner and the port-table fallback, without hanging.
 func TestFingerprintUDPUndecodable(t *testing.T) {
 	withProbeDB(t, nil)
 	junk := make([]byte, 2048)

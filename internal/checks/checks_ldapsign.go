@@ -26,9 +26,9 @@ func init() {
 	})
 }
 
-// ldapSigningApplies selects the cleartext LDAP port only. On LDAPS the TLS
-// layer already provides the integrity the bind would otherwise need, so the
-// same probe there would say nothing about the signing policy.
+// ldapSigningApplies selects the cleartext LDAP port only. On LDAPS the TLS layer already
+// provides the integrity the bind would otherwise need, so the same probe there would say
+// nothing about the signing policy.
 func ldapSigningApplies(t *Target) bool {
 	s := t.Service
 	if s.Protocol != model.TCP || ldapUseTLS(s) {
@@ -55,18 +55,16 @@ func ldapSimpleBind(id int, name, password string) []byte {
 	return ldapMessage(id, ntlm.DER(0x60, ldapInt(0x02, 3), ldapStr(0x04, name), ldapStr(0x80, password)))
 }
 
-// runLDAPSigning asks the directory one question: would it accept a cleartext
-// simple bind at all?
+// runLDAPSigning asks the directory one question: would it accept a cleartext simple bind
+// at all?
 //
-// The bind is sent for an account name that is generated at random and
-// therefore cannot exist, with a random password, and NETY only reads the
-// refusal code. That is not credential guessing: the bind is meant to fail,
-// and a name that does not exist cannot be locked out. What distinguishes the
-// two configurations is *how* it fails. A directory that requires signing
-// refuses the bind before it ever looks at the credential (unwillingToPerform
-// with "data 0" / the 00002028 LdapErr, or strongerAuthRequired); one that
-// does not require signing looks the account up and answers
-// invalidCredentials.
+// The bind is sent for an account name that is generated at random and therefore cannot
+// exist, with a random password, and NETY only reads the refusal code. That is not
+// credential guessing: the bind is meant to fail, and a name that does not exist cannot
+// be locked out. What distinguishes the two configurations is *how* it fails. A directory
+// that requires signing refuses the bind before it ever looks at the credential
+// (unwillingToPerform with "data 0" / the 00002028 LdapErr, or strongerAuthRequired); one
+// that does not require signing looks the account up and answers invalidCredentials.
 func runLDAPSigning(ctx context.Context, t *Target) []model.Finding {
 	conn, err := t.Dial(ctx)
 	if err != nil {
@@ -76,8 +74,8 @@ func runLDAPSigning(ctx context.Context, t *Target) []model.Finding {
 	l := &ldapConn{c: conn, timeout: t.Timeout}
 	defer func() { _ = l.send(ldapUnbind(9)) }()
 
-	// A rootDSE read first, so the check only reports against something that
-	// really is an LDAP server.
+	// A rootDSE read first, so the check only reports against something that really is an
+	// LDAP server.
 	if err := l.send(ldapBindRequest(1)); err != nil {
 		return nil
 	}
@@ -91,10 +89,10 @@ func runLDAPSigning(ctx context.Context, t *Target) []model.Finding {
 		return nil
 	}
 
-	// Signing requirements as described here are an Active Directory setting,
-	// and the relay they prevent targets AD. Reporting this against an
-	// OpenLDAP server would put a remediation in the report that does not
-	// exist on that product, so the check stops unless the rootDSE is AD's.
+	// Signing requirements as described here are an Active Directory setting, and the
+	// relay they prevent targets AD. Reporting this against an OpenLDAP server would put
+	// a remediation in the report that does not exist on that product, so the check stops
+	// unless the rootDSE is AD's.
 	if !ldapLooksLikeAD(root[0].Attrs) {
 		return nil
 	}
@@ -114,13 +112,13 @@ func runLDAPSigning(ctx context.Context, t *Target) []model.Finding {
 
 	switch res.Result {
 	case ldapResultUnwillingToPerform, ldapResultStrongerAuthReq, ldapResultConfidentialityReq, ldapResultInappropriateAuthen:
-		// The directory refused the bind on the grounds of the channel, which
-		// is exactly the configuration that is wanted.
+		// The directory refused the bind on the grounds of the channel, which is exactly
+		// the configuration that is wanted.
 		t.Log.Debug("ldap signing enforced", "result", res.Result, "diag", res.Diag)
 		return nil
 	case ldapResultSuccess:
-		// A non-existent account must never authenticate; something answered
-		// that is not the directory this check reasons about.
+		// A non-existent account must never authenticate; something answered that is not
+		// the directory this check reasons about.
 		return nil
 	case ldapResultInvalidCredentials:
 	default:
@@ -162,12 +160,11 @@ func ldapLooksLikeAD(attrs map[string][]string) bool {
 	return false
 }
 
-// ldapChannelBindingNote states what is known about channel binding and, just
-// as importantly, what is not. Confirming LdapEnforceChannelBinding needs a
-// SASL bind with a credential that is accepted, because the server only looks
-// at the channel binding token after the credential validates. NETY has no
-// credential to bind with, so it reports what it saw and says plainly that
-// the rest has to be read from the configuration.
+// ldapChannelBindingNote states what is known about channel binding and, just as
+// importantly, what is not. Confirming LdapEnforceChannelBinding needs a SASL bind with a
+// credential that is accepted, because the server only looks at the channel binding token
+// after the credential validates. NETY has no credential to bind with, so it reports what
+// it saw and says plainly that the rest has to be read from the configuration.
 func ldapChannelBindingNote(t *Target) string {
 	ldaps := t.ServiceOn(636, model.TCP)
 	if ldaps == nil {

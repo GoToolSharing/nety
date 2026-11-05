@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-// fakeApplier records every system change and lets a test assert that each one
-// was reverted. Counters are incremented on "add" and decremented on the
-// matching "remove", so a non-zero counter at the end of a Test call is a leak.
+// fakeApplier records every system change and lets a test assert that each one was
+// reverted. Counters are incremented on "add" and decremented on the matching "remove",
+// so a non-zero counter at the end of a Test call is a leak.
 type fakeApplier struct {
 	wireless bool
 	mu       sync.Mutex
@@ -26,11 +26,11 @@ type fakeApplier struct {
 	failFrames  error
 	noMAC       bool
 
-	// onAddVLAN runs right after a sub-interface is created, which is where a
-	// test injects a cancellation to prove the cleanup still happens.
+	// onAddVLAN runs right after a sub-interface is created, which is where a test
+	// injects a cancellation to prove the cleanup still happens.
 	onAddVLAN func()
-	// onDHCP runs when the sub-interface is being addressed, i.e. once the
-	// sub-interface exists and its removal is already registered for cleanup.
+	// onDHCP runs when the sub-interface is being addressed, i.e. once the sub-interface
+	// exists and its removal is already registered for cleanup.
 	onDHCP func()
 }
 

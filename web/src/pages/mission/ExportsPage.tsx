@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { api } from '@/lib/api'
-import { useExportFormats, useMission, useNetworks, useTriageSummary } from '@/lib/queries'
+import {
+  useExportFormats,
+  useMission,
+  useNetworks,
+  useTriageSummary,
+} from '@/lib/queries'
 import { useMissionId } from '@/lib/hooks'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, CardBody, CardHeader, PageHeader } from '@/components/ui/Card'
@@ -17,16 +22,18 @@ import type { ExportFormat } from '@/types/api'
 const FORMAT_BLURB: Record<string, string> = {
   json: 'The whole mission as one JSON document - networks, scans, hosts, services, assets, findings, reachability, matrix and the latest scan diff.',
   'csv-hosts': 'One row per host: IP, MAC, vendor, hostname, OS, network.',
-  'csv-services': 'One row per service: address, port, protocol, product, version, TLS and HTTP summary.',
+  'csv-services':
+    'One row per service: address, port, protocol, product, version, TLS and HTTP summary.',
   'csv-findings': 'One row per finding, with severity, evidence and remediation.',
   'csv-reach': 'One row per reachability test: source, target, technique, status.',
   'csv-assets': 'One row per asset with its addresses and identity keys.',
-  'csv-matrix': 'The source × target grid: how many services each network could reach in the next.',
+  'csv-matrix':
+    'The source × target grid: how many services each network could reach in the next.',
   'csv-diff':
     'What the last scan of a network changed against the one before it: hosts that appeared or went away, ports that opened or closed, findings raised or cleared.',
   'nmap-xml': 'Nmap XML, for tools that already ingest nmap output.',
   gnmap: 'Grepable nmap output.',
-  'targets-txt': 'Plain list of live addresses - feed it to your next tool.',
+  'targets-txt': 'Plain list of live addresses, ready for your next tool.',
   markdown: 'Report-ready Markdown.',
   html: 'Self-contained HTML report you can hand over as is.',
   xlsx: 'Excel workbook with one sheet per table.',
@@ -57,7 +64,9 @@ function FormatCard({
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-fg">{format.title || format.id}</span>
+          <span className="text-sm font-semibold text-fg">
+            {format.title || format.id}
+          </span>
           <Badge tone="neutral">{format.extension || format.id}</Badge>
         </span>
         {FORMAT_BLURB[format.id] && (
@@ -104,7 +113,7 @@ export default function ExportsPage() {
     <PageContainer>
       <PageHeader
         title="Exports"
-        description={`Download ${mission.data?.name ? `“${mission.data.name}”` : 'this mission'} in any format the server supports. Everything is generated locally - nothing leaves the machine.`}
+        description={`Download ${mission.data?.name ? `“${mission.data.name}”` : 'this mission'} in any format the server supports. Everything is generated locally and nothing leaves the machine.`}
       />
 
       <Card className="mt-5">
@@ -147,8 +156,8 @@ export default function ExportsPage() {
               />
               {setAside > 0 && !includeDismissed && (
                 <p className="mt-2 text-xs text-muted">
-                  {formatNumber(setAside)} rows across this mission are set aside and will not
-                  be in the download.
+                  {formatNumber(setAside)} rows across this mission are set aside and will
+                  not be in the download.
                 </p>
               )}
             </div>
@@ -179,8 +188,8 @@ export default function ExportsPage() {
             </div>
 
             <p className="text-xs text-faint">
-              Whatever is left out, the export says on its own front page how many rows were
-              held back and why, so a short file is never a silent one.
+              Whatever is left out, the export says on its own front page how many rows
+              were held back and why, so a short file is never a silent one.
             </p>
           </div>
         </CardBody>
@@ -226,8 +235,8 @@ export default function ExportsPage() {
       </div>
 
       <p className="mt-5 pb-6 text-xs text-faint">
-        Exports stream straight from the server with a Content-Disposition header, so a large
-        mission does not have to be held in memory by the browser.
+        Exports stream straight from the server with a Content-Disposition header, so a
+        large mission does not have to be held in memory by the browser.
       </p>
     </PageContainer>
   )

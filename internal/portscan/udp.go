@@ -16,10 +16,10 @@ import (
 	"github.com/GoToolSharing/nety/internal/rawnet"
 )
 
-// udpScan sends protocol-specific payloads from one unconnected UDP socket
-// per address family and reports every (host, port) that answers. It is
-// stateless: replies are matched by their source address/port against the
-// scanned set, so memory stays O(hosts + ports).
+// udpScan sends protocol-specific payloads from one unconnected UDP socket per address
+// family and reports every (host, port) that answers. It is stateless: replies are
+// matched by their source address/port against the scanned set, so memory stays O(hosts +
+// ports).
 func (s *Scanner) udpScan(ctx context.Context, j *job) error {
 	wait := j.opts.Timeout
 	if wait <= 0 {
@@ -92,8 +92,8 @@ func (s *Scanner) udpScan(ctx context.Context, j *job) error {
 				if rctx.Err() != nil || errors.Is(err, net.ErrClosed) {
 					return
 				}
-				// ICMP errors surface as transient read errors on some
-				// systems: ignore them.
+				// ICMP errors surface as transient read errors on some systems: ignore
+				// them.
 				continue
 			}
 			h, ok := hidx.get(from.Addr())
@@ -103,8 +103,8 @@ func (s *Scanner) udpScan(ctx context.Context, j *job) error {
 			port := from.Port()
 			p := pidx[port]
 			if p < 0 {
-				// TFTP answers from a fresh port: attribute opcode DATA/ERROR
-				// replies to 69 when it was probed.
+				// TFTP answers from a fresh port: attribute opcode DATA/ERROR replies to
+				// 69 when it was probed.
 				if pidx[69] >= 0 && nr >= 4 && buf[0] == 0 && (buf[1] == 3 || buf[1] == 5) {
 					port, p = 69, pidx[69]
 				} else {
@@ -196,8 +196,8 @@ send:
 	return ctx.Err()
 }
 
-// writeUDP sends one datagram, briefly retrying when the socket send
-// queue is full (ENOBUFS / EAGAIN at high rates).
+// writeUDP sends one datagram, briefly retrying when the socket send queue is full
+// (ENOBUFS / EAGAIN at high rates).
 func writeUDP(c *net.UDPConn, b []byte, dst netip.AddrPort) error {
 	var err error
 	for attempt := range 20 {
@@ -212,9 +212,9 @@ func writeUDP(c *net.UDPConn, b []byte, dst netip.AddrPort) error {
 	return err
 }
 
-// isFatalSendError reports socket-level failures that will not resolve by
-// themselves (as opposed to per-destination errors like EHOSTUNREACH,
-// ECONNREFUSED from a previous ICMP or ENOBUFS).
+// isFatalSendError reports socket-level failures that will not resolve by themselves (as
+// opposed to per-destination errors like EHOSTUNREACH, ECONNREFUSED from a previous ICMP
+// or ENOBUFS).
 func isFatalSendError(err error) bool {
 	return errors.Is(err, net.ErrClosed)
 }

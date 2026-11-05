@@ -14,8 +14,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// newTester returns a Tester wired to a fake applier and, unless the test
-// replaces it, a prober that answers instantly.
+// newTester returns a Tester wired to a fake applier and, unless the test replaces it, a
+// prober that answers instantly.
 func newTester(t *testing.T) (*Tester, *fakeApplier) {
 	t.Helper()
 	tester := New(nil, nil, nil).(*Tester)
@@ -55,8 +55,8 @@ func (c *collector) byTechnique(tech string) []model.ReachResult {
 	return out
 }
 
-// ---------------------------------------------------------------------------
-// Direct path against real loopback listeners
+// --------------------------------------------------------------------------- Direct path
+// against real loopback listeners
 // ---------------------------------------------------------------------------
 
 func TestDirectAgainstLoopbackListener(t *testing.T) {
@@ -111,8 +111,8 @@ func TestDirectAgainstLoopbackListener(t *testing.T) {
 	}
 }
 
-// A closed port on loopback must be reported as "closed", not "filtered": the
-// difference is exactly what a segmentation report hinges on.
+// A closed port on loopback must be reported as "closed", not "filtered": the difference
+// is exactly what a segmentation report hinges on.
 func TestDirectAgainstClosedLoopbackPort(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -343,8 +343,8 @@ func TestTestToleratesANilCallback(t *testing.T) {
 	}
 }
 
-// A panic inside a probe must not take the process down: it becomes an error
-// result and the rest of the scan carries on.
+// A panic inside a probe must not take the process down: it becomes an error result and
+// the rest of the scan carries on.
 func TestTestRecoversFromAProbePanic(t *testing.T) {
 	tester, fa := newTester(t)
 	tester.probe = func(_ context.Context, s probeSpec) probeResult {
@@ -454,11 +454,11 @@ func TestNormalizeOptions(t *testing.T) {
 	}
 }
 
-// TestWirelessDropsSwitchPortTechniques covers the Wi-Fi case: an operator
-// associates to the client's wireless network instead of plugging a cable in.
-// Everything that rides on IP must behave identically; only the switch-port
-// techniques, which have no meaning on an access point association, drop out -
-// and they must drop out cleanly rather than failing against the driver.
+// TestWirelessDropsSwitchPortTechniques covers the Wi-Fi case: an operator associates to
+// the client's wireless network instead of plugging a cable in. Everything that rides on
+// IP must behave identically; only the switch-port techniques, which have no meaning on
+// an access point association, drop out, and they must do so cleanly rather than
+// failing against the driver.
 func TestWirelessDropsSwitchPortTechniques(t *testing.T) {
 	for _, wireless := range []bool{false, true} {
 		tester, fa := newTester(t)

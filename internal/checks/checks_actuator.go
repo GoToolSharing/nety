@@ -28,19 +28,19 @@ func init() {
 	})
 }
 
-// actuatorEndpoint describes one endpoint and what finding it against an
-// unauthenticated client means.
+// actuatorEndpoint describes one endpoint and what finding it against an unauthenticated
+// client means.
 type actuatorEndpoint struct {
 	name string
-	// marker must appear in the body: a 200 alone proves nothing, since many
-	// front ends answer 200 with a SPA shell for every path.
+	// marker must appear in the body: a 200 alone proves nothing, since many front ends
+	// answer 200 with a SPA shell for every path.
 	marker string
 	sev    model.Severity
 	why    string
 }
 
-// actuatorBoot1 are the Spring Boot 1.x endpoints, which sit at the root
-// instead of under /actuator. Only cheap, read-only ones are requested.
+// actuatorBoot1 are the Spring Boot 1.x endpoints, which sit at the root instead of under
+// /actuator. Only cheap, read-only ones are requested.
 var actuatorBoot1 = []actuatorEndpoint{
 	{"env", `"systemProperties"`, model.SevCritical, "resolved configuration including passwords and tokens"},
 	{"configprops", `"prefix"`, model.SevHigh, "bound configuration properties"},
@@ -84,12 +84,11 @@ func runSpringActuator(ctx context.Context, t *Target) []model.Finding {
 	return actuatorBoot1Probe(ctx, t, c, scheme)
 }
 
-// actuatorFromIndex reads the Boot 2.x/3.x discovery page. The index names
-// every exposed endpoint, which is why NETY never has to request /heapdump:
-// serving a heap dump forces a full garbage collection and stops the JVM for
-// as long as it takes to write the heap out, so asking for one would be a
-// performance hit on a production application. Being listed in the index is
-// the evidence, and the finding says so.
+// actuatorFromIndex reads the Boot 2.x/3.x discovery page. The index names every exposed
+// endpoint, which is why NETY never has to request /heapdump: serving a heap dump forces
+// a full garbage collection and stops the JVM for as long as it takes to write the heap
+// out, so asking for one would be a performance hit on a production application. Being
+// listed in the index is the evidence, and the finding says so.
 func actuatorFromIndex(ctx context.Context, t *Target, c *http.Client, scheme string, idx *webResp) *model.Finding {
 	var page struct {
 		Links map[string]struct {
@@ -130,8 +129,8 @@ func actuatorFromIndex(ctx context.Context, t *Target, c *http.Client, scheme st
 	if len(notes) > 0 {
 		ev.WriteString("Of those:\n" + strings.Join(limitStrings(notes, 15), "\n") + "\n")
 	}
-	// /env is cheap and read-only, so one request confirms that the listing is
-	// real rather than an index behind a filter that blocks the endpoints.
+	// /env is cheap and read-only, so one request confirms that the listing is real
+	// rather than an index behind a filter that blocks the endpoints.
 	if _, ok := page.Links["env"]; ok {
 		if re, err := webDo(ctx, c, http.MethodGet, webURL(t, scheme, "/actuator/env"), nil, nil); err == nil && re.Status == http.StatusOK && bytes.Contains(re.Body, []byte(`"propertySources"`)) {
 			fmt.Fprintf(&ev, "GET /actuator/env -> 200 with propertySources (%d bytes read, content not recorded).\n", len(re.Body))
@@ -149,8 +148,8 @@ func actuatorFromIndex(ctx context.Context, t *Target, c *http.Client, scheme st
 	return &f
 }
 
-// actuatorBoot1Probe covers Spring Boot 1.x, where the endpoints live at the
-// root and there is no index to read.
+// actuatorBoot1Probe covers Spring Boot 1.x, where the endpoints live at the root and
+// there is no index to read.
 func actuatorBoot1Probe(ctx context.Context, t *Target, c *http.Client, scheme string) []model.Finding {
 	sev := model.SevInfo
 	var lines []string
@@ -171,8 +170,8 @@ func actuatorBoot1Probe(ctx context.Context, t *Target, c *http.Client, scheme s
 			sev = e.sev
 		}
 	}
-	// A lone /health is a health probe, not a leak, and plenty of services
-	// answer one on purpose. Anything else means management is wide open.
+	// A lone /health is a health probe, not a leak, and plenty of services answer one on
+	// purpose. Anything else means management is wide open.
 	if len(lines) == 0 || (len(lines) == 1 && strings.Contains(lines[0], "/health")) {
 		return nil
 	}

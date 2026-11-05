@@ -40,9 +40,8 @@ func findValue(ev []model.IdentityEvidence, kind model.EvidenceKind, value strin
 	return false
 }
 
-// ---------------------------------------------------------------------------
-// Evidence sink
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Evidence
+// sink ---------------------------------------------------------------------------
 
 func TestEvidenceSinkDedupeAndOrder(t *testing.T) {
 	s := &evidenceSink{}
@@ -109,8 +108,8 @@ func TestEvidenceSinkConcurrent(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Evidence derived from already-collected service data
+// --------------------------------------------------------------------------- Evidence
+// derived from already-collected service data
 // ---------------------------------------------------------------------------
 
 func TestFromServiceData(t *testing.T) {
@@ -221,8 +220,7 @@ func TestMACEvidenceSkipsUnusableAddresses(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Planning
+// --------------------------------------------------------------------------- Planning
 // ---------------------------------------------------------------------------
 
 func TestPlanUsesOnlyOpenServices(t *testing.T) {
@@ -300,8 +298,7 @@ func TestOpenServicesFiltersClosedPorts(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Collect
+// --------------------------------------------------------------------------- Collect
 // ---------------------------------------------------------------------------
 
 func TestCollectWithoutIP(t *testing.T) {
@@ -311,9 +308,9 @@ func TestCollectWithoutIP(t *testing.T) {
 	}
 }
 
-// TestCollectOnDeadHost points every probe at a loopback address with nothing
-// listening. All of them must fail quickly and harmlessly, and Collect must
-// still return the evidence derivable from the service data it was handed.
+// TestCollectOnDeadHost points every probe at a loopback address with nothing listening.
+// All of them must fail quickly and harmlessly, and Collect must still return the
+// evidence derivable from the service data it was handed.
 func TestCollectOnDeadHost(t *testing.T) {
 	c := newTestCollector()
 	host := model.Host{IP: "127.0.0.1", MAC: "00:50:56:11:22:33"}
@@ -359,8 +356,8 @@ func TestCollectHonoursCancellation(t *testing.T) {
 // Byte-fixture parsers
 // ---------------------------------------------------------------------------
 
-// buildNBSTATReply assembles a node status response the way a Windows host
-// would, so the parser is exercised against a realistic frame.
+// buildNBSTATReply assembles a node status response the way a Windows host would, so the
+// parser is exercised against a realistic frame.
 func buildNBSTATReply(id uint16, names []nbName, mac []byte) []byte {
 	b := make([]byte, 12)
 	binary.BigEndian.PutUint16(b[0:], id)
@@ -427,8 +424,8 @@ func TestParseNBSTAT(t *testing.T) {
 		t.Errorf("MAC = %q", r.MAC)
 	}
 
-	// The MAC is readable across a routed boundary, unlike ARP: make sure the
-	// evidence records that provenance so the correlator trusts it.
+	// The MAC is readable across a routed boundary, unlike ARP: make sure the evidence
+	// records that provenance so the correlator trusts it.
 	s := &evidenceSink{}
 	nbstatEvidence(s, r, "nbstat/137")
 	ev := s.evidence()
@@ -449,14 +446,14 @@ func TestParseNBSTAT(t *testing.T) {
 	}
 }
 
-// TestParseNBSTATHostileInput feeds truncations and absurd counts to the
-// parser: it must never panic and never allocate from the wire length.
+// TestParseNBSTATHostileInput feeds truncations and absurd counts to the parser: it must
+// never panic and never allocate from the wire length.
 func TestParseNBSTATHostileInput(t *testing.T) {
 	frame := buildNBSTATReply(1, []nbName{{Name: "A", Suffix: 0}}, []byte{1, 2, 3, 4, 5, 6})
 	for i := 0; i < len(frame); i++ {
 		if _, err := parseNBSTAT(frame[:i], 1); err == nil && i < len(frame)-1 {
-			// A short frame may legitimately parse if it ends on a boundary;
-			// the only requirement is that it does not panic.
+			// A short frame may legitimately parse if it ends on a boundary; the only
+			// requirement is that it does not panic.
 			continue
 		}
 	}
@@ -521,9 +518,8 @@ func TestSNMPv3DiscoveryIsWellFormed(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// In-process servers
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- In-process
+// servers ---------------------------------------------------------------------------
 
 // udpEcho starts a UDP responder on loopback that answers each datagram with
 // reply(request). It returns the port it listens on.
@@ -578,8 +574,8 @@ func TestProbeNBSTATAgainstFakeServer(t *testing.T) {
 	}
 }
 
-// TestProbeNBSTATIgnoresGarbage makes sure a hostile responder cannot make the
-// probe panic or emit nonsense.
+// TestProbeNBSTATIgnoresGarbage makes sure a hostile responder cannot make the probe
+// panic or emit nonsense.
 func TestProbeNBSTATIgnoresGarbage(t *testing.T) {
 	port := udpEcho(t, func(req []byte) []byte {
 		out := make([]byte, 1400)

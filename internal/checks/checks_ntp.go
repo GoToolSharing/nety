@@ -29,9 +29,9 @@ func init() {
 }
 
 // ntpMonlistRequest is a single mode 7 (private) MON_GETLIST_1 request:
-// version 2, mode 7, implementation 3 (XNTPD), request code 42. It asks a
-// question and changes nothing; the mode 7 calls that reconfigure a daemon
-// are a different request code and are never sent.
+// version 2, mode 7, implementation 3 (XNTPD), request code 42. It asks a question and
+// changes nothing; the mode 7 calls that reconfigure a daemon are a different request
+// code and are never sent.
 var ntpMonlistRequest = func() []byte {
 	b := make([]byte, 48)
 	b[0] = 0x17 // response=0, more=0, version=2, mode=7
@@ -100,13 +100,13 @@ func ntpParseMonlist(b []byte) (peers []string, count, size int, err error) {
 	}
 	data := b[8:]
 	if size*count > len(data) {
-		// A truncated datagram is still proof the query is answered; read
-		// whatever entries arrived whole.
+		// A truncated datagram is still proof the query is answered; read whatever
+		// entries arrived whole.
 		count = len(data) / size
 	}
 	if size != ntpMonItemSize {
-		// A different ntpd build lays the entry out differently. The count is
-		// the evidence that matters, so do not guess at the addresses.
+		// A different ntpd build lays the entry out differently. The count is the
+		// evidence that matters, so do not guess at the addresses.
 		return nil, count, size, nil
 	}
 	seen := map[string]bool{}

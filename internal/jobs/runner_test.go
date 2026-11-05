@@ -15,9 +15,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/store"
 )
 
-// ---------------------------------------------------------------------------
-// fake engines
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- fake
+// engines ---------------------------------------------------------------------------
 
 type fakeDiscoverer struct {
 	mu      sync.Mutex
@@ -122,8 +121,7 @@ func (fakeChecker) Catalog() []engine.CheckInfo {
 	return []engine.CheckInfo{{ID: "demo-check", Title: "Demo", Severity: model.SevLow}}
 }
 
-// ---------------------------------------------------------------------------
-// harness
+// --------------------------------------------------------------------------- harness
 // ---------------------------------------------------------------------------
 
 type harness struct {
@@ -211,12 +209,11 @@ func defaultOptions() model.ScanOptions {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// tests
+// --------------------------------------------------------------------------- tests
 // ---------------------------------------------------------------------------
 
-// TestScanStreamsResultsLive is requirement R1: results must be stored and
-// published while the scan runs, not at the end.
+// TestScanStreamsResultsLive is requirement R1: results must be stored and published
+// while the scan runs, not at the end.
 func TestScanStreamsResultsLive(t *testing.T) {
 	fp := &fakeFingerprinter{}
 	h := newHarness(t, Engines{
@@ -287,8 +284,8 @@ func TestScanStreamsResultsLive(t *testing.T) {
 	}
 }
 
-// TestPauseAndResume is requirement R2: pausing returns in-flight work to the
-// queue, and resuming continues without losing or repeating work.
+// TestPauseAndResume is requirement R2: pausing returns in-flight work to the queue, and
+// resuming continues without losing or repeating work.
 func TestPauseAndResume(t *testing.T) {
 	disc := &fakeDiscoverer{perUnit: 2, delay: 40 * time.Millisecond}
 	h := newHarness(t, Engines{
@@ -364,8 +361,8 @@ func TestPauseAndResume(t *testing.T) {
 	}
 }
 
-// TestStopKeepsResults checks that stopping cancels the scan but preserves
-// everything already collected.
+// TestStopKeepsResults checks that stopping cancels the scan but preserves everything
+// already collected.
 func TestStopKeepsResults(t *testing.T) {
 	h := newHarness(t, Engines{
 		Discoverer:  &fakeDiscoverer{perUnit: 2, delay: 30 * time.Millisecond},
@@ -395,8 +392,8 @@ func TestStopKeepsResults(t *testing.T) {
 	}
 }
 
-// TestRecoverAfterCrash simulates a process that died mid-scan: leased units
-// go back to the queue and the scan becomes resumable.
+// TestRecoverAfterCrash simulates a process that died mid-scan: leased units go back to
+// the queue and the scan becomes resumable.
 func TestRecoverAfterCrash(t *testing.T) {
 	h := newHarness(t, Engines{Discoverer: &fakeDiscoverer{perUnit: 1}})
 	ctx := context.Background()
@@ -539,9 +536,8 @@ func TestLocalAddressIsNeverScanned(t *testing.T) {
 }
 
 // TestResumeDoesNotRegenerateWork guards requirement R2 from its subtler side:
-// resuming walks every phase again, including the ones that already completed
-// before the pause, and must not append a second set of work units for the
-// phases they feed.
+// resuming walks every phase again, including the ones that already completed before the
+// pause, and must not append a second set of work units for the phases they feed.
 func TestResumeDoesNotRegenerateWork(t *testing.T) {
 	fp := &fakeFingerprinter{delay: 30 * time.Millisecond}
 	h := newHarness(t, Engines{
@@ -560,8 +556,8 @@ func TestResumeDoesNotRegenerateWork(t *testing.T) {
 		t.Fatalf("start: %v", err)
 	}
 
-	// Wait until the fingerprint phase is under way, then pause: discovery and
-	// the port phases are complete, so a resume will walk over them again.
+	// Wait until the fingerprint phase is under way, then pause: discovery and the port
+	// phases are complete, so a resume will walk over them again.
 	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		cur, err := h.st.Scan(ctx, sc.ID)

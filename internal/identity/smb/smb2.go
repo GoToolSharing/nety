@@ -282,10 +282,9 @@ func ParseResponse(b []byte) (*Response, error) {
 	return r, nil
 }
 
-// request sends cmd with body and waits for the matching final response.
-// Responses with non-success status are returned along with a *StatusError,
-// except STATUS_MORE_PROCESSING_REQUIRED and STATUS_BUFFER_OVERFLOW which
-// are informational.
+// request sends cmd with body and waits for the matching final response. Responses with
+// non-success status are returned along with a *StatusError, except
+// STATUS_MORE_PROCESSING_REQUIRED and STATUS_BUFFER_OVERFLOW which are informational.
 func (c *Conn) request(cmd uint16, treeID uint32, body []byte) (*Response, error) {
 	msg := append(c.header(cmd, treeID), body...)
 	id := c.msgID
@@ -375,8 +374,8 @@ func appendContext(b []byte, typ uint16, data []byte) []byte {
 // DefaultDialects are offered in NEGOTIATE.
 var DefaultDialects = []uint16{Dialect202, Dialect210, Dialect300, Dialect302, Dialect311}
 
-// Negotiate performs SMB2 NEGOTIATE. ErrSMB1Only is returned when the server
-// only speaks SMB1.
+// Negotiate performs SMB2 NEGOTIATE. ErrSMB1Only is returned when the server only speaks
+// SMB1.
 func (c *Conn) Negotiate(dialects ...uint16) (*NegotiateInfo, error) {
 	if len(dialects) == 0 {
 		dialects = DefaultDialects
@@ -492,9 +491,8 @@ func allZero(b []byte) bool {
 	return true
 }
 
-// SessionSetup sends one SESSION_SETUP round with the given security blob.
-// It returns the response (status MORE_PROCESSING_REQUIRED or SUCCESS) and
-// the server security blob.
+// SessionSetup sends one SESSION_SETUP round with the given security blob. It returns the
+// response (status MORE_PROCESSING_REQUIRED or SUCCESS) and the server security blob.
 func (c *Conn) SessionSetup(blob []byte) (*Response, []byte, error) {
 	b := make([]byte, 24)
 	binary.LittleEndian.PutUint16(b[0:], 25)
@@ -522,8 +520,8 @@ func (c *Conn) SessionSetup(blob []byte) (*Response, []byte, error) {
 	return r, out, nil
 }
 
-// Challenge performs the first NTLM SESSION_SETUP leg and returns the server
-// CHALLENGE. The session is left half open (call Authenticate or Close).
+// Challenge performs the first NTLM SESSION_SETUP leg and returns the server CHALLENGE.
+// The session is left half open (call Authenticate or Close).
 func (c *Conn) Challenge() (*ntlm.Challenge, error) {
 	r, blob, err := c.SessionSetup(ntlm.SPNEGOInit(ntlm.NegotiateMessage()))
 	if err != nil {
@@ -543,8 +541,7 @@ type SessionInfo struct {
 	Encrypt   bool // server demands encryption: further requests will fail
 }
 
-// Login performs a full NTLM authentication. cred == nil means anonymous
-// (null session).
+// Login performs a full NTLM authentication. cred == nil means anonymous (null session).
 func (c *Conn) Login(cred *ntlm.Credentials) (*SessionInfo, error) {
 	ch, err := c.Challenge()
 	if err != nil {
@@ -675,8 +672,8 @@ func (c *Conn) Write(t *Tree, fid FileID, data []byte) (int, error) {
 	return int(binary.LittleEndian.Uint32(r.Body[4:])), nil
 }
 
-// Read reads up to n bytes. The returned bool is true when more data is
-// pending in the pipe message (STATUS_BUFFER_OVERFLOW).
+// Read reads up to n bytes. The returned bool is true when more data is pending in the
+// pipe message (STATUS_BUFFER_OVERFLOW).
 func (c *Conn) Read(t *Tree, fid FileID, n int) ([]byte, bool, error) {
 	if n <= 0 || n > 1<<16 {
 		n = 1 << 16
@@ -712,9 +709,9 @@ func readBody(r *Response) ([]byte, error) {
 // FSCTLPipeTransceive is the IOCTL code for a pipe write+read.
 const FSCTLPipeTransceive uint32 = 0x0011c017
 
-// Transceive writes in to the pipe and reads the full reply message
-// (following up with READs on STATUS_BUFFER_OVERFLOW). The reply is capped
-// at maxOut bytes total (default 1 MiB).
+// Transceive writes in to the pipe and reads the full reply message (following up with
+// READs on STATUS_BUFFER_OVERFLOW). The reply is capped at maxOut bytes total (default 1
+// MiB).
 func (c *Conn) Transceive(t *Tree, fid FileID, in []byte, maxOut int) ([]byte, error) {
 	if maxOut <= 0 || maxOut > MaxMessageSize {
 		maxOut = MaxMessageSize

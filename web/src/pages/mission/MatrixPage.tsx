@@ -1,11 +1,22 @@
 import { Fragment, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useHosts, useMatrix, useNetworks, useReach, useTriageSummary } from '@/lib/queries'
+import {
+  useHosts,
+  useMatrix,
+  useNetworks,
+  useReach,
+  useTriageSummary,
+} from '@/lib/queries'
 import { useMissionId } from '@/lib/hooks'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, CardHeader, PageHeader } from '@/components/ui/Card'
 import { Drawer } from '@/components/ui/Modal'
-import { EmptyState, ErrorState, InlineAlert, TableSkeleton } from '@/components/ui/Feedback'
+import {
+  EmptyState,
+  ErrorState,
+  InlineAlert,
+  TableSkeleton,
+} from '@/components/ui/Feedback'
 import { Badge, ReachBadge } from '@/components/ui/Badge'
 import { LinkButton } from '@/components/ui/Button'
 import { Mono, RelativeTime, SearchInput, Tabs } from '@/components/common'
@@ -51,7 +62,11 @@ function cellStyle(cell: MatrixCell | undefined): {
     }
   }
   if (cell.closed > 0) {
-    return { className: 'bg-warn/12 text-warn', label: 'routed, ports closed', tone: 'warn' }
+    return {
+      className: 'bg-warn/12 text-warn',
+      label: 'routed, ports closed',
+      tone: 'warn',
+    }
   }
   return { className: 'bg-ok/12 text-ok', label: 'filtered', tone: 'ok' }
 }
@@ -97,7 +112,8 @@ export default function MatrixPage() {
     return fromMatrix.length > 0 ? fromMatrix : (networksQuery.data ?? [])
   }, [matrix.data, networksQuery.data])
 
-  const netName = (id: number) => networks.find((n) => n.id === id)?.name ?? `network ${id}`
+  const netName = (id: number) =>
+    networks.find((n) => n.id === id)?.name ?? `network ${id}`
 
   const cells = matrix.data?.cells ?? []
   const cellOf = (source: number, target: number) =>
@@ -162,7 +178,8 @@ export default function MatrixPage() {
           netName(row.targetNetworkId).toLowerCase().includes(q),
       )
       .sort((a, b) => {
-        if (a.targetNetworkId !== b.targetNetworkId) return a.targetNetworkId - b.targetNetworkId
+        if (a.targetNetworkId !== b.targetNetworkId)
+          return a.targetNetworkId - b.targetNetworkId
         const ip = compareIP(a.ip, b.ip)
         return ip !== 0 ? ip : (a.port ?? 0) - (b.port ?? 0)
       })
@@ -192,7 +209,7 @@ export default function MatrixPage() {
     <PageContainer wide>
       <PageHeader
         title="Segmentation matrix"
-        description="Which networks can reach which, measured - not assumed. Each cell counts the services retried from the source network against the target network."
+        description="Which networks can reach which, measured rather than assumed. Each cell counts the services retried from the source network against the target network."
         actions={
           <LinkButton to="../exports" variant="secondary">
             Export the matrix
@@ -271,7 +288,10 @@ export default function MatrixPage() {
               </div>
               <div className="text-xs text-muted">
                 source-port, fragment, IPv6, alternate route or 802.1Q -{' '}
-                <Link to="/help" className="text-accent underline-offset-2 hover:underline">
+                <Link
+                  to="/help"
+                  className="text-accent underline-offset-2 hover:underline"
+                >
                   what these are
                 </Link>
               </div>
@@ -279,11 +299,17 @@ export default function MatrixPage() {
           </div>
 
           {bypassHits.length > 0 && (
-            <InlineAlert tone="warn" className="mt-4" icon={<BoltIcon />} title="Filtering bypassed">
-              {bypassHits.length} result{bypassHits.length > 1 ? 's were' : ' was'} obtained with
-              a technique other than plain routing - the filtering exists but can be walked
-              around. Every detail view names the technique that got through; click it to read
-              what it does and how to reproduce it by hand, or browse{' '}
+            <InlineAlert
+              tone="warn"
+              className="mt-4"
+              icon={<BoltIcon />}
+              title="Filtering bypassed"
+            >
+              {bypassHits.length} result{bypassHits.length > 1 ? 's were' : ' was'}{' '}
+              obtained with a technique other than plain routing: the filtering exists but
+              can be walked around. Every detail view names the technique that got
+              through; click it to read what it does and how to reproduce it by hand, or
+              browse{' '}
               <Link to="/help" className="underline underline-offset-2">
                 the technique reference
               </Link>
@@ -297,7 +323,11 @@ export default function MatrixPage() {
               onChange={setView}
               tabs={[
                 { id: 'network', label: 'Network × network' },
-                { id: 'service', label: 'Service × source network', count: serviceRows.length },
+                {
+                  id: 'service',
+                  label: 'Service × source network',
+                  count: serviceRows.length,
+                },
               ]}
             />
           </div>
@@ -389,7 +419,8 @@ export default function MatrixPage() {
                                 ) : (
                                   <>
                                     <span className="tabular block text-sm font-semibold">
-                                      {formatNumber(cell.reachable)} / {formatNumber(cell.tested)}
+                                      {formatNumber(cell.reachable)} /{' '}
+                                      {formatNumber(cell.tested)}
                                     </span>
                                     <span className="block text-[11px] font-medium">
                                       {style.label}
@@ -423,15 +454,15 @@ export default function MatrixPage() {
                 <span className="font-medium">Legend:</span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-3 w-3 rounded-sm bg-crit/25" aria-hidden="true" />
-                  reachable - segmentation does not hold
+                  reachable: segmentation does not hold
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-3 w-3 rounded-sm bg-warn/20" aria-hidden="true" />
-                  routed but closed - packets cross, ports are shut
+                  routed but closed: packets cross, ports are shut
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-3 w-3 rounded-sm bg-ok/20" aria-hidden="true" />
-                  filtered - blocked
+                  filtered: blocked
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-3 w-3 rounded-sm bg-elevated" aria-hidden="true" />
@@ -476,7 +507,9 @@ export default function MatrixPage() {
                       {serviceRows.slice(0, 500).map((row) => (
                         <tr
                           key={row.key}
-                          className={cn(skippedHosts.has(row.targetHostId) && SKIPPED_ROW_CLASS)}
+                          className={cn(
+                            skippedHosts.has(row.targetHostId) && SKIPPED_ROW_CLASS,
+                          )}
                         >
                           <td className="sticky left-0 z-10 bg-surface">
                             <Mono className="font-medium">
@@ -484,7 +517,9 @@ export default function MatrixPage() {
                               {row.port ? `:${row.port}` : ''}
                             </Mono>
                             {row.protocol && (
-                              <span className="ml-1 text-xs text-faint">/{row.protocol}</span>
+                              <span className="ml-1 text-xs text-faint">
+                                /{row.protocol}
+                              </span>
                             )}
                           </td>
                           <td className="text-muted">{netName(row.targetNetworkId)}</td>
@@ -522,8 +557,8 @@ export default function MatrixPage() {
                   </table>
                   {serviceRows.length > 500 && (
                     <p className="px-4 py-2 text-xs text-faint">
-                      Showing the first 500 of {formatNumber(serviceRows.length)} rows - narrow
-                      the search to see the rest.
+                      Showing the first 500 of {formatNumber(serviceRows.length)} rows -
+                      narrow the search to see the rest.
                     </p>
                   )}
                 </div>
@@ -540,15 +575,13 @@ export default function MatrixPage() {
           setExplained(null)
         }}
         width="lg"
-        title={
-          drill ? `${netName(drill.source)} → ${netName(drill.target)}` : ''
-        }
-        subtitle={`${drillResults.length} individual results - click a technique to see how that flow got through`}
+        title={drill ? `${netName(drill.source)} → ${netName(drill.target)}` : ''}
+        subtitle={`${drillResults.length} individual results. Click a technique to see how that flow got through`}
       >
         {drillResults.length === 0 ? (
           <p className="text-sm text-muted">
-            No individual result stored for this pair. The aggregate counters come from the
-            matrix endpoint; the detailed results may have been pruned.
+            No individual result stored for this pair. The aggregate counters come from
+            the matrix endpoint; the detailed results may have been pruned.
           </p>
         ) : (
           <div className="table-scroll rounded-md border border-border">
@@ -588,7 +621,9 @@ export default function MatrixPage() {
                               expanded={open}
                               onToggle={() => setExplained(open ? null : r.id)}
                             />
-                            {r.vlan_id ? <Badge tone="accent">vlan {r.vlan_id}</Badge> : null}
+                            {r.vlan_id ? (
+                              <Badge tone="accent">vlan {r.vlan_id}</Badge>
+                            ) : null}
                           </span>
                         </td>
                         <td>
@@ -597,7 +632,10 @@ export default function MatrixPage() {
                         <td className="tabular text-muted">
                           {r.rtt_ms ? formatMs(r.rtt_ms) : '-'}
                         </td>
-                        <td className="max-w-[220px] truncate text-muted" title={r.detail}>
+                        <td
+                          className="max-w-[220px] truncate text-muted"
+                          title={r.detail}
+                        >
                           {r.detail || '-'}
                         </td>
                         <td className="text-muted">
@@ -614,7 +652,9 @@ export default function MatrixPage() {
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <h4 className="whitespace-normal text-sm font-semibold text-fg">
                                   How this crossed: {t.title}{' '}
-                                  <Mono className="ml-1 font-normal text-faint">{t.id}</Mono>
+                                  <Mono className="ml-1 font-normal text-faint">
+                                    {t.id}
+                                  </Mono>
                                 </h4>
                                 <TechniqueFlags t={t} />
                               </div>

@@ -102,7 +102,9 @@ export default function SeverityByNetwork({
             <li key={row.id} className="flex items-center gap-3">
               <div className="w-40 shrink-0 truncate text-xs" title={row.name}>
                 <span className="text-fg">{row.name}</span>
-                {row.vlan ? <span className="ml-1 text-faint">VLAN {row.vlan}</span> : null}
+                {row.vlan ? (
+                  <span className="ml-1 text-faint">VLAN {row.vlan}</span>
+                ) : null}
               </div>
               <div className="min-w-0 flex-1">
                 <svg

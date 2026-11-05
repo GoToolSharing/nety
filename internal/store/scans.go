@@ -80,12 +80,12 @@ func resumable(sc model.Scan) bool {
 	switch sc.Status {
 	case model.ScanPaused, model.ScanFailed, model.ScanCancelled, model.ScanQueued:
 	case model.ScanCompleted:
-		// A scan normally stays finished. The exception is one that finished
-		// with an unfinished plan: a process killed while the phases were
-		// being written leaves a scan that ran whatever had made it to disk
-		// and then reported success. Every kind of scan plans either host
-		// discovery or segmentation, so a completed scan with neither did not
-		// do what it was asked, and planning it again fills in the gap.
+		// A scan normally stays finished. The exception is one that finished with an
+		// unfinished plan: a process killed while the phases were being written leaves a
+		// scan that ran whatever had made it to disk and then reported success. Every
+		// kind of scan plans either host discovery or segmentation, so a completed scan
+		// with neither did not do what it was asked, and planning it again fills in the
+		// gap.
 		return !hasPhase(sc, model.PhaseDiscovery) && !hasPhase(sc, model.PhaseSegment)
 	default:
 		return false
@@ -227,13 +227,13 @@ func (s *Store) DeleteScan(ctx context.Context, id int64) error {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// Work units - the backbone of pause / resume / crash recovery
+// --------------------------------------------------------------------------- Work units
+// - the backbone of pause / resume / crash recovery
 // ---------------------------------------------------------------------------
 
-// AddWork appends work units for a phase. seq numbering continues from the
-// highest existing seq of that (scan, phase), and the unique index makes the
-// call idempotent, so re-generating units after a resume is harmless.
+// AddWork appends work units for a phase. seq numbering continues from the highest
+// existing seq of that (scan, phase), and the unique index makes the call idempotent, so
+// re-generating units after a resume is harmless.
 func (s *Store) AddWork(ctx context.Context, scanID int64, phase model.WorkPhase, payloads []json.RawMessage) (int, error) {
 	if len(payloads) == 0 {
 		return 0, nil
@@ -271,8 +271,8 @@ func (s *Store) AddWork(ctx context.Context, scanID int64, phase model.WorkPhase
 	return inserted, nil
 }
 
-// ClaimWork atomically leases up to n pending units of a scan, optionally
-// restricted to one phase, and marks them running.
+// ClaimWork atomically leases up to n pending units of a scan, optionally restricted to
+// one phase, and marks them running.
 func (s *Store) ClaimWork(ctx context.Context, scanID int64, phase model.WorkPhase, n int) ([]model.WorkUnit, error) {
 	if n <= 0 {
 		n = 1
@@ -354,8 +354,8 @@ func (s *Store) CompleteWork(ctx context.Context, id int64) error {
 	})
 }
 
-// FailWork marks a unit failed (it will not be retried automatically) or, when
-// requeue is true, puts it back in the pending queue for another attempt.
+// FailWork marks a unit failed (it will not be retried automatically) or, when requeue is
+// true, puts it back in the pending queue for another attempt.
 func (s *Store) FailWork(ctx context.Context, id int64, cause string, requeue bool) error {
 	status := "failed"
 	if requeue {
@@ -369,13 +369,13 @@ func (s *Store) FailWork(ctx context.Context, id int64, cause string, requeue bo
 	})
 }
 
-// ReleaseRunningWork puts every leased unit of a scan back in the pending
-// queue. Called when a scan is paused, and at startup for scans that were
-// running when the process died - nothing is lost, nothing is redone twice.
+// ReleaseRunningWork puts every leased unit of a scan back in the pending queue. Called
+// when a scan is paused, and at startup for scans that were running when the process died
+// - nothing is lost, nothing is redone twice.
 //
-// The attempt counter is rolled back too: being interrupted is not a failed
-// attempt, and counting it as one would burn the unit's retry budget after a
-// few pauses, failing it permanently on the first transient error.
+// The attempt counter is rolled back too: being interrupted is not a failed attempt, and
+// counting it as one would burn the unit's retry budget after a few pauses, failing it
+// permanently on the first transient error.
 func (s *Store) ReleaseRunningWork(ctx context.Context, scanID int64) (int64, error) {
 	var n int64
 	err := s.tx(ctx, func(tx *sql.Tx) error {
@@ -427,8 +427,8 @@ func (s *Store) PendingWorkCount(ctx context.Context, scanID int64) (int64, erro
 	return n, nil
 }
 
-// PhaseProgress aggregates the work units of a scan per phase, in canonical
-// phase order. Only phases that have units are returned.
+// PhaseProgress aggregates the work units of a scan per phase, in canonical phase order.
+// Only phases that have units are returned.
 func (s *Store) PhaseProgress(ctx context.Context, scanID int64) ([]model.PhaseProgress, error) {
 	rows, err := s.r.QueryContext(ctx, `
 		SELECT phase,
@@ -473,8 +473,7 @@ func (s *Store) PhaseProgress(ctx context.Context, scanID int64) ([]model.PhaseP
 	return out, nil
 }
 
-// ---------------------------------------------------------------------------
-// Scan logs
+// --------------------------------------------------------------------------- Scan logs
 // ---------------------------------------------------------------------------
 
 // AppendScanLog stores one log line of a scan (also streamed to the UI live).

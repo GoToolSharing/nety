@@ -101,8 +101,8 @@ func pgMD5(user, password string, salt []byte) string {
 	return "md5" + hex.EncodeToString(h2[:])
 }
 
-// scramClient computes the SCRAM-SHA-256 client-final message and the
-// expected server signature.
+// scramClient computes the SCRAM-SHA-256 client-final message and the expected server
+// signature.
 func scramClient(password, clientFirstBare, serverFirst, clientNonce string) (clientFinal string, serverSig []byte, err error) {
 	var nonce, salt64 string
 	iter := 0
@@ -151,8 +151,8 @@ func scramClient(password, clientFirstBare, serverFirst, clientNonce string) (cl
 	return withoutProof + ",p=" + base64.StdEncoding.EncodeToString(proof), mac(serverKey, authMsg), nil
 }
 
-// pgLogin performs one login attempt. ok=true means authentication
-// succeeded; method describes the auth method used by the server.
+// pgLogin performs one login attempt. ok=true means authentication succeeded; method
+// describes the auth method used by the server.
 func pgLogin(c net.Conn, user, password string) (ok bool, method string, detail string, err error) {
 	if _, err := c.Write(pgStartup(user, user)); err != nil {
 		return false, "", "", err

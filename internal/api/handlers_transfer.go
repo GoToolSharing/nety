@@ -18,15 +18,14 @@ import (
 
 // Moving a whole mission off one installation and back onto another.
 //
-// The other exports are readings of the results, shaped for a client or for
-// another tool. This one is the results themselves: every row of every table
-// the mission owns, including the parts nothing else carries, such as the
-// pending work units of a paused scan and who wrote which note. It is what you
-// take before a machine is wiped.
+// The other exports are readings of the results, shaped for a client or for another tool.
+// This one is the results themselves: every row of every table the mission owns,
+// including the parts nothing else carries, such as the pending work units of a paused
+// scan and who wrote which note. It is what you take before a machine is wiped.
 
-// maxBundleBytes bounds what an import will read. A bundle is compressed, so
-// this is applied to the decompressed stream: without it a small file could
-// expand until the process runs out of memory.
+// maxBundleBytes bounds what an import will read. A bundle is compressed, so this is
+// applied to the decompressed stream: without it a small file could expand until the
+// process runs out of memory.
 const maxBundleBytes = 2 << 30 // 2 GiB
 
 // handleExportBundle streams the mission as a gzipped bundle.
@@ -51,9 +50,9 @@ func (a *API) handleExportBundle(w http.ResponseWriter, r *http.Request, u model
 	gz := gzip.NewWriter(w)
 	gz.Name = strings.TrimSuffix(filename, ".gz")
 	if err := json.NewEncoder(gz).Encode(bundle); err != nil {
-		// The headers have gone out, so the only honest thing left is to stop
-		// writing and say so in the log: a truncated file fails its checksum
-		// on the way back in, which is what that checksum is for.
+		// The headers have gone out, so the only honest thing left is to stop writing and
+		// say so in the log: a truncated file fails its checksum on the way back in,
+		// which is what that checksum is for.
 		a.Log.Error("bundle export failed", "mission", m.ID, "error", err)
 		return
 	}
@@ -66,9 +65,9 @@ func (a *API) handleExportBundle(w http.ResponseWriter, r *http.Request, u model
 
 // handleImportBundle restores a bundle as a new mission.
 //
-// It is administrators only: it creates a mission, and with create_users it
-// creates accounts. It never merges into an existing mission, so a restore
-// cannot quietly reconcile two versions of one engagement.
+// It is administrators only: it creates a mission, and with create_users it creates
+// accounts. It never merges into an existing mission, so a restore cannot quietly
+// reconcile two versions of one engagement.
 func (a *API) handleImportBundle(w http.ResponseWriter, r *http.Request, u model.User) {
 	body, cleanup, err := bundleReader(r)
 	if err != nil {
@@ -79,8 +78,8 @@ func (a *API) handleImportBundle(w http.ResponseWriter, r *http.Request, u model
 
 	var bundle store.MissionBundle
 	dec := json.NewDecoder(io.LimitReader(body, maxBundleBytes))
-	// Numbers stay exact: an id or a millisecond timestamp read as a float
-	// and written back would not be the same value.
+	// Numbers stay exact: an id or a millisecond timestamp read as a float and written
+	// back would not be the same value.
 	dec.UseNumber()
 	if err := dec.Decode(&bundle); err != nil {
 		a.fail(w, http.StatusBadRequest, "invalid",
@@ -95,8 +94,8 @@ func (a *API) handleImportBundle(w http.ResponseWriter, r *http.Request, u model
 	}
 	res, err := a.Store.ImportMission(r.Context(), bundle, opts)
 	if err != nil {
-		// Every failure here is about the file the caller sent, not about the
-		// server, so it reads as a bad request with the reason in it.
+		// Every failure here is about the file the caller sent, not about the server, so
+		// it reads as a bad request with the reason in it.
 		a.fail(w, http.StatusBadRequest, "invalid", err.Error())
 		return
 	}
@@ -107,15 +106,15 @@ func (a *API) handleImportBundle(w http.ResponseWriter, r *http.Request, u model
 	a.ok(w, res)
 }
 
-// bundleReader returns the bundle's bytes, from a form upload or from the
-// request body, transparently ungzipped.
+// bundleReader returns the bundle's bytes, from a form upload or from the request body,
+// transparently ungzipped.
 func bundleReader(r *http.Request) (io.Reader, func(), error) {
 	var raw io.Reader = r.Body
 	cleanup := func() {}
 
 	if ct := r.Header.Get("Content-Type"); strings.HasPrefix(ct, "multipart/form-data") {
-		// 32 MiB in memory, the rest spooled to a temporary file, which is
-		// what a browser upload of a large mission needs.
+		// 32 MiB in memory, the rest spooled to a temporary file, which is what a browser
+		// upload of a large mission needs.
 		if err := r.ParseMultipartForm(32 << 20); err != nil {
 			return nil, cleanup, fmt.Errorf("could not read the upload: %w", err)
 		}
@@ -132,8 +131,8 @@ func bundleReader(r *http.Request) (io.Reader, func(), error) {
 		}
 	}
 
-	// Accept the file either compressed or not, because someone will unzip it
-	// before uploading it and that should still work.
+	// Accept the file either compressed or not, because someone will unzip it before
+	// uploading it and that should still work.
 	buf := make([]byte, 2)
 	n, err := io.ReadFull(raw, buf)
 	if err != nil && n == 0 {
@@ -155,8 +154,8 @@ func bundleReader(r *http.Request) (io.Reader, func(), error) {
 
 var unsafeFilename = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
 
-// bundleFilename names the download after the mission and the day, so a folder
-// of backups is readable without opening any of them.
+// bundleFilename names the download after the mission and the day, so a folder of backups
+// is readable without opening any of them.
 func bundleFilename(mission string) string {
 	slug := strings.Trim(unsafeFilename.ReplaceAllString(mission, "-"), "-")
 	if slug == "" {

@@ -8,7 +8,12 @@ import { useToast } from '@/components/ui/Toast'
 import { Button, LinkButton } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Checkbox, TextAreaField, TextField } from '@/components/ui/Field'
-import { CardSkeleton, EmptyState, ErrorState, InlineAlert } from '@/components/ui/Feedback'
+import {
+  CardSkeleton,
+  EmptyState,
+  ErrorState,
+  InlineAlert,
+} from '@/components/ui/Feedback'
 import { PageHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { RelativeTime, SearchInput } from '@/components/common'
@@ -95,7 +100,7 @@ function CreateMissionModal({ open, onClose }: { open: boolean; onClose: () => v
           label="Name"
           required
           data-autofocus
-          placeholder="Internal audit - HQ"
+          placeholder="Internal audit, HQ"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -153,7 +158,9 @@ function CountChip({
       title={`${label}: ${value === undefined ? 'unknown' : formatNumber(value)}`}
     >
       <span className="text-faint">{icon}</span>
-      <span className="tabular text-fg">{value === undefined ? '-' : formatNumber(value)}</span>
+      <span className="tabular text-fg">
+        {value === undefined ? '-' : formatNumber(value)}
+      </span>
       <span className="hidden sm:inline">{label}</span>
     </span>
   )
@@ -215,7 +222,11 @@ function MissionCard({
             label="networks"
             value={(summary?.networks ?? []).length}
           />
-          <CountChip icon={<HostIcon width={13} height={13} />} label="hosts" value={summary?.hosts} />
+          <CountChip
+            icon={<HostIcon width={13} height={13} />}
+            label="hosts"
+            value={summary?.hosts}
+          />
           <CountChip
             icon={<ServiceIcon width={13} height={13} />}
             label="services"
@@ -328,7 +339,11 @@ export default function MissionsPage() {
                 </Button>
               )}
               {canWrite && (
-                <Button variant="primary" icon={<PlusIcon />} onClick={() => setCreateOpen(true)}>
+                <Button
+                  variant="primary"
+                  icon={<PlusIcon />}
+                  onClick={() => setCreateOpen(true)}
+                >
                   New mission
                 </Button>
               )}
@@ -373,7 +388,9 @@ export default function MissionsPage() {
             <div className="card">
               <EmptyState
                 icon={<ScanIcon width={20} height={20} />}
-                title={all.length === 0 ? 'No missions yet' : 'No mission matches that filter'}
+                title={
+                  all.length === 0 ? 'No missions yet' : 'No mission matches that filter'
+                }
                 description={
                   all.length === 0
                     ? 'Create a mission for the engagement you are starting. You will then declare the VLAN you are plugged into as a network, and launch a discovery scan on it.'
@@ -451,27 +468,27 @@ function RestoreMissionModal({ onClose }: { onClose: () => void }) {
     return (
       <Modal open title={`${done.name} restored`} onClose={onClose} size="md">
         <p className="text-sm text-fg">
-          {formatNumber(counts.hosts ?? 0)} hosts, {formatNumber(counts.services ?? 0)} services,{' '}
-          {formatNumber(counts.findings ?? 0)} findings and {formatNumber(counts.scans ?? 0)} scans
-          came back.
+          {formatNumber(counts.hosts ?? 0)} hosts, {formatNumber(counts.services ?? 0)}{' '}
+          services, {formatNumber(counts.findings ?? 0)} findings and{' '}
+          {formatNumber(counts.scans ?? 0)} scans came back.
         </p>
         {(done.users_created?.length ?? 0) > 0 && (
           <p className="mt-3 text-xs text-muted">
             Recreated so their work keeps its author, disabled and unable to sign in:{' '}
-            <strong className="text-fg">{done.users_created?.join(', ')}</strong>. Give them a
-            password from the users page if they are to work here.
+            <strong className="text-fg">{done.users_created?.join(', ')}</strong>. Give
+            them a password from the users page if they are to work here.
           </p>
         )}
         {(done.users_unmatched?.length ?? 0) > 0 && (
           <p className="mt-3 text-xs text-warn">
-            No account here matches {done.users_unmatched?.join(', ')}, so their statuses and notes
-            came back without an author.
+            No account here matches {done.users_unmatched?.join(', ')}, so their statuses
+            and notes came back without an author.
           </p>
         )}
         {(done.skipped_columns?.length ?? 0) > 0 && (
           <p className="mt-3 text-xs text-warn">
-            This build has no column for {done.skipped_columns?.join(', ')}, so that much was
-            dropped. The file was written by a newer NETY.
+            This build has no column for {done.skipped_columns?.join(', ')}, so that much
+            was dropped. The file was written by a newer NETY.
           </p>
         )}
         <div className="mt-4 flex justify-end gap-2">
@@ -489,8 +506,8 @@ function RestoreMissionModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal open title="Restore a mission backup" onClose={onClose} size="md">
       <InlineAlert tone="info">
-        This always creates a new mission. It never writes over one that is already here, so
-        restoring the same file twice gives you two copies rather than a merge.
+        This always creates a new mission. It never writes over one that is already here,
+        so restoring the same file twice gives you two copies rather than a merge.
       </InlineAlert>
 
       <div className="mt-4 space-y-4">
@@ -528,7 +545,12 @@ function RestoreMissionModal({ onClose }: { onClose: () => void }) {
         <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-        <Button variant="primary" disabled={!file} loading={busy} onClick={() => void run()}>
+        <Button
+          variant="primary"
+          disabled={!file}
+          loading={busy}
+          onClick={() => void run()}
+        >
           Restore
         </Button>
       </div>

@@ -1,5 +1,5 @@
-// Package netif inspects the local network attachment of the operator's
-// machine and manipulates it when a segmentation technique needs to.
+// Package netif inspects the local network attachment of the operator's machine and
+// manipulates it when a segmentation technique needs to.
 //
 // It has three jobs:
 //
@@ -11,9 +11,9 @@
 //   - track every change so RestoreAll undoes all of it, including on
 //     cancellation or panic.
 //
-// Everything that talks to the kernel lives in a //go:build linux file; the
-// //go:build !linux stubs return engine.ErrUnsupported so the tree still
-// compiles (and the pure parsing/decoding logic is still testable) on darwin.
+// Everything that talks to the kernel lives in a //go:build linux file; the //go:build
+// !linux stubs return engine.ErrUnsupported so the tree still compiles (and the pure
+// parsing/decoding logic is still testable) on darwin.
 package netif
 
 import (
@@ -30,8 +30,8 @@ import (
 // errUnsupported is engine.ErrUnsupported, returned by the !linux stubs.
 var errUnsupported = engine.ErrUnsupported
 
-// errNeedPrivileges is engine.ErrNeedPrivileges, returned when a netlink or
-// AF_PACKET operation fails with EPERM/EACCES.
+// errNeedPrivileges is engine.ErrNeedPrivileges, returned when a netlink or AF_PACKET
+// operation fails with EPERM/EACCES.
 var errNeedPrivileges = engine.ErrNeedPrivileges
 
 // Inspector implements engine.NetInspector. Use New.
@@ -53,13 +53,12 @@ func orDiscard(log *slog.Logger) *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError}))
 }
 
-// ---------------------------------------------------------------------------
-// VLAN naming helpers
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- VLAN naming
+// helpers ---------------------------------------------------------------------------
 
-// VLANName is the conventional name of the 802.1Q sub-interface carrying
-// vlanID on parent ("eth0" + 20 -> "eth0.20"). Linux limits interface names to
-// IFNAMSIZ-1 = 15 bytes, so a long parent name is truncated to make room.
+// VLANName is the conventional name of the 802.1Q sub-interface carrying vlanID on parent
+// ("eth0" + 20 -> "eth0.20"). Linux limits interface names to IFNAMSIZ-1 = 15 bytes, so a
+// long parent name is truncated to make room.
 func VLANName(parent string, vlanID int) string {
 	suffix := "." + strconv.Itoa(vlanID)
 	const maxLen = 15
@@ -73,8 +72,8 @@ func VLANName(parent string, vlanID int) string {
 	return parent + suffix
 }
 
-// ParseVLANName splits an "eth0.20" style sub-interface name. ok is false when
-// name does not look like an 802.1Q sub-interface.
+// ParseVLANName splits an "eth0.20" style sub-interface name. ok is false when name does
+// not look like an 802.1Q sub-interface.
 func ParseVLANName(name string) (parent string, vlanID int, ok bool) {
 	i := strings.LastIndexByte(name, '.')
 	if i <= 0 || i == len(name)-1 {
@@ -87,13 +86,12 @@ func ParseVLANName(name string) (parent string, vlanID int, ok bool) {
 	return name[:i], id, true
 }
 
-// ValidVLANID reports whether id is a usable 802.1Q VLAN identifier.
-// 0 (priority tagging) and 4095 (reserved) are rejected.
+// ValidVLANID reports whether id is a usable 802.1Q VLAN identifier. 0 (priority tagging)
+// and 4095 (reserved) are rejected.
 func ValidVLANID(id int) bool { return id >= 1 && id <= 4094 }
 
-// ---------------------------------------------------------------------------
-// Prefix helpers
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Prefix
+// helpers ---------------------------------------------------------------------------
 
 // PrefixesContain reports whether any prefix contains ip.
 func PrefixesContain(prefixes []netip.Prefix, ip netip.Addr) bool {
@@ -106,9 +104,9 @@ func PrefixesContain(prefixes []netip.Prefix, ip netip.Addr) bool {
 	return false
 }
 
-// HostInPrefix returns the n-th host address of p counting from the network
-// address (n == 1 is the usual router address). For IPv4 it refuses the
-// network and broadcast addresses of prefixes shorter than /31.
+// HostInPrefix returns the n-th host address of p counting from the network address (n ==
+// 1 is the usual router address). For IPv4 it refuses the network and broadcast addresses
+// of prefixes shorter than /31.
 func HostInPrefix(p netip.Prefix, n int) (netip.Addr, bool) {
 	if !p.IsValid() || n < 0 {
 		return netip.Addr{}, false
@@ -129,9 +127,9 @@ func HostInPrefix(p netip.Prefix, n int) (netip.Addr, bool) {
 	return addr, true
 }
 
-// HostFromEnd returns the n-th host address counting backwards from the end of
-// p (n == 0 is the last address, which for IPv4 is the broadcast address and is
-// therefore rejected for prefixes shorter than /31).
+// HostFromEnd returns the n-th host address counting backwards from the end of p (n == 0
+// is the last address, which for IPv4 is the broadcast address and is therefore rejected
+// for prefixes shorter than /31).
 func HostFromEnd(p netip.Prefix, n int) (netip.Addr, bool) {
 	if !p.IsValid() || n < 0 {
 		return netip.Addr{}, false

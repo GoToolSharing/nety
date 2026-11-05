@@ -98,7 +98,11 @@ export default function OverviewPage() {
         actions={
           canWrite && (
             <>
-              <LinkButton to={`${base}/networks`} variant="secondary" icon={<NetworkIcon />}>
+              <LinkButton
+                to={`${base}/networks`}
+                variant="secondary"
+                icon={<NetworkIcon />}
+              >
                 Networks
               </LinkButton>
               <LinkButton to={`${base}/scans/new`} variant="primary" icon={<PlusIcon />}>
@@ -120,7 +124,7 @@ export default function OverviewPage() {
           <EmptyState
             icon={<NetworkIcon width={20} height={20} />}
             title="Create a network for the VLAN you are plugged into"
-            description="A network records the segment you are attached to - its interface, addressing, gateway, DNS and the passive L2 recon of the switch port. Everything else in the mission hangs off it."
+            description="A network records the segment you are attached to: its interface, addressing, gateway, DNS and the passive L2 recon of the switch port. Everything else in the mission hangs off it."
             action={
               canWrite && (
                 <LinkButton to={`${base}/networks`} variant="primary" icon={<PlusIcon />}>
@@ -139,9 +143,9 @@ export default function OverviewPage() {
               icon={<TrunkIcon />}
               title={`${trunkNetworks.length} port${trunkNetworks.length > 1 ? 's' : ''} negotiate${trunkNetworks.length > 1 ? '' : 's'} trunking (DTP)`}
             >
-              {trunkNetworks.map((n) => n.name).join(', ')} - a port that offers DTP lets an
-              attacker become a trunk and reach every VLAN it carries. This is a finding in
-              itself.{' '}
+              {trunkNetworks.map((n) => n.name).join(', ')}, a port that offers DTP lets
+              an attacker become a trunk and reach every VLAN it carries. This is a
+              finding in itself.{' '}
               <Link to={`${base}/networks`} className="underline underline-offset-2">
                 Review the L2 recon
               </Link>
@@ -149,16 +153,28 @@ export default function OverviewPage() {
           )}
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Networks" value={nets.length} sub={`${scanList.length} scans run`} />
+            <Stat
+              label="Networks"
+              value={nets.length}
+              sub={`${scanList.length} scans run`}
+            />
             <Stat
               label="Hosts"
               value={hostCount ?? 0}
-              sub={summary.data?.services ? `${formatNumber(summary.data.services)} services` : undefined}
+              sub={
+                summary.data?.services
+                  ? `${formatNumber(summary.data.services)} services`
+                  : undefined
+              }
             />
             <Stat
               label="Findings"
               value={summary.data?.findings ?? findingList.length}
-              tone={(severityCounts.critical ?? 0) + (severityCounts.high ?? 0) > 0 ? 'crit' : 'default'}
+              tone={
+                (severityCounts.critical ?? 0) + (severityCounts.high ?? 0) > 0
+                  ? 'crit'
+                  : 'default'
+              }
               sub={
                 <span className="flex flex-wrap gap-1">
                   {SEVERITIES.filter((s) => (severityCounts[s] ?? 0) > 0).map((s) => (
@@ -257,7 +273,7 @@ export default function OverviewPage() {
                                   striped={s.status === 'running'}
                                   label={`Scan ${s.id} progress`}
                                 />
-                                <div className="mt-1 text-right text-[11px] tabular text-faint">
+                                <div className="tabular mt-1 text-right text-[11px] text-faint">
                                   {formatPercent(s.progress)}
                                 </div>
                               </div>
@@ -300,7 +316,10 @@ export default function OverviewPage() {
                       return (
                         <tr key={n.id}>
                           <td className="font-medium">
-                            <Link to={`${base}/networks#network-${n.id}`} className="hover:underline">
+                            <Link
+                              to={`${base}/networks#network-${n.id}`}
+                              className="hover:underline"
+                            >
                               {n.name}
                             </Link>
                           </td>
@@ -308,7 +327,9 @@ export default function OverviewPage() {
                           <td className="font-mono text-[12px] text-muted">
                             {(n.prefixes ?? []).join(', ') || '-'}
                           </td>
-                          <td className="tabular text-right">{formatNumber(hostsHere)}</td>
+                          <td className="tabular text-right">
+                            {formatNumber(hostsHere)}
+                          </td>
                           <td>
                             {n.l2?.dtp_seen ? (
                               <Badge tone="crit">DTP / trunk</Badge>
@@ -343,8 +364,8 @@ export default function OverviewPage() {
             {topFindings.length === 0 ? (
               <CardBody>
                 <p className="text-sm text-muted">
-                  No finding yet. Checks run as part of a discovery scan when “Light checks” is
-                  enabled.
+                  No finding yet. Checks run as part of a discovery scan when “Light
+                  checks” is enabled.
                 </p>
               </CardBody>
             ) : (
@@ -384,8 +405,6 @@ export default function OverviewPage() {
               </div>
             )}
           </Card>
-
-
         </>
       )}
     </PageContainer>

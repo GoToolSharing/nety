@@ -84,8 +84,8 @@ func challengeMsg() []byte {
 	return append(b, ti...)
 }
 
-// fakeServer is a scripted SMB2 server: it answers each command with the
-// handler output; the bool return closes the connection.
+// fakeServer is a scripted SMB2 server: it answers each command with the handler output;
+// the bool return closes the connection.
 type fakeServer struct {
 	t        *testing.T
 	pipeData []byte

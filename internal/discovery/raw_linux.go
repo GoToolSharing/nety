@@ -23,8 +23,8 @@ import (
 
 const rawSupported = true
 
-// Probe source ports (outside Linux's default ephemeral range so they never
-// collide with kernel sockets).
+// Probe source ports (outside Linux's default ephemeral range so they never collide with
+// kernel sockets).
 const (
 	rawPortBase = 61000
 	rawPortSpan = 4096
@@ -70,12 +70,12 @@ func (r *rawDisc) tsNow() uint32 { return uint32(time.Since(r.start) / time.Micr
 //     case their MAC is learnt (on-link hosts that do not answer ARP cannot
 //     receive IP probes either and are considered down);
 //  2. every other target (and on-link hosts when arp is disabled) gets a
-//     burst of IP probes - ICMP echo + timestamp, TCP SYN on TCPPorts, TCP
-//     ACK, UDP payloads - sent through the gateway's MAC. Hosts are visited
+//     burst of IP probes (ICMP echo + timestamp, TCP SYN on TCPPorts, TCP
+//     ACK, UDP payloads) sent through the gateway's MAC. Hosts are visited
 //     in a keyed random permutation and probes are rate limited.
 //
-// Replies are validated statelessly with keyed cookies (TCP sequence / ACK
-// numbers, ICMP identifier, UDP source port).
+// Replies are validated statelessly with keyed cookies (TCP sequence / ACK numbers, ICMP
+// identifier, UDP source port).
 func (d *Discoverer) discoverRaw(ctx context.Context, cfg *config, col *collector, log *slog.Logger) error {
 	router, err := rawnet.NewRouter(cfg.iface)
 	if err != nil {
@@ -100,8 +100,7 @@ func (d *Discoverer) discoverRaw(ctx context.Context, cfg *config, col *collecto
 	seed := rand.Uint64()
 	perm := rawnet.NewPermutation(n, seed)
 
-	// Pass 0: classify targets per egress interface (in-process LPM; no I/O
-	// per address).
+	// Pass 0: classify targets per egress interface (in-process LPM; no I/O per address).
 	onLink := map[int]int{}
 	var routed, noRoute uint64
 	for i := uint64(0); i < n; i++ {
@@ -357,8 +356,8 @@ func (r *rawDisc) l2For(ctx context.Context, p rawnet.Path, dst netip.Addr) (raw
 	return rawnet.L2{SrcMAC: e.ifi.HardwareAddr, DstMAC: m}, src, true
 }
 
-// buildProbes returns the frames of one host burst. Frames are copied
-// because FrameBuilder reuses its buffer.
+// buildProbes returns the frames of one host burst. Frames are copied because
+// FrameBuilder reuses its buffer.
 func (r *rawDisc) buildProbes(fb *rawnet.FrameBuilder, l2 rawnet.L2, src, dst netip.Addr, round int) [][]byte {
 	var out [][]byte
 	keep := func(f []byte, err error) {
@@ -493,9 +492,9 @@ func (r *rawDisc) classify(p *rawnet.Packet) (string, time.Duration, bool) {
 	return "", 0, false
 }
 
-// macLookup returns a resolver of MAC addresses from the kernel neighbour
-// table, used to enrich hosts found by the unprivileged engine (netlink
-// dumps need no privilege). The table is re-read at most once a second.
+// macLookup returns a resolver of MAC addresses from the kernel neighbour table, used to
+// enrich hosts found by the unprivileged engine (netlink dumps need no privilege). The
+// table is re-read at most once a second.
 func (d *Discoverer) macLookup() func(netip.Addr) net.HardwareAddr {
 	var (
 		mu     sync.Mutex

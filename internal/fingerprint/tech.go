@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// techRule is a lightweight technology signature. A rule matches when any of
-// its non-empty conditions matches (OR semantics).
+// techRule is a lightweight technology signature. A rule matches when any of its
+// non-empty conditions matches (OR semantics).
 type techRule struct {
 	name   string
 	header map[string]*regexp.Regexp // canonical header name -> regexp on value

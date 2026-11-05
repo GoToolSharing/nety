@@ -6,8 +6,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// kindFacts is a normalized view of what is known about a host, used by the
-// kind inference rules.
+// kindFacts is a normalized view of what is known about a host, used by the kind
+// inference rules.
 type kindFacts struct {
 	tcp, udp map[int]bool
 	names    map[string]bool // lowercase service names
@@ -127,8 +127,8 @@ var (
 	winClientText  = []string{"windows 10", "windows 11", "windows 7", "windows 8", "windows xp", "windows vista"}
 )
 
-// InferKind guesses the asset kind from open services, identity evidence
-// and the MAC vendor. It is a pure, deterministic function.
+// InferKind guesses the asset kind from open services, identity evidence and the MAC
+// vendor. It is a pure, deterministic function.
 func InferKind(services []model.Service, ev []model.IdentityEvidence, vendor string) model.AssetKind {
 	f := buildFacts(services, ev, vendor)
 

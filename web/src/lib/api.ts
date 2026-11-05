@@ -174,7 +174,10 @@ function list<T>(v: T[] | null | undefined): T[] {
 export const api = {
   // --- session -------------------------------------------------------------
   login: (username: string, password: string) =>
-    request<SessionInfo>('api/auth/login', { method: 'POST', body: { username, password } }),
+    request<SessionInfo>('api/auth/login', {
+      method: 'POST',
+      body: { username, password },
+    }),
   logout: () => request<void>('api/auth/logout', { method: 'POST' }),
   me: () => request<SessionInfo>('api/auth/me'),
   changePassword: (current_password: string, new_password: string) =>
@@ -209,7 +212,8 @@ export const api = {
     request<Mission>('api/missions', { method: 'POST', body }),
   patchMission: (id: number, body: Partial<MissionInput>) =>
     request<Mission>(`api/missions/${id}`, { method: 'PATCH', body }),
-  deleteMission: (id: number) => request<void>(`api/missions/${id}`, { method: 'DELETE' }),
+  deleteMission: (id: number) =>
+    request<void>(`api/missions/${id}`, { method: 'DELETE' }),
   // The mission name has to be typed back, so the server refuses a reset that
   // was fired from the wrong tab.
   resetMission: (id: number, confirm: string) =>
@@ -220,9 +224,10 @@ export const api = {
   // The handler answers the people as well as their ids: listing every account
   // is admin-only, so an operator needs the names to come back with the ids.
   missionMembers: async (id: number) => {
-    const r = await request<{ user_ids: number[] | null; members: MissionMember[] | null }>(
-      `api/missions/${id}/members`,
-    )
+    const r = await request<{
+      user_ids: number[] | null
+      members: MissionMember[] | null
+    }>(`api/missions/${id}/members`)
     return { ids: list(r.user_ids), members: list(r.members) }
   },
   setMissionMembers: (id: number, user_ids: number[]) =>
@@ -237,7 +242,8 @@ export const api = {
   network: (id: number) => request<Network>(`api/networks/${id}`),
   patchNetwork: (id: number, body: Partial<NetworkInput>) =>
     request<Network>(`api/networks/${id}`, { method: 'PATCH', body }),
-  deleteNetwork: (id: number) => request<void>(`api/networks/${id}`, { method: 'DELETE' }),
+  deleteNetwork: (id: number) =>
+    request<void>(`api/networks/${id}`, { method: 'DELETE' }),
   interfaces: async () => list(await request<InterfaceInfo[] | null>('api/interfaces')),
   detectNetwork: (iface?: string) =>
     request<Network>('api/networks/detect', {
@@ -283,7 +289,9 @@ export const api = {
    * listing in SQL, not the rows that happen to be on screen.
    */
   hosts: async (missionId: number, params: ListParams = {}) =>
-    list(await request<Host[] | null>(`api/missions/${missionId}/hosts`, { query: params })),
+    list(
+      await request<Host[] | null>(`api/missions/${missionId}/hosts`, { query: params }),
+    ),
   host: (id: number) => request<HostDetail>(`api/hosts/${id}`),
 
   /** Record a status, a note, or both on one address. */
@@ -347,7 +355,12 @@ export const api = {
       /** Show the findings of hosts the operator has skipped. */
       include_skipped?: boolean
     } = {},
-  ) => list(await request<Finding[] | null>(`api/missions/${missionId}/findings`, { query: params })),
+  ) =>
+    list(
+      await request<Finding[] | null>(`api/missions/${missionId}/findings`, {
+        query: params,
+      }),
+    ),
   finding: (id: number) => request<Finding>(`api/findings/${id}`),
 
   /** Record a status, a note, or both. A field left out is left alone. */
@@ -362,7 +375,11 @@ export const api = {
     ),
 
   assets: async (missionId: number, params: ListParams = {}) =>
-    list(await request<Asset[] | null>(`api/missions/${missionId}/assets`, { query: params })),
+    list(
+      await request<Asset[] | null>(`api/missions/${missionId}/assets`, {
+        query: params,
+      }),
+    ),
   asset: (id: number) => request<Asset>(`api/assets/${id}`),
   patchAsset: (id: number, body: AssetPatch) =>
     request<Asset>(`api/assets/${id}`, { method: 'PATCH', body }),

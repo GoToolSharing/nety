@@ -15,21 +15,20 @@ import (
 	"github.com/GoToolSharing/nety/internal/engine"
 )
 
-// Netlink-backed system mutations used by the segmentation techniques. Every
-// one of them registers an undo action with the tracker (see track.go), so
-// netif.RestoreAll() puts the machine back exactly as it was.
+// Netlink-backed system mutations used by the segmentation techniques. Every one of them
+// registers an undo action with the tracker (see track.go), so netif.RestoreAll() puts
+// the machine back exactly as it was.
 
-// AddVLAN creates an 802.1Q sub-interface carrying vlanID on parent and brings
-// it up. It returns the sub-interface name. If the sub-interface already
-// exists it is reused and NOT registered for deletion (NETY never removes an
-// interface it did not create).
+// AddVLAN creates an 802.1Q sub-interface carrying vlanID on parent and brings it up. It
+// returns the sub-interface name. If the sub-interface already exists it is reused and
+// NOT registered for deletion (NETY never removes an interface it did not create).
 func AddVLAN(parent string, vlanID int) (string, error) {
 	if !ValidVLANID(vlanID) {
 		return "", fmt.Errorf("netif: invalid VLAN id %d", vlanID)
 	}
-	// A station associated to an access point cannot send 802.1Q-tagged
-	// frames: the AP does not forward them. Say so plainly instead of letting
-	// the driver fail later with an errno the operator cannot act on.
+	// A station associated to an access point cannot send 802.1Q-tagged frames: the AP
+	// does not forward them. Say so plainly instead of letting the driver fail later with
+	// an errno the operator cannot act on.
 	if IsWireless(parent) {
 		return "", fmt.Errorf("netif: %q is a Wi-Fi interface: %w", parent, engine.ErrWirelessUnsupported)
 	}
@@ -67,9 +66,8 @@ func AddVLAN(parent string, vlanID int) (string, error) {
 	return name, nil
 }
 
-// DeleteVLAN removes a sub-interface created by AddVLAN. Deleting a link also
-// drops its addresses and routes, so the tracker entries for those become
-// no-ops.
+// DeleteVLAN removes a sub-interface created by AddVLAN. Deleting a link also drops its
+// addresses and routes, so the tracker entries for those become no-ops.
 func DeleteVLAN(name string) error {
 	l, err := netlink.LinkByName(name)
 	if err != nil {
@@ -89,8 +87,8 @@ func DeleteVLAN(name string) error {
 	return nil
 }
 
-// SetLinkUp brings iface up. It restores the previous administrative state on
-// cleanup when NETY was the one that brought it up.
+// SetLinkUp brings iface up. It restores the previous administrative state on cleanup
+// when NETY was the one that brought it up.
 func SetLinkUp(iface string) error {
 	l, err := netlink.LinkByName(iface)
 	if err != nil {
@@ -166,12 +164,12 @@ func netlinkAddr(p netip.Prefix) (*netlink.Addr, error) {
 	return &netlink.Addr{IPNet: ipnet}, nil
 }
 
-// AddRoute installs a route to dst via the next hop `via` on iface and
-// registers its removal. `via` may be invalid for an on-link (dev) route;
-// iface may be empty when `via` alone determines the egress interface.
+// AddRoute installs a route to dst via the next hop `via` on iface and registers its
+// removal. `via` may be invalid for an on-link (dev) route; iface may be empty when `via`
+// alone determines the egress interface.
 //
-// The route is added with a high metric and the RTPROT_STATIC protocol so it
-// is easy to recognise in `ip route` output during an engagement.
+// The route is added with a high metric and the RTPROT_STATIC protocol so it is easy to
+// recognise in `ip route` output during an engagement.
 func AddRoute(dst netip.Prefix, via netip.Addr, iface string) error {
 	r, err := buildRoute(dst, via, iface)
 	if err != nil {
@@ -190,8 +188,7 @@ func AddRoute(dst netip.Prefix, via netip.Addr, iface string) error {
 	return nil
 }
 
-// DelRoute removes a route previously added by AddRoute. A missing route is
-// not an error.
+// DelRoute removes a route previously added by AddRoute. A missing route is not an error.
 func DelRoute(dst netip.Prefix, via netip.Addr, iface string) error {
 	r, err := buildRoute(dst, via, iface)
 	if err != nil {
@@ -207,8 +204,8 @@ func DelRoute(dst netip.Prefix, via netip.Addr, iface string) error {
 	return nil
 }
 
-// NetyRouteMetric is the metric NETY installs its temporary routes with: high
-// enough to never win over a legitimate route to the same prefix.
+// NetyRouteMetric is the metric NETY installs its temporary routes with: high enough to
+// never win over a legitimate route to the same prefix.
 const NetyRouteMetric = 2048
 
 func buildRoute(dst netip.Prefix, via netip.Addr, iface string) (*netlink.Route, error) {
@@ -247,14 +244,14 @@ func buildRoute(dst netip.Prefix, via netip.Addr, iface string) (*netlink.Route,
 	return r, nil
 }
 
-// HasRoute reports whether the routing table already has a route to ip that
-// is more specific than the default route.
+// HasRoute reports whether the routing table already has a route to ip that is more
+// specific than the default route.
 //
-// The distinction matters: RouteGet resolves successfully for any address as
-// soon as a default route exists, which is essentially always. Treating that
-// as "a route already exists" made the route-based segmentation techniques
-// skip installing their route and silently degrade into a plain direct test,
-// while still being reported under their own technique name.
+// The distinction matters: RouteGet resolves successfully for any address as soon as a
+// default route exists, which is essentially always. Treating that as "a route already
+// exists" made the route-based segmentation techniques skip installing their route and
+// silently degrade into a plain direct test, while still being reported under their own
+// technique name.
 func HasRoute(ip netip.Addr) bool {
 	routes, err := netlink.RouteGet(ip.Unmap().AsSlice())
 	if err != nil || len(routes) == 0 {
@@ -273,8 +270,8 @@ func HasRoute(ip netip.Addr) bool {
 	return false
 }
 
-// mapPermErr turns EPERM/EACCES into engine.ErrNeedPrivileges so the UI can
-// tell the operator to grant CAP_NET_ADMIN instead of showing a raw errno.
+// mapPermErr turns EPERM/EACCES into engine.ErrNeedPrivileges so the UI can tell the
+// operator to grant CAP_NET_ADMIN instead of showing a raw errno.
 func mapPermErr(err error) error {
 	if errors.Is(err, os.ErrPermission) || errors.Is(err, unix.EPERM) || errors.Is(err, unix.EACCES) {
 		return fmt.Errorf("%w (%v)", errNeedPrivileges, err)

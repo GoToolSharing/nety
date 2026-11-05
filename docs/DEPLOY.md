@@ -432,27 +432,27 @@ the client's network.
 
 ## Troubleshooting
 
-**"raw sockets are not available" / Unprivileged badge** - capabilities are
+**"raw sockets are not available" / Unprivileged badge**: capabilities are
 missing. `getcap /usr/local/bin/nety`, install `libcap2-bin`, re-run the
 installer. Scanning still works in connect mode, slower and without ARP or
 layer-2 recon.
 
-**A scan is stuck in `running` after a crash** - it is not. Restart the
+**A scan is stuck in `running` after a crash**: it is not. Restart the
 service: interrupted scans are moved to *paused* at startup and the in-flight
 work units are returned to the queue. Press Resume.
 
-**"no target to scan"** - the network has no prefix recorded and automatic
+**"no target to scan"**: the network has no prefix recorded and automatic
 targets was on with nothing else given. Edit the network's prefixes, or give
 explicit targets in the scan form.
 
-**Everything comes back filtered from one VLAN** - check you are actually on
+**Everything comes back filtered from one VLAN**: check you are actually on
 that VLAN (`ip -4 addr`), that the gateway answers, and whether the client has
 host isolation on that segment. That last one is a real finding, not a bug.
 
-**A segmentation scan says nothing to test** - segmentation replays services
+**A segmentation scan says nothing to test**: segmentation replays services
 discovered elsewhere, so at least one *other* network needs a completed
 discovery scan first.
 
-**The browser refuses the certificate** - expected, it is self-signed. Compare
+**The browser refuses the certificate**: expected, it is self-signed. Compare
 the fingerprint with `journalctl -u nety | grep sha256`. To use a real
 certificate: `--tls-cert /path/cert.pem --tls-key /path/key.pem`.

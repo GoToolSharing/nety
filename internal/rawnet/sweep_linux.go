@@ -15,10 +15,10 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-// Neighbors resolves IP -> MAC on directly connected segments for the
-// scanners. It caches answers, seeds itself from the kernel neighbour table
-// (netlink), and actively resolves with ARP (IPv4) or ICMPv6 Neighbor
-// Solicitation (IPv6) over its own packet socket. Safe for concurrent use.
+// Neighbors resolves IP -> MAC on directly connected segments for the scanners. It caches
+// answers, seeds itself from the kernel neighbour table (netlink), and actively resolves
+// with ARP (IPv4) or ICMPv6 Neighbor Solicitation (IPv6) over its own packet socket. Safe
+// for concurrent use.
 type Neighbors struct {
 	log *slog.Logger
 
@@ -53,8 +53,7 @@ func (n *Neighbors) Set(ip netip.Addr, mac net.HardwareAddr) {
 	n.mu.Unlock()
 }
 
-// Seed loads the kernel neighbour table of ifi into the cache (once per
-// interface).
+// Seed loads the kernel neighbour table of ifi into the cache (once per interface).
 func (n *Neighbors) Seed(ifi *net.Interface) {
 	n.mu.Lock()
 	if n.seeded[ifi.Index] {
@@ -81,8 +80,8 @@ func (n *Neighbors) Seed(ifi *net.Interface) {
 	}
 }
 
-// Resolve returns the MAC of one on-link neighbour, probing actively when it
-// is not cached.
+// Resolve returns the MAC of one on-link neighbour, probing actively when it is not
+// cached.
 func (n *Neighbors) Resolve(ctx context.Context, ifi *net.Interface, src, ip netip.Addr, timeout time.Duration) (net.HardwareAddr, error) {
 	ip = ip.Unmap()
 	n.Seed(ifi)
@@ -108,10 +107,10 @@ func (n *Neighbors) Resolve(ctx context.Context, ifi *net.Interface, src, ip net
 	return nil, fmt.Errorf("rawnet: no neighbour answer for %s on %s", ip, ifi.Name)
 }
 
-// Sweep sends ARP requests (IPv4 targets) / neighbour solicitations (IPv6
-// targets) to every target, retrying unanswered ones, and caches answers.
-// OnReply is called once per answering IP from a single goroutine. A
-// cancelled ctx stops the sweep and returns nil (callers check ctx).
+// Sweep sends ARP requests (IPv4 targets) / neighbour solicitations (IPv6 targets) to
+// every target, retrying unanswered ones, and caches answers. OnReply is called once per
+// answering IP from a single goroutine. A cancelled ctx stops the sweep and returns nil
+// (callers check ctx).
 func (n *Neighbors) Sweep(ctx context.Context, opts SweepOptions) error {
 	if opts.Ifi == nil || opts.Targets == nil {
 		return errors.New("rawnet: sweep needs an interface and targets")

@@ -47,8 +47,8 @@ func tdsPacket(typ byte, payload []byte) []byte {
 	return append(b, payload...)
 }
 
-// tdsReadMessage reads TDS packets until EOM (bounded) and returns the type
-// and concatenated payload.
+// tdsReadMessage reads TDS packets until EOM (bounded) and returns the type and
+// concatenated payload.
 func tdsReadMessage(r io.Reader) (byte, []byte, error) {
 	var out []byte
 	var typ byte
@@ -224,8 +224,8 @@ func tdsLoginResult(b []byte) (ok bool, errMsg string) {
 	return ok, errMsg
 }
 
-// tdsTLSShim carries TLS handshake records inside TDS PRELOGIN packets, as
-// required by MS-TDS; once the handshake is done, records go on the wire raw.
+// tdsTLSShim carries TLS handshake records inside TDS PRELOGIN packets, as required by
+// MS-TDS; once the handshake is done, records go on the wire raw.
 type tdsTLSShim struct {
 	net.Conn
 	handshake bool
@@ -265,8 +265,8 @@ func (s *tdsTLSShim) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-// mssqlLogin performs PRELOGIN + (optional TLS) + LOGIN7 on a fresh
-// connection. It returns the prelogin info and the login outcome.
+// mssqlLogin performs PRELOGIN + (optional TLS) + LOGIN7 on a fresh connection. It
+// returns the prelogin info and the login outcome.
 func mssqlLogin(ctx context.Context, t *Target, user, password string, enc byte) (tdsPreloginInfo, bool, string, error) {
 	var info tdsPreloginInfo
 	c, err := t.Dial(ctx)

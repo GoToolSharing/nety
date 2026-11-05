@@ -38,9 +38,9 @@ func TestInlineScriptHashesHandlesMissingIndex(t *testing.T) {
 	}
 }
 
-// TestCSPAllowsTheRealIndexScripts is the regression test for a live bug: the
-// policy was blocking the SPA's theme bootstrap, which runs inline before the
-// first paint. Any inline script the built index.html carries must be covered.
+// TestCSPAllowsTheRealIndexScripts is the regression test for a live bug: the policy was
+// blocking the SPA's theme bootstrap, which runs inline before the first paint. Any
+// inline script the built index.html carries must be covered.
 func TestCSPAllowsTheRealIndexScripts(t *testing.T) {
 	root, err := webRoot()
 	if err != nil {

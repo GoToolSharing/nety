@@ -82,13 +82,16 @@ export default function LoginPage() {
             'linear-gradient(rgb(var(--c-border)) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--c-border)) 1px, transparent 1px)',
           backgroundSize: '48px 48px',
           maskImage: 'radial-gradient(ellipse at center, black 10%, transparent 70%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at center, black 10%, transparent 70%)',
+          WebkitMaskImage:
+            'radial-gradient(ellipse at center, black 10%, transparent 70%)',
         }}
       />
 
       <div className="absolute right-4 top-4">
         <IconButton
-          label={theme === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme'}
+          label={
+            theme === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme'
+          }
           onClick={toggle}
         >
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
@@ -131,7 +134,13 @@ export default function LoginPage() {
             error={error && !password ? 'Required' : null}
           />
 
-          <Button type="submit" variant="primary" size="lg" className="w-full" loading={busy}>
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            className="w-full"
+            loading={busy}
+          >
             Sign in
           </Button>
         </form>

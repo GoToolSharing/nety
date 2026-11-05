@@ -11,8 +11,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// MatchThreshold is the minimum score for an observation to be attached to
-// an existing asset.
+// MatchThreshold is the minimum score for an observation to be attached to an existing
+// asset.
 const MatchThreshold = 70
 
 // Key weights (0..100): how much a single matching key proves identity.
@@ -32,8 +32,8 @@ const (
 	wFavicon      = 5
 	wSameIP       = 20
 
-	// contradictionPenalty is subtracted per strong key kind present on both
-	// sides with disjoint values.
+	// contradictionPenalty is subtracted per strong key kind present on both sides with
+	// disjoint values.
 	contradictionPenalty = 50
 )
 
@@ -53,8 +53,8 @@ type obsKey struct {
 	nbstat bool // MAC learned from NBSTAT
 }
 
-// normalize canonicalizes a key value for comparison. It returns "" for
-// values that must be ignored.
+// normalize canonicalizes a key value for comparison. It returns "" for values that must
+// be ignored.
 func normalize(kind model.EvidenceKind, v string) string {
 	v = strings.TrimSpace(v)
 	if v == "" {
@@ -77,8 +77,8 @@ func normalize(kind model.EvidenceKind, v string) string {
 	}
 }
 
-// canonicalMAC returns "aa:bb:cc:dd:ee:ff" for any common MAC notation, or
-// "" when the input is not a valid unicast, non-zero 48-bit MAC.
+// canonicalMAC returns "aa:bb:cc:dd:ee:ff" for any common MAC notation, or "" when the
+// input is not a valid unicast, non-zero 48-bit MAC.
 func canonicalMAC(s string) string {
 	var hex []byte
 	for i := 0; i < len(s); i++ {
@@ -180,8 +180,8 @@ func observationKeys(obs model.HostObservation) []obsKey {
 	return keys
 }
 
-// scale applies the evidence confidence to a key weight. Confidence >= 80
-// counts as full weight.
+// scale applies the evidence confidence to a key weight. Confidence >= 80 counts as full
+// weight.
 func scale(weight, conf int) float64 {
 	if conf >= 80 || conf <= 0 {
 		return float64(weight)
@@ -307,8 +307,8 @@ func scoreAsset(a model.Asset, obs model.HostObservation, keys []obsKey) candida
 		}
 	}
 
-	// Name family: FQDN / NetBIOS pair / short hostname / reverse DNS. These
-	// carry the same information, so only the best one counts.
+	// Name family: FQDN / NetBIOS pair / short hostname / reverse DNS. These carry the
+	// same information, so only the best one counts.
 	nameW, nameReason := 0.0, ""
 	consider := func(w float64, reason string) {
 		if w > nameW {
@@ -368,8 +368,8 @@ func scoreAsset(a model.Asset, obs model.HostObservation, keys []obsKey) candida
 			continue
 		}
 		if kind == model.EvMAC {
-			// Multi-homed hosts have several NICs: a different MAC is only
-			// a contradiction when no strong key confirms the identity.
+			// Multi-homed hosts have several NICs: a different MAC is only a
+			// contradiction when no strong key confirms the identity.
 			if strongMatched {
 				continue
 			}
@@ -414,8 +414,8 @@ func scoreAsset(a model.Asset, obs model.HostObservation, keys []obsKey) candida
 	return c
 }
 
-// Resolve decides which existing asset the observation belongs to and returns
-// the merged asset. Pure and deterministic.
+// Resolve decides which existing asset the observation belongs to and returns the merged
+// asset. Pure and deterministic.
 func (correlator) Resolve(existing []model.Asset, obs model.HostObservation) model.AssetDecision {
 	keys := observationKeys(obs)
 

@@ -49,8 +49,8 @@ func murmur3_32(data []byte, seed uint32) uint32 {
 	return h
 }
 
-// base64MIME mimics Python's base64.encodebytes: standard alphabet, a "\n"
-// after every 76 characters and at the end.
+// base64MIME mimics Python's base64.encodebytes: standard alphabet, a "\n" after every 76
+// characters and at the end.
 func base64MIME(b []byte) []byte {
 	if len(b) == 0 {
 		return nil

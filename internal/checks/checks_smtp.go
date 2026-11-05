@@ -46,9 +46,9 @@ func smtpApplies(t *Target) bool {
 	return svcIs(t.Service, model.TCP, []string{"smtp", "smtps", "submission", "ssmtp"}, 25, 465, 587, 2525)
 }
 
-// smtpSession is a line oriented SMTP client that only ever issues the
-// commands below. DATA is never sent by any check here, which is what
-// guarantees no mail can leave the server as a result of a scan.
+// smtpSession is a line oriented SMTP client that only ever issues the commands below.
+// DATA is never sent by any check here, which is what guarantees no mail can leave the
+// server as a result of a scan.
 type smtpSession struct {
 	c       net.Conn
 	r       *bufio.Reader
@@ -59,9 +59,8 @@ type smtpSession struct {
 
 const smtpMaxLine = 2000
 
-// smtpDial opens the session and reads the greeting. Port 465 is implicit
-// TLS; STARTTLS is not negotiated because none of these checks sends anything
-// worth protecting.
+// smtpDial opens the session and reads the greeting. Port 465 is implicit TLS; STARTTLS
+// is not negotiated because none of these checks sends anything worth protecting.
 func smtpDial(ctx context.Context, t *Target) (*smtpSession, error) {
 	raw, err := t.Dial(ctx)
 	if err != nil {
@@ -155,21 +154,21 @@ func (s *smtpSession) hello(name string) error {
 	return nil
 }
 
-// smtpHeloName is the name NETY announces itself with. It is in a reserved
-// domain so it can never be confused with a real host.
+// smtpHeloName is the name NETY announces itself with. It is in a reserved domain so it
+// can never be confused with a real host.
 const smtpHeloName = "nety-scanner.invalid"
 
-// Reserved domains (RFC 2606): no mail can reach them and no real recipient
-// can be affected by the envelope below.
+// Reserved domains (RFC 2606): no mail can reach them and no real recipient can be
+// affected by the envelope below.
 const (
 	smtpRelaySender    = "nety-relay-test@example.com"
 	smtpRelayRecipient = "nety-relay-test@example.net"
 )
 
-// runSMTPOpenRelay offers an envelope from an external sender to an external
-// recipient and reads the answer to RCPT TO. The session is then reset with
-// RSET and closed with QUIT: DATA is never sent, so the server is never given
-// a message and nothing can be delivered.
+// runSMTPOpenRelay offers an envelope from an external sender to an external recipient
+// and reads the answer to RCPT TO. The session is then reset with RSET and closed with
+// QUIT: DATA is never sent, so the server is never given a message and nothing can be
+// delivered.
 func runSMTPOpenRelay(ctx context.Context, t *Target) []model.Finding {
 	s, err := smtpDial(ctx, t)
 	if err != nil {
@@ -191,8 +190,8 @@ func runSMTPOpenRelay(ctx context.Context, t *Target) []model.Finding {
 	if err != nil {
 		return nil
 	}
-	// Whatever the answer, put the session back to a clean state before
-	// leaving. RSET discards the envelope the server has been holding.
+	// Whatever the answer, put the session back to a clean state before leaving. RSET
+	// discards the envelope the server has been holding.
 	_, _, _ = s.cmd("RSET")
 	if rcptCode != 250 && rcptCode != 251 {
 		t.Log.Debug("smtp: relay refused", "code", rcptCode)
@@ -211,15 +210,14 @@ func runSMTPOpenRelay(ctx context.Context, t *Target) []model.Finding {
 	return []model.Finding{t.Finding(ev)}
 }
 
-// smtpVrfyProbes are the names asked about. "root" and "postmaster" exist on
-// almost every mail system, which is the point: the check needs one name that
-// should resolve and one that cannot.
+// smtpVrfyProbes are the names asked about. "root" and "postmaster" exist on almost every
+// mail system, which is the point: the check needs one name that should resolve and one
+// that cannot.
 var smtpVrfyProbes = []string{"root", "postmaster"}
 
-// runSMTPVrfyExpn establishes that VRFY or EXPN really distinguishes accounts
-// rather than answering the same thing to everything. A server that confirms
-// a random name as readily as a real one tells an attacker nothing, so it is
-// not reported.
+// runSMTPVrfyExpn establishes that VRFY or EXPN really distinguishes accounts rather than
+// answering the same thing to everything. A server that confirms a random name as readily
+// as a real one tells an attacker nothing, so it is not reported.
 func runSMTPVrfyExpn(ctx context.Context, t *Target) []model.Finding {
 	s, err := smtpDial(ctx, t)
 	if err != nil {
@@ -274,6 +272,6 @@ func runSMTPVrfyExpn(ctx context.Context, t *Target) []model.Finding {
 	return []model.Finding{t.Finding(ev)}
 }
 
-// smtpConfirms reports whether a reply code confirms the address. 252 is
-// explicitly "cannot verify, will try to deliver" and discloses nothing.
+// smtpConfirms reports whether a reply code confirms the address. 252 is explicitly
+// "cannot verify, will try to deliver" and discloses nothing.
 func smtpConfirms(code int) bool { return code == 250 || code == 251 }

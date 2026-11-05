@@ -11,8 +11,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// ---------------------------------------------------------------------------
-// LDAP anonymous bind
+// --------------------------------------------------------------------------- LDAP
+// anonymous bind
 // ---------------------------------------------------------------------------
 
 // ldapEnum encodes an ENUMERATED result code.
@@ -74,8 +74,8 @@ func readLDAPMessage(c net.Conn) (*ldapMsg, error) {
 	return nil, io.ErrUnexpectedEOF
 }
 
-// ldapServer answers an anonymous bind and serves a rootDSE plus one subtree.
-// bindCode != 0 makes it refuse the anonymous bind.
+// ldapServer answers an anonymous bind and serves a rootDSE plus one subtree. bindCode !=
+// 0 makes it refuse the anonymous bind.
 func ldapServer(t *testing.T, bindCode int, entries []string) int {
 	return fakeServer(t, func(c net.Conn) {
 		bind, err := readLDAPMessage(c)
@@ -166,8 +166,8 @@ func TestLDAPParseMessageHostileInput(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// SNMP default community
+// --------------------------------------------------------------------------- SNMP
+// default community
 // ---------------------------------------------------------------------------
 
 // berLen encodes a definite BER length.
@@ -237,8 +237,8 @@ func berOID(dotted string) []byte {
 	return berTLV(0x06, body)
 }
 
-// snmpParseRequest pulls the community and request id out of a v1/v2c
-// GetRequest, using only bounds-checked TLV reads.
+// snmpParseRequest pulls the community and request id out of a v1/v2c GetRequest, using
+// only bounds-checked TLV reads.
 func snmpParseRequest(b []byte) (version int, community string, reqID []byte, ok bool) {
 	tag, seq, _, err := ntlm.ReadTLV(b)
 	if err != nil || tag != 0x30 {
@@ -341,8 +341,8 @@ func TestSNMPDefaultCommunity(t *testing.T) {
 	})
 }
 
-// TestSNMPCommunityListStaysTiny guards the promise made to the client: NETY
-// does not spray community strings on a live network.
+// TestSNMPCommunityListStaysTiny guards the promise made to the client: NETY does not
+// spray community strings on a live network.
 func TestSNMPCommunityListStaysTiny(t *testing.T) {
 	if len(snmpDefaultCommunities) > 3 {
 		t.Fatalf("%d default communities tried; the check must stay a spot check", len(snmpDefaultCommunities))

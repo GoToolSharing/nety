@@ -6,8 +6,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// A scan killed while its phases were being written finished without doing the
-// work it was asked for. It has to be offered again rather than read as done.
+// A scan killed while its phases were being written finished without doing the work it
+// was asked for. It has to be offered again rather than read as done.
 func TestACompletedScanWithAnUnfinishedPlanIsResumable(t *testing.T) {
 	cases := []struct {
 		name   string

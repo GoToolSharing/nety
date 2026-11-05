@@ -10,10 +10,12 @@ const VARIANTS: Record<Variant, string> = {
     'bg-accent text-accent-fg hover:bg-accent/90 border border-transparent font-semibold',
   secondary:
     'bg-elevated text-fg border border-border hover:border-border-strong hover:bg-border/40',
-  ghost: 'bg-transparent text-muted border border-transparent hover:bg-elevated hover:text-fg',
+  ghost:
+    'bg-transparent text-muted border border-transparent hover:bg-elevated hover:text-fg',
   danger: 'bg-crit text-white border border-transparent hover:bg-crit/90 font-semibold',
   success: 'bg-ok text-accent-fg border border-transparent hover:bg-ok/90 font-semibold',
-  warning: 'bg-warn text-accent-fg border border-transparent hover:bg-warn/90 font-semibold',
+  warning:
+    'bg-warn text-accent-fg border border-transparent hover:bg-warn/90 font-semibold',
 }
 
 const SIZES: Record<Size, string> = {
@@ -60,7 +62,14 @@ export function Spinner({ className }: { className?: string }) {
       fill="none"
       aria-hidden="true"
     >
-      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
+      <circle
+        cx="8"
+        cy="8"
+        r="6.5"
+        stroke="currentColor"
+        strokeOpacity="0.25"
+        strokeWidth="2"
+      />
       <path
         d="M14.5 8A6.5 6.5 0 0 0 8 1.5"
         stroke="currentColor"

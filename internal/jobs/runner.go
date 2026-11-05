@@ -27,8 +27,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/store"
 )
 
-// Engines holds the scanning implementations. A nil engine makes the phases
-// that need it no-ops (logged), so the platform runs with a partial toolset.
+// Engines holds the scanning implementations. A nil engine makes the phases that need it
+// no-ops (logged), so the platform runs with a partial toolset.
 type Engines struct {
 	Discoverer    engine.Discoverer
 	PortScanner   engine.PortScanner
@@ -103,12 +103,11 @@ type Runner struct {
 	sem    chan struct{}
 	wg     sync.WaitGroup
 
-	// segMu serialises the segmentation phase process-wide. The segmentation
-	// engine creates sub-interfaces, addresses and routes on the one machine
-	// we are running on, and tracks them for cleanup per call; two concurrent
-	// callers would tear down each other's state, leaking interfaces and -
-	// worse - turning a reachable service into a "filtered" cell in the
-	// matrix handed to the client.
+	// segMu serialises the segmentation phase process-wide. The segmentation engine
+	// creates sub-interfaces, addresses and routes on the one machine we are running on,
+	// and tracks them for cleanup per call; two concurrent callers would tear down each
+	// other's state, leaking interfaces and, worse, turning a reachable service into a
+	// "filtered" cell in the matrix handed to the client.
 	segMu sync.Mutex
 
 	closed atomic.Bool
@@ -138,9 +137,9 @@ func New(st *store.Store, b *bus.Bus, eng Engines, opts Options, log *slog.Logge
 	}
 }
 
-// Recover is called at startup. Scans that were running when the process died
-// are moved back to paused and their leased work units returned to the queue,
-// so the operator can resume them without losing anything.
+// Recover is called at startup. Scans that were running when the process died are moved
+// back to paused and their leased work units returned to the queue, so the operator can
+// resume them without losing anything.
 func (r *Runner) Recover(ctx context.Context) error {
 	scans, err := r.st.ScansByStatus(ctx, model.ScanRunning)
 	if err != nil {
@@ -176,10 +175,10 @@ func (r *Runner) Start(ctx context.Context, scanID int64) error {
 	case model.ScanRunning:
 		return errors.New("jobs: scan is already running")
 	case model.ScanCompleted:
-		// Completed is not a dead end. "Retry failed units" puts work back in
-		// the queue, and a scan whose plan was cut short by a crash finished
-		// without ever doing the work it was asked for: planning again fills
-		// in the phases it is missing, and only then is there nothing to do.
+		// Completed is not a dead end. "Retry failed units" puts work back in the queue,
+		// and a scan whose plan was cut short by a crash finished without ever doing the
+		// work it was asked for: planning again fills in the phases it is missing, and
+		// only then is there nothing to do.
 		pending, err := r.st.PendingWorkCount(ctx, sc.ID)
 		if err != nil {
 			return err
@@ -197,8 +196,8 @@ func (r *Runner) Start(ctx context.Context, scanID int64) error {
 			r.log.Info("scan restarted with the phases its plan was missing",
 				"scan", sc.ID, "pending", pending)
 		}
-		// Leave the completed state behind here rather than in the goroutine,
-		// so the scan never reads as finished while it is being picked up.
+		// Leave the completed state behind here rather than in the goroutine, so the scan
+		// never reads as finished while it is being picked up.
 		if err := r.st.SetScanStatus(ctx, sc.ID, model.ScanQueued, ""); err != nil {
 			return err
 		}
@@ -207,11 +206,11 @@ func (r *Runner) Start(ctx context.Context, scanID int64) error {
 	r.mu.Lock()
 	if ctl, busy := r.active[scanID]; busy {
 		r.mu.Unlock()
-		// A scan writes its final status before the goroutine running it lets
-		// go, so a resume issued the moment a pause lands, which is exactly
-		// what pressing Pause then Resume does, used to be told the scan was
-		// still running. Give the previous run its moment to finish letting
-		// go rather than refusing an action that is perfectly legitimate.
+		// A scan writes its final status before the goroutine running it lets go, so a
+		// resume issued the moment a pause lands, which is exactly what pressing Pause
+		// then Resume does, used to be told the scan was still running. Give the previous
+		// run its moment to finish letting go rather than refusing an action that is
+		// perfectly legitimate.
 		select {
 		case <-ctl.done:
 		case <-time.After(handoverGrace):
@@ -247,8 +246,8 @@ func (r *Runner) Start(ctx context.Context, scanID int64) error {
 			cancel()
 		}()
 		// A panic anywhere in a scan must never take the server down with it:
-		// the operator would lose the web interface and, worse, the deferred
-		// network cleanup would never run. Mark the scan failed and carry on.
+		// the operator would lose the web interface and, worse, the deferred network
+		// cleanup would never run. Mark the scan failed and carry on.
 		defer func() {
 			if p := recover(); p != nil {
 				r.log.Error("scan panicked", "scan", scanID, "panic", p,
@@ -268,12 +267,12 @@ func (r *Runner) Start(ctx context.Context, scanID int64) error {
 	return nil
 }
 
-// handoverGrace is how long Start waits for a run that is winding down to let
-// go of a scan before it calls it busy.
+// handoverGrace is how long Start waits for a run that is winding down to let go of a
+// scan before it calls it busy.
 const handoverGrace = 5 * time.Second
 
-// Pause asks a running scan to stop claiming work. In-flight units finish and
-// everything else returns to the queue.
+// Pause asks a running scan to stop claiming work. In-flight units finish and everything
+// else returns to the queue.
 func (r *Runner) Pause(scanID int64) error {
 	r.mu.Lock()
 	ctl := r.active[scanID]
@@ -329,9 +328,8 @@ func (r *Runner) Close() {
 	r.wg.Wait()
 }
 
-// ---------------------------------------------------------------------------
-// the run loop
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- the run
+// loop ---------------------------------------------------------------------------
 
 func (r *Runner) run(ctx context.Context, ctl *control, scanID int64) {
 	sc, err := r.st.Scan(ctx, scanID)
@@ -351,8 +349,8 @@ func (r *Runner) run(ctx context.Context, ctl *control, scanID int64) {
 	runErr := r.execute(ctx, ctl, sc, st)
 
 	// The epilogue must run even when ctx was cancelled by Stop or Close:
-	// otherwise the scan would stay stuck in "running" and its work units
-	// would stay leased, which is exactly what R2 forbids.
+	// otherwise the scan would stay stuck in "running" and its work units would stay
+	// leased, which is exactly what R2 forbids.
 	epi, cancelEpi := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 	defer cancelEpi()
 	ctx = epi
@@ -402,8 +400,8 @@ func (r *Runner) execute(ctx context.Context, ctl *control, sc model.Scan, st *r
 			}
 			return fmt.Errorf("phase %s: %w", phase, err)
 		}
-		// A phase feeds the next one: generate its units now that the results
-		// of this phase are all in the store.
+		// A phase feeds the next one: generate its units now that the results of this
+		// phase are all in the store.
 		if err := r.generate(ctx, sc, phase); err != nil {
 			return fmt.Errorf("generating work after %s: %w", phase, err)
 		}
@@ -416,8 +414,8 @@ func (r *Runner) runPhase(ctx context.Context, ctl *control, sc model.Scan, st *
 	workers := r.phaseWorkers(phase, sc)
 	st.setPhase(phase)
 
-	// The segmentation phase reconfigures this machine's interfaces and
-	// routes, so only one may run at a time across the whole process.
+	// The segmentation phase reconfigures this machine's interfaces and routes, so only
+	// one may run at a time across the whole process.
 	if phase == model.PhaseSegment {
 		if pending, err := r.st.PendingWorkCount(ctx, sc.ID); err == nil && pending > 0 {
 			r.logScan(ctx, sc, "debug", "waiting for exclusive access to the network configuration")
@@ -497,8 +495,8 @@ func (r *Runner) phaseWorkers(phase model.WorkPhase, sc model.Scan) int {
 	case model.PhaseL2:
 		return 1
 	case model.PhaseDiscovery, model.PhasePortsTCP, model.PhasePortsUDP:
-		// The packet engines are internally parallel and rate limited; running
-		// several units at once would multiply the real packet rate.
+		// The packet engines are internally parallel and rate limited; running several
+		// units at once would multiply the real packet rate.
 		return 1
 	case model.PhaseSegment:
 		// One unit at a time: see Runner.segMu.
@@ -534,9 +532,8 @@ func (r *Runner) exec(ctx context.Context, sc model.Scan, st *runState, u model.
 	}
 }
 
-// ---------------------------------------------------------------------------
-// progress and events
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- progress
+// and events ---------------------------------------------------------------------------
 
 // runState tracks the live counters of a scan.
 type runState struct {
@@ -583,8 +580,8 @@ func (s *runState) lookupHost(key string) (int64, bool) {
 	return id, ok
 }
 
-// flushProgress persists and publishes the live counters, throttled to a few
-// updates per second unless force is set.
+// flushProgress persists and publishes the live counters, throttled to a few updates per
+// second unless force is set.
 func (r *Runner) flushProgress(ctx context.Context, sc model.Scan, st *runState, force bool) {
 	st.mu.Lock()
 	if !force && time.Since(st.lastFlush) < 250*time.Millisecond {
@@ -613,8 +610,8 @@ func (r *Runner) flushProgress(ctx context.Context, sc model.Scan, st *runState,
 	})
 }
 
-// overallProgress weighs each phase equally in units, which is close enough
-// for a progress bar and never goes backwards.
+// overallProgress weighs each phase equally in units, which is close enough for a
+// progress bar and never goes backwards.
 func overallProgress(phases []model.PhaseProgress) float64 {
 	var total, done int64
 	for _, p := range phases {

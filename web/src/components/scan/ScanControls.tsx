@@ -24,7 +24,9 @@ export function canStartScan(scan: Scan): boolean {
 }
 
 export function canPauseScan(scan: Scan): boolean {
-  return scan.status === 'running' || (scan.status === 'queued' && Boolean(scan.started_at))
+  return (
+    scan.status === 'running' || (scan.status === 'queued' && Boolean(scan.started_at))
+  )
 }
 
 export function canStopScan(scan: Scan): boolean {
@@ -66,8 +68,8 @@ export default function ScanControls({
       await action.mutateAsync({ id: scan.id, action: kind })
       const messages = {
         start: scan.started_at ? 'Scan resumed' : 'Scan started',
-        pause: 'Scan paused - nothing is lost',
-        stop: 'Scan stopped - collected data is kept',
+        pause: 'Scan paused, nothing is lost',
+        stop: 'Scan stopped, the collected data is kept',
         'retry-failed': 'Failed work units requeued',
       }
       toast.success(messages[kind])
@@ -79,7 +81,8 @@ export default function ScanControls({
   // Every control is laid out on the same minimum width, so Resume, Pause and
   // Stop are the same size and whatever follows them in a table row lines up
   // with the rows above and below.
-  const width = size === 'sm' ? 'min-w-[6rem]' : size === 'lg' ? 'min-w-[8rem]' : 'min-w-[7rem]'
+  const width =
+    size === 'sm' ? 'min-w-[6rem]' : size === 'lg' ? 'min-w-[8rem]' : 'min-w-[7rem]'
 
   const busy = action.isPending
   const everStarted = Boolean(scan.started_at)
@@ -102,13 +105,13 @@ export default function ScanControls({
       busy={busy}
       body={
         <>
-          Stopping cancels the remaining work units. Everything already discovered - hosts,
-          ports, services, findings - stays in the mission.
+          Stopping cancels the remaining work units. Everything already discovered -
+          hosts, ports, services and findings, stays in the mission.
           <br />
           <br />
           If you only need to free the link for a moment, use{' '}
-          <strong className="text-fg">Pause</strong> instead: a paused scan resumes exactly
-          where it stopped, even after the server restarts.
+          <strong className="text-fg">Pause</strong> instead: a paused scan resumes
+          exactly where it stopped, even after the server restarts.
         </>
       }
       onConfirm={async () => {

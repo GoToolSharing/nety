@@ -7,12 +7,12 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// Skipping is the triage status with consequences beyond its own row: an
-// operator parks a machine that is out of scope, and everything belonging to
-// it has to leave the working views without anything being deleted.
+// Skipping is the triage status with consequences beyond its own row: an operator parks a
+// machine that is out of scope, and everything belonging to it has to leave the working
+// views without anything being deleted.
 
-// parked seeds one host with a service, a finding and a segmentation result
-// attached to it, which is the shape of everything these tests check.
+// parked seeds one host with a service, a finding and a segmentation result attached to
+// it, which is the shape of everything these tests check.
 func parked(t *testing.T, s *Store, missionID int64, ip string) (model.Host, model.Service, model.Finding, model.ReachResult) {
 	t.Helper()
 	ctx := context.Background()
@@ -54,8 +54,8 @@ func skip(t *testing.T, s *Store, hostID int64) {
 	}
 }
 
-// TestSkippingAHostHidesItsRows is the whole point of the feature: one gesture
-// takes a machine out of the way, everywhere it shows up.
+// TestSkippingAHostHidesItsRows is the whole point of the feature: one gesture takes a
+// machine out of the way, everywhere it shows up.
 func TestSkippingAHostHidesItsRows(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -117,9 +117,9 @@ func countTotal(counts map[model.TriageStatus]int) (int, int) {
 	return total, total - counts[model.TriageTodo]
 }
 
-// TestSkippingAHostNeverWritesToItsRows is the rule that makes un-skipping
-// safe: the operator may already have gone through some of those services by
-// hand, and that work must still be there afterwards.
+// TestSkippingAHostNeverWritesToItsRows is the rule that makes un-skipping safe: the
+// operator may already have gone through some of those services by hand, and that work
+// must still be there afterwards.
 func TestSkippingAHostNeverWritesToItsRows(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -157,8 +157,8 @@ func TestSkippingAHostNeverWritesToItsRows(t *testing.T) {
 	}
 }
 
-// TestRowsWithoutAHostAreNeverHidden: a finding recorded against a network
-// rather than an address belongs to nobody, so no host can park it.
+// TestRowsWithoutAHostAreNeverHidden: a finding recorded against a network rather than an
+// address belongs to nobody, so no host can park it.
 func TestRowsWithoutAHostAreNeverHidden(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -178,8 +178,8 @@ func TestRowsWithoutAHostAreNeverHidden(t *testing.T) {
 	}
 }
 
-// TestHostTriageSurvivesRescan: the next morning's scan sees the same address
-// again and must not undo the decision made about it.
+// TestHostTriageSurvivesRescan: the next morning's scan sees the same address again and
+// must not undo the decision made about it.
 func TestHostTriageSurvivesRescan(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -212,12 +212,11 @@ func TestHostTriageSurvivesRescan(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Assets
+// --------------------------------------------------------------------------- Assets
 // ---------------------------------------------------------------------------
 
-// TestSkippingAMachineSkipsEveryAddress: the operator is parking a machine,
-// not one of the addresses it happens to answer on today.
+// TestSkippingAMachineSkipsEveryAddress: the operator is parking a machine, not one of
+// the addresses it happens to answer on today.
 func TestSkippingAMachineSkipsEveryAddress(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -267,8 +266,8 @@ func TestSkippingAMachineSkipsEveryAddress(t *testing.T) {
 	}
 }
 
-// TestANewAddressOfASkippedMachineIsSkipped is the IP change mid-engagement: a
-// machine that is out of scope must not walk back in as a fresh host.
+// TestANewAddressOfASkippedMachineIsSkipped is the IP change mid-engagement: a machine
+// that is out of scope must not walk back in as a fresh host.
 func TestANewAddressOfASkippedMachineIsSkipped(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -283,8 +282,8 @@ func TestANewAddressOfASkippedMachineIsSkipped(t *testing.T) {
 		t.Fatalf("triage asset: %v", err)
 	}
 
-	// The next day the same machine answers on another address, and the
-	// correlator recognises it.
+	// The next day the same machine answers on another address, and the correlator
+	// recognises it.
 	h, _, _, _ := parked(t, s, m.ID, "10.0.0.77")
 	if h.Triage.Status != model.TriageTodo {
 		t.Fatalf("a brand new host starts as todo, got %q", h.Triage.Status)
@@ -301,8 +300,8 @@ func TestANewAddressOfASkippedMachineIsSkipped(t *testing.T) {
 		t.Fatalf("and its services hidden with it, got %d", len(services))
 	}
 
-	// Putting that one address back in scope by hand must stick: re-running
-	// the identity phase attaches it to the same asset and changes nothing.
+	// Putting that one address back in scope by hand must stick: re-running the identity
+	// phase attaches it to the same asset and changes nothing.
 	todo := model.TriageTodo
 	if _, err := s.SetHostTriage(ctx, h.ID, &todo, nil, 1); err != nil {
 		t.Fatalf("un-skip: %v", err)
@@ -369,10 +368,10 @@ func TestBulkHostAndAssetTriageAreScopedToTheMission(t *testing.T) {
 	}
 }
 
-// TestExportsKeepTheSkippedRows: asked for the whole record, an export must
-// not quietly lose a machine because it was parked on screen. This is the
-// handover case, the one an incoming tester needs; the deliverable case, where
-// those rows are deliberately left out, is in export_scope_test.go.
+// TestExportsKeepTheSkippedRows: asked for the whole record, an export must not quietly
+// lose a machine because it was parked on screen. This is the handover case, the one an
+// incoming tester needs; the deliverable case, where those rows are deliberately left
+// out, is in export_scope_test.go.
 func TestExportsKeepTheSkippedRows(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -396,8 +395,8 @@ func TestExportsKeepTheSkippedRows(t *testing.T) {
 	}
 }
 
-// TestSkippedHostCounts feeds the banner that tells the operator a table is
-// showing less than it holds.
+// TestSkippedHostCounts feeds the banner that tells the operator a table is showing less
+// than it holds.
 func TestSkippedHostCounts(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)

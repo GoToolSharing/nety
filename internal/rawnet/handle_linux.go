@@ -16,10 +16,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Handle is an AF_PACKET (SOCK_RAW, ETH_P_ALL) socket bound to one interface
-// with a classic BPF filter attached before bind, so no unwanted frame is
-// ever queued. Write and Read may be used concurrently from different
-// goroutines.
+// Handle is an AF_PACKET (SOCK_RAW, ETH_P_ALL) socket bound to one interface with a
+// classic BPF filter attached before bind, so no unwanted frame is ever queued. Write and
+// Read may be used concurrently from different goroutines.
 type Handle struct {
 	conn *packet.Conn
 	Ifi  *net.Interface
@@ -77,8 +76,8 @@ func (h *Handle) tuneBuffers() {
 	})
 }
 
-// Write sends one complete Ethernet frame. Transient ENOBUFS (driver queue
-// full at high rates) is retried briefly.
+// Write sends one complete Ethernet frame. Transient ENOBUFS (driver queue full at high
+// rates) is retried briefly.
 func (h *Handle) Write(frame []byte) error {
 	if len(frame) < 14 {
 		return errors.New("rawnet: frame too short")
@@ -97,8 +96,8 @@ func (h *Handle) Write(frame []byte) error {
 	return err
 }
 
-// Read reads one frame into buf, waiting at most until deadline. On timeout
-// it returns (0, nil) so receive loops can poll their context.
+// Read reads one frame into buf, waiting at most until deadline. On timeout it returns
+// (0, nil) so receive loops can poll their context.
 func (h *Handle) Read(buf []byte, deadline time.Time) (int, error) {
 	if err := h.conn.SetReadDeadline(deadline); err != nil {
 		return 0, err
@@ -114,8 +113,8 @@ func (h *Handle) Read(buf []byte, deadline time.Time) (int, error) {
 	return n, nil
 }
 
-// Drops returns the number of frames the kernel dropped since the previous
-// call because the socket buffer was full (a hint that the rate is too high).
+// Drops returns the number of frames the kernel dropped since the previous call because
+// the socket buffer was full (a hint that the rate is too high).
 func (h *Handle) Drops() uint32 {
 	st, err := h.conn.Stats()
 	if err != nil {

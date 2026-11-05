@@ -9,13 +9,13 @@ import (
 	"sort"
 )
 
-// MaxAddrSpace bounds the number of addresses an AddrSpace may hold (IPv6
-// /64s cannot be swept).
+// MaxAddrSpace bounds the number of addresses an AddrSpace may hold (IPv6 /64s cannot be
+// swept).
 const MaxAddrSpace = 1 << 32
 
-// AddrSpace is an indexable, de-duplicated set of IP addresses built from
-// target prefixes minus exclusion prefixes. Memory is O(number of ranges),
-// independent of the number of addresses.
+// AddrSpace is an indexable, de-duplicated set of IP addresses built from target prefixes
+// minus exclusion prefixes. Memory is O(number of ranges), independent of the number of
+// addresses.
 type AddrSpace struct {
 	ranges []addrRange
 	cum    []uint64 // cum[i] = number of addresses in ranges[:i]
@@ -27,8 +27,8 @@ type addrRange struct {
 	v4     bool
 }
 
-// NewAddrSpace builds the space targets \ excludes. IPv4 and IPv6 prefixes
-// may be mixed. It fails when the result exceeds MaxAddrSpace addresses.
+// NewAddrSpace builds the space targets \ excludes. IPv4 and IPv6 prefixes may be mixed.
+// It fails when the result exceeds MaxAddrSpace addresses.
 func NewAddrSpace(targets, excludes []netip.Prefix) (*AddrSpace, error) {
 	inc, err := toRanges(targets)
 	if err != nil {
@@ -199,8 +199,8 @@ func subtract(inc, exc []addrRange) []addrRange {
 	return out
 }
 
-// u128 is a big-endian 128-bit unsigned integer (IPv4 stored in the low 32
-// bits; families are tracked separately so they never mix).
+// u128 is a big-endian 128-bit unsigned integer (IPv4 stored in the low 32 bits; families
+// are tracked separately so they never mix).
 type u128 struct{ hi, lo uint64 }
 
 func fromAddr(a netip.Addr) u128 {

@@ -180,8 +180,8 @@ func (s *Store) LoginState(ctx context.Context, userID int64) (LoginState, error
 	return st, nil
 }
 
-// RecordLoginFailure increments the failure counter and locks the account
-// when it reaches maxAttempts. It returns the updated state.
+// RecordLoginFailure increments the failure counter and locks the account when it reaches
+// maxAttempts. It returns the updated state.
 func (s *Store) RecordLoginFailure(ctx context.Context, userID int64, maxAttempts int, window time.Duration) (LoginState, error) {
 	var st LoginState
 	err := s.tx(ctx, func(tx *sql.Tx) error {
@@ -223,8 +223,7 @@ func (s *Store) RecordLoginSuccess(ctx context.Context, userID int64) error {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// Sessions
+// --------------------------------------------------------------------------- Sessions
 // ---------------------------------------------------------------------------
 
 // Session is a stored web session. ID is a hash of the cookie token.
@@ -297,8 +296,8 @@ func (s *Store) DeleteUserSessions(ctx context.Context, userID int64) error {
 	})
 }
 
-// PurgeExpiredSessions deletes sessions past their absolute expiry or idle
-// deadline and returns how many rows were removed.
+// PurgeExpiredSessions deletes sessions past their absolute expiry or idle deadline and
+// returns how many rows were removed.
 func (s *Store) PurgeExpiredSessions(ctx context.Context, idleDeadline time.Time) (int64, error) {
 	var n int64
 	err := s.tx(ctx, func(tx *sql.Tx) error {

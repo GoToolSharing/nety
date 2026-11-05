@@ -3,8 +3,8 @@ package ports
 import "github.com/GoToolSharing/nety/internal/model"
 
 // ServiceName returns the conventional service name registered for port/proto
-// (nmap-services / IANA naming), or "" when unknown. It is a low-confidence
-// fallback: nothing is learned from the wire.
+// (nmap-services / IANA naming), or "" when unknown. It is a low-confidence fallback:
+// nothing is learned from the wire.
 func ServiceName(port uint16, proto model.Protocol) string {
 	if proto == model.UDP {
 		if n, ok := udpServices[port]; ok {

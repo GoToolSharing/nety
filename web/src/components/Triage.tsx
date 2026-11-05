@@ -72,7 +72,13 @@ export function triageLabel(status: TriageStatus | undefined): string {
   return TRIAGE_META[status ?? 'todo']?.label ?? String(status)
 }
 
-export function TriageIcon({ status, className }: { status: TriageStatus; className?: string }) {
+export function TriageIcon({
+  status,
+  className,
+}: {
+  status: TriageStatus
+  className?: string
+}) {
   const props = { width: 13, height: 13, className }
   switch (status) {
     case 'in_progress':
@@ -252,13 +258,15 @@ export function SkipToggle({
       className={cn(
         'inline-flex w-full items-center gap-1.5 rounded border px-1.5 py-0.5 text-[11px]',
         'font-medium transition-opacity hover:opacity-80 disabled:opacity-50',
-        skipped
-          ? 'border-border bg-surface text-faint'
-          : 'border-ok/40 bg-ok/10 text-ok',
+        skipped ? 'border-border bg-surface text-faint' : 'border-ok/40 bg-ok/10 text-ok',
         className,
       )}
     >
-      {skipped ? <SkipIcon width={13} height={13} /> : <CheckIcon width={13} height={13} />}
+      {skipped ? (
+        <SkipIcon width={13} height={13} />
+      ) : (
+        <CheckIcon width={13} height={13} />
+      )}
       <span className="truncate">{skipped ? 'Skipped' : 'In scope'}</span>
     </button>
   )
@@ -452,7 +460,9 @@ export function HideDismissedToggle({
   if (total === 0 && !hiding) return null
   const detail = [
     skipped > 0 ? `${skipped} skipped` : '',
-    falsePositives > 0 ? `${falsePositives} false positive${falsePositives === 1 ? '' : 's'}` : '',
+    falsePositives > 0
+      ? `${falsePositives} false positive${falsePositives === 1 ? '' : 's'}`
+      : '',
   ]
     .filter(Boolean)
     .join(' and ')
@@ -501,7 +511,11 @@ export function SkippedHostsBanner({
 }) {
   if (!hidden || hidden.hosts === 0) return null
   const rows =
-    noun === 'services' ? hidden.services : noun === 'findings' ? hidden.findings : hidden.reach
+    noun === 'services'
+      ? hidden.services
+      : noun === 'findings'
+        ? hidden.findings
+        : hidden.reach
   if (rows === 0) return null
 
   const labels = hidden.host_labels ?? []

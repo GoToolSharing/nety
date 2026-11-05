@@ -33,7 +33,13 @@ function Icon({ children, ...props }: IconProps) {
  * the 24px header. The nodes and links take the accent token; the boundary
  * takes currentColor so it stays readable on a light or a dark surface.
  */
-export function NetyMark({ size = 24, className }: { size?: number; className?: string }) {
+export function NetyMark({
+  size = 24,
+  className,
+}: {
+  size?: number
+  className?: string
+}) {
   return (
     <svg
       width={size}

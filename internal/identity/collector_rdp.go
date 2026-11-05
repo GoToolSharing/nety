@@ -175,8 +175,8 @@ func readDER(r io.Reader) ([]byte, error) {
 	return append(hdr, body...), nil
 }
 
-// probeRDP performs X.224 negotiation then CredSSP NTLM NEGOTIATE to obtain
-// the server CHALLENGE. Authentication is never completed.
+// probeRDP performs X.224 negotiation then CredSSP NTLM NEGOTIATE to obtain the server
+// CHALLENGE. Authentication is never completed.
 func (c *collector) probeRDP(ctx context.Context, sink *evidenceSink, ip string, port int) error {
 	pctx, cancel := withTimeout(ctx, 3*c.ioTimeout)
 	defer cancel()

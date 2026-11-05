@@ -26,11 +26,10 @@ func init() {
 	})
 }
 
-// smiProbe is the Smart Install protocol hello: header version 1, message
-// type 1 (a capability query), no payload beyond the fixed fields. It asks
-// the switch what it is, and nothing more. The destructive side of Smart
-// Install lives in the later "copy config" and "image load" messages, which
-// NETY does not send.
+// smiProbe is the Smart Install protocol hello: header version 1, message type 1 (a
+// capability query), no payload beyond the fixed fields. It asks the switch what it is,
+// and nothing more. The destructive side of Smart Install lives in the later "copy
+// config" and "image load" messages, which NETY does not send.
 var smiProbe = []byte{
 	0x00, 0x00, 0x00, 0x01, // version
 	0x00, 0x00, 0x00, 0x01, // message type: hello request

@@ -37,8 +37,8 @@ func DER(tag byte, content ...[]byte) []byte {
 	return out
 }
 
-// SPNEGOInit wraps an NTLM NEGOTIATE token in a GSS-API InitialContextToken
-// carrying a NegTokenInit that offers only NTLMSSP.
+// SPNEGOInit wraps an NTLM NEGOTIATE token in a GSS-API InitialContextToken carrying a
+// NegTokenInit that offers only NTLMSSP.
 func SPNEGOInit(token []byte) []byte {
 	mechTypes := DER(0xa0, DER(0x30, DER(0x06, oidNTLMSSP)))
 	mechToken := DER(0xa2, DER(0x04, token))
@@ -54,8 +54,8 @@ func SPNEGOResponse(token []byte) []byte {
 // ErrBadDER is returned by ReadTLV on malformed DER.
 var ErrBadDER = errors.New("ntlm: malformed DER")
 
-// ReadTLV reads one DER TLV from b and returns tag, value and the remaining
-// bytes. Only definite lengths up to 4 bytes are accepted.
+// ReadTLV reads one DER TLV from b and returns tag, value and the remaining bytes. Only
+// definite lengths up to 4 bytes are accepted.
 func ReadTLV(b []byte) (tag byte, val, rest []byte, err error) {
 	if len(b) < 2 {
 		return 0, nil, nil, ErrBadDER

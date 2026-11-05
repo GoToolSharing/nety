@@ -11,11 +11,11 @@ import (
 //
 //	[ dst | src | 0x8100 native | 0x8100 target | IPv4 | ICMP echo ]
 //
-// The trunk port strips the outer tag because it matches the native VLAN
-// (which a trunk sends untagged), and forwards what is left - a frame still
-// carrying the target VLAN tag - into the target VLAN. Nothing comes back
-// along the same path, which is why the technique is one-way: the reply, if
-// any, is routed normally and only arrives if the target VLAN can reach ours.
+// The trunk port strips the outer tag because it matches the native VLAN (which a trunk
+// sends untagged), and forwards what is left, a frame still carrying the target VLAN tag
+// - into the target VLAN. Nothing comes back along the same path, which is why the
+// technique is one-way: the reply, if any, is routed normally and only arrives if the
+// target VLAN can reach ours.
 
 const (
 	etherTypeDot1Q = 0x8100
@@ -24,9 +24,9 @@ const (
 
 var errNoNativeVLAN = errors.New("segment: the native VLAN of the port is unknown; double tagging needs it")
 
-// doubleTagFrame builds a double-tagged Ethernet frame carrying an ICMP echo
-// request from src to dst. icmpID/icmpSeq let the caller recognise a reply on
-// the normal path, and magic is echoed back in the payload.
+// doubleTagFrame builds a double-tagged Ethernet frame carrying an ICMP echo request from
+// src to dst. icmpID/icmpSeq let the caller recognise a reply on the normal path, and
+// magic is echoed back in the payload.
 func doubleTagFrame(srcMAC, dstMAC net.HardwareAddr, nativeVLAN, targetVLAN int, src, dst netip.Addr, icmpID, icmpSeq uint16, magic []byte) ([]byte, error) {
 	if nativeVLAN < 1 || nativeVLAN > 4094 {
 		return nil, errNoNativeVLAN
@@ -85,8 +85,8 @@ func ipv4Header(src, dst netip.Addr, proto byte, payload []byte) []byte {
 	return p
 }
 
-// onesComplement is the Internet checksum (RFC 1071) over b, which must
-// already have its own checksum field zeroed.
+// onesComplement is the Internet checksum (RFC 1071) over b, which must already have its
+// own checksum field zeroed.
 func onesComplement(b []byte) uint16 {
 	var sum uint32
 	for i := 0; i+1 < len(b); i += 2 {

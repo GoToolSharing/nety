@@ -1,7 +1,7 @@
 // Package api exposes the REST and WebSocket interface of NETY.
 //
-// Routing uses the standard library's pattern mux. Every handler is small and
-// delegates to the store, the auth service or the scan runner.
+// Routing uses the standard library's pattern mux. Every handler is small and delegates
+// to the store, the auth service or the scan runner.
 package api
 
 import (
@@ -26,8 +26,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/store"
 )
 
-// Cookie names. The session cookie is HttpOnly; the CSRF cookie is readable
-// by the SPA so it can echo the value in a header (double-submit pattern).
+// Cookie names. The session cookie is HttpOnly; the CSRF cookie is readable by the SPA so
+// it can echo the value in a header (double-submit pattern).
 const (
 	sessionCookie = "nety_session"
 	csrfCookie    = "nety_csrf"
@@ -45,8 +45,8 @@ type Deps struct {
 	Config   config.Config
 	Log      *slog.Logger
 	Started  time.Time
-	// RawCapable reports whether the process can open raw sockets, which the
-	// UI shows so the operator knows a SYN scan will not silently degrade.
+	// RawCapable reports whether the process can open raw sockets, which the UI shows so
+	// the operator knows a SYN scan will not silently degrade.
 	RawCapable bool
 }
 
@@ -100,9 +100,9 @@ func (a *API) routes() {
 	a.mux.Handle("PATCH /api/missions/{id}", write(a.handleUpdateMission))
 	a.mux.Handle("DELETE /api/missions/{id}", a.adminOnly(a.handleDeleteMission))
 	a.mux.Handle("POST /api/missions/{id}/reset", a.adminOnly(a.handleResetMission))
-	// A whole mission, out and back in. Taking one out is the same privilege
-	// as exporting its results, which a member already has. Bringing one in
-	// creates a mission and can recreate accounts, so it is an administrator's.
+	// A whole mission, out and back in. Taking one out is the same privilege as exporting
+	// its results, which a member already has. Bringing one in creates a mission and can
+	// recreate accounts, so it is an administrator's.
 	a.mux.Handle("GET /api/missions/{id}/bundle", auth(a.handleExportBundle))
 	a.mux.Handle("POST /api/missions/import", a.adminOnly(a.handleImportBundle))
 	a.mux.Handle("GET /api/missions/{id}/members", auth(a.handleGetMembers))
@@ -131,8 +131,8 @@ func (a *API) routes() {
 	a.mux.Handle("POST /api/scans/{id}/stop", write(a.handleStopScan))
 	a.mux.Handle("POST /api/scans/{id}/retry-failed", write(a.handleRetryScan))
 	a.mux.Handle("GET /api/scans/{id}/logs", auth(a.handleScanLogs))
-	// Mission scoped on purpose: a diff reads two scans at once, and the
-	// mission in the path is what the membership check hangs off.
+	// Mission scoped on purpose: a diff reads two scans at once, and the mission in the
+	// path is what the membership check hangs off.
 	a.mux.Handle("GET /api/missions/{id}/scans/{scanID}/diff", auth(a.handleScanDiff))
 
 	a.mux.Handle("GET /api/missions/{id}/hosts", auth(a.handleListHosts))
@@ -160,8 +160,7 @@ func (a *API) routes() {
 	a.mux.Handle("GET /api/missions/{id}/events", auth(a.handleEvents))
 }
 
-// ---------------------------------------------------------------------------
-// middleware
+// --------------------------------------------------------------------------- middleware
 // ---------------------------------------------------------------------------
 
 type ctxKey int
@@ -186,9 +185,9 @@ func (a *API) authenticated(h handlerFunc) http.Handler {
 		if !a.checkCSRF(w, r) {
 			return
 		}
-		// An account created or reset by an administrator must change its
-		// password before it can do anything else. Enforced here rather than
-		// trusted to the client, which an operator can bypass trivially.
+		// An account created or reset by an administrator must change its password before
+		// it can do anything else. Enforced here rather than trusted to the client, which
+		// an operator can bypass trivially.
 		if user.MustChangePW && !passwordChangeExempt(r.URL.Path) {
 			a.fail(w, http.StatusForbidden, "password_change_required",
 				"this account must change its password before continuing")
@@ -198,8 +197,8 @@ func (a *API) authenticated(h handlerFunc) http.Handler {
 	})
 }
 
-// passwordChangeExempt lists the few routes an account still needs while it is
-// locked out pending a password change.
+// passwordChangeExempt lists the few routes an account still needs while it is locked out
+// pending a password change.
 func passwordChangeExempt(path string) bool {
 	switch path {
 	case "/api/auth/password", "/api/auth/logout", "/api/auth/me", "/api/status":
@@ -343,8 +342,7 @@ func (s *statusRecorder) Write(b []byte) (int, error) {
 // Unwrap lets http.ResponseController and the WebSocket hijacker through.
 func (s *statusRecorder) Unwrap() http.ResponseWriter { return s.ResponseWriter }
 
-// ---------------------------------------------------------------------------
-// responses
+// --------------------------------------------------------------------------- responses
 // ---------------------------------------------------------------------------
 
 type errorBody struct {
@@ -402,9 +400,8 @@ func (a *API) decode(w http.ResponseWriter, r *http.Request, v any) bool {
 	return true
 }
 
-// ---------------------------------------------------------------------------
-// request helpers
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- request
+// helpers ---------------------------------------------------------------------------
 
 func (a *API) pathID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
@@ -415,8 +412,8 @@ func (a *API) pathID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	return id, true
 }
 
-// pathScanID reads the {scanID} segment of a mission-scoped scan route, where
-// {id} is already taken by the mission.
+// pathScanID reads the {scanID} segment of a mission-scoped scan route, where {id} is
+// already taken by the mission.
 func (a *API) pathScanID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	id, err := strconv.ParseInt(r.PathValue("scanID"), 10, 64)
 	if err != nil || id <= 0 {
@@ -431,9 +428,9 @@ func queryInt64(r *http.Request, name string) int64 {
 	return v
 }
 
-// includeSkipped reads the `include_skipped` parameter shared by the listings
-// that hide the rows of a skipped host. Absent or anything but a clear yes
-// means the default: those rows stay hidden.
+// includeSkipped reads the `include_skipped` parameter shared by the listings that hide
+// the rows of a skipped host. Absent or anything but a clear yes means the default: those
+// rows stay hidden.
 func includeSkipped(r *http.Request) bool {
 	switch strings.ToLower(strings.TrimSpace(r.URL.Query().Get("include_skipped"))) {
 	case "1", "true", "yes":
@@ -454,8 +451,8 @@ func queryInt(r *http.Request, name string, def int) int {
 	return v
 }
 
-// clientIP extracts the remote address, honouring X-Forwarded-For only when
-// the server is configured to sit behind a trusted proxy.
+// clientIP extracts the remote address, honouring X-Forwarded-For only when the server is
+// configured to sit behind a trusted proxy.
 func (a *API) clientIP(r *http.Request) string {
 	if a.Config.TrustedProxy {
 		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
@@ -504,8 +501,8 @@ func (a *API) clearCookies(w http.ResponseWriter) {
 	}
 }
 
-// engineOr reports a clear error when an engine is not available on this
-// platform instead of failing with a confusing nil dereference.
+// engineOr reports a clear error when an engine is not available on this platform instead
+// of failing with a confusing nil dereference.
 func (a *API) engineMissing(w http.ResponseWriter, name string) {
 	a.fail(w, http.StatusNotImplemented, "unsupported",
 		fmt.Sprintf("%s is not available on this platform or requires raw socket privileges", name))

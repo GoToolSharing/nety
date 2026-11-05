@@ -59,8 +59,8 @@ func TestParseResolvConfEmpty(t *testing.T) {
 	}
 }
 
-// LoadResolvConf must prefer systemd-resolved's upstream servers over the
-// 127.0.0.53 stub that /etc/resolv.conf points at.
+// LoadResolvConf must prefer systemd-resolved's upstream servers over the 127.0.0.53 stub
+// that /etc/resolv.conf points at.
 func TestLoadResolvConfPrefersUpstreamOverStub(t *testing.T) {
 	root := t.TempDir()
 	write := func(p, content string) {

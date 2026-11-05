@@ -10,8 +10,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// The services CSV is what gets pasted into the client's tracking spreadsheet,
-// so the operator's own columns have to be there and in a sensible place.
+// The services CSV is what gets pasted into the client's tracking spreadsheet, so the
+// operator's own columns have to be there and in a sensible place.
 func TestServicesCSVCarriesTriage(t *testing.T) {
 	when := time.Date(2026, 11, 4, 9, 30, 0, 0, time.UTC)
 	data := sampleData()
@@ -104,8 +104,8 @@ func TestTriageReachesEveryFormat(t *testing.T) {
 	}
 }
 
-// The findings CSV goes into the same tracking spreadsheet as the services
-// one, so it carries the same columns in the same place.
+// The findings CSV goes into the same tracking spreadsheet as the services one, so it
+// carries the same columns in the same place.
 func TestFindingsCSVCarriesTriage(t *testing.T) {
 	when := time.Date(2026, 11, 4, 9, 30, 0, 0, time.UTC)
 	data := sampleData()
@@ -180,8 +180,7 @@ func TestFindingTriageReachesEveryFormat(t *testing.T) {
 	data.Findings[0].Triage = model.Triage{
 		Status: model.TriageFlagged, Note: "exploite depuis le VLAN bureaux",
 	}
-	// The services keep their own default so a hit can only come from the
-	// finding.
+	// The services keep their own default so a hit can only come from the finding.
 	for i := range data.Services {
 		data.Services[i].Triage = model.Triage{Status: model.TriageTodo}
 	}

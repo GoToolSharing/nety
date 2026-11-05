@@ -64,8 +64,8 @@ func validHostname(n string) bool {
 	return true
 }
 
-// genericPTR reports whether a PTR name merely embeds the IP address
-// (e.g. "10-0-0-5.dhcp.corp", "host-10.0.0.5.isp.net").
+// genericPTR reports whether a PTR name merely embeds the IP address (e.g.
+// "10-0-0-5.dhcp.corp", "host-10.0.0.5.isp.net").
 func genericPTR(name string, addr netip.Addr) bool {
 	if !addr.Is4() {
 		return false
@@ -153,8 +153,8 @@ func (c *collector) dnsExchange(ctx context.Context, m *dns.Msg, server, network
 	return resp, nil
 }
 
-// probeReverseDNS resolves the PTR of addr via the given DNS servers (or
-// the system resolver when none).
+// probeReverseDNS resolves the PTR of addr via the given DNS servers (or the system
+// resolver when none).
 func (c *collector) probeReverseDNS(ctx context.Context, sink *evidenceSink, addr netip.Addr, servers []netip.Addr) error {
 	var names []string
 	var lastErr error = errors.New("rdns: no answer")

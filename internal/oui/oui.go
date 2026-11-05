@@ -1,11 +1,10 @@
 // Package oui resolves a MAC address to its IEEE-registered vendor.
 //
-// The database is an embedded, gzip-compressed snapshot of the IEEE MA-L
-// (24-bit), MA-M (28-bit) and MA-S/IAB (36-bit) registries. It is decoded
-// lazily, on the first lookup, so a process that never resolves a MAC pays
-// nothing for it. Decoding is a single pass over a few hundred kilobytes and
-// takes a handful of milliseconds; vendor strings are slices of one shared
-// string, so lookups themselves never allocate.
+// The database is an embedded, gzip-compressed snapshot of the IEEE MA-L (24-bit), MA-M
+// (28-bit) and MA-S/IAB (36-bit) registries. It is decoded lazily, on the first lookup,
+// so a process that never resolves a MAC pays nothing for it. Decoding is a single pass
+// over a few hundred kilobytes and takes a handful of milliseconds; vendor strings are
+// slices of one shared string, so lookups themselves never allocate.
 //
 // Regenerate the embedded file from the repository root with:
 //
@@ -13,28 +12,26 @@
 //
 // # Lookup behaviour
 //
-// [Lookup] matches the longest registered prefix first (36 → 28 → 24 bits),
-// because MA-M and MA-S ranges are carved out of MA-L blocks that IEEE
-// registers to the block administrator; the administrator placeholder entries
-// ("IEEE Registration Authority", "Private") are omitted from the database so
-// they can never shadow a real vendor.
+// [Lookup] matches the longest registered prefix first (36 → 28 → 24 bits), because MA-M
+// and MA-S ranges are carved out of MA-L blocks that IEEE registers to the block
+// administrator; the administrator placeholder entries ("IEEE Registration Authority",
+// "Private") are omitted from the database so they can never shadow a real vendor.
 //
-// Locally administered addresses - those with the U/L bit set, i.e. randomized
-// Wi-Fi MACs, container and hypervisor-generated MACs - are reported as
+// Locally administered addresses, those with the U/L bit set (randomized Wi-Fi MACs,
+// container and hypervisor-generated MACs), are reported as
 // follows:
 //
 //	Lookup("02:00:00:00:00:01")  == "(randomized)"           // LA, unregistered
 //	Lookup("00:50:56:aa:bb:cc")  == "VMware, Inc."           // registered
 //	Lookup("<LA address in a registered block>") == "<Vendor> (locally administered)"
 //
-// An unknown, globally administered address yields "". Invalid input yields ""
-// and never panics.
+// An unknown, globally administered address yields "". Invalid input yields "" and never
+// panics.
 //
-// The multicast / group bit (the least-significant bit of the first octet) is
-// masked off before the registry lookup, so group addresses still resolve to
-// the vendor that owns the matching unicast OUI - 01:00:0C (Cisco CDP/PVST+)
-// resolves to Cisco. The broadcast address FF:FF:FF:FF:FF:FF is reported as
-// unknown.
+// The multicast / group bit (the least-significant bit of the first octet) is masked off
+// before the registry lookup, so group addresses still resolve to the vendor that owns
+// the matching unicast OUI: 01:00:0C (Cisco CDP/PVST+) resolves to Cisco. The broadcast
+// address FF:FF:FF:FF:FF:FF is reported as unknown.
 package oui
 
 import (
@@ -56,8 +53,8 @@ const (
 	magic   = "NETYOUI2"
 	version = 1
 
-	// Randomized is returned by [Lookup] for a locally administered address
-	// that matches no registered block.
+	// Randomized is returned by [Lookup] for a locally administered address that matches
+	// no registered block.
 	Randomized = "(randomized)"
 
 	// LocalSuffix is appended by [Lookup] when a locally administered address
@@ -70,8 +67,8 @@ const (
 // Deprecated: use [Randomized].
 const Random = Randomized
 
-// database is the decoded, read-only vendor table. All fields are built once
-// and never mutated afterwards, so concurrent use is safe without locking.
+// database is the decoded, read-only vendor table. All fields are built once and never
+// mutated afterwards, so concurrent use is safe without locking.
 type database struct {
 	pool string   // every vendor name, concatenated
 	off  []uint32 // len(names)+1 offsets into pool
@@ -83,9 +80,9 @@ type database struct {
 	masName      []uint32
 }
 
-// load decodes the embedded database exactly once. On a corrupt or truncated
-// blob it returns an empty database rather than failing: a missing vendor name
-// must never take the scanner down.
+// load decodes the embedded database exactly once. On a corrupt or truncated blob it
+// returns an empty database rather than failing: a missing vendor name must never take
+// the scanner down.
 var load = sync.OnceValue(func() *database {
 	d := &database{}
 	zr, err := gzip.NewReader(bytes.NewReader(dbGz))
@@ -223,8 +220,8 @@ func (d *database) name(i uint32) string {
 	return d.pool[d.off[i]:d.off[i+1]]
 }
 
-// find32 and find64 are explicit binary searches over the sorted key slices;
-// they avoid the closure sort.Search would need and never allocate.
+// find32 and find64 are explicit binary searches over the sorted key slices; they avoid
+// the closure sort.Search would need and never allocate.
 func (d *database) find32(keys, names []uint32, key uint32) (string, bool) {
 	lo, hi := 0, len(keys)
 	for lo < hi {
@@ -257,8 +254,8 @@ func (d *database) find64(keys []uint64, names []uint32, key uint64) (string, bo
 	return "", false
 }
 
-// Parse decodes a MAC address written in any of the common notations into its
-// octets. Accepted forms, case-insensitive and with surrounding whitespace
+// Parse decodes a MAC address written in any of the common notations into its octets.
+// Accepted forms, case-insensitive and with surrounding whitespace
 // ignored:
 //
 //	00:50:56:aa:bb:cc     00-50-56-AA-BB-CC     0:50:56:aa:bb:cc
@@ -267,10 +264,9 @@ func (d *database) find64(keys []uint64, names []uint32, key uint64) (string, bo
 //	0050561               005056aab                         (MA-M / MA-S prefix)
 //	00:50:56:ff:fe:aa:bb:cc                                 (EUI-64)
 //
-// The returned slice holds 3, 4 or 6 octets; bits reports how many leading
-// bits of it are significant (24, 28, 36 or 48). EUI-64 input is truncated to
-// its first six octets, which is all a vendor lookup needs. ok is false for
-// anything else; Parse never panics.
+// The returned slice holds 3, 4 or 6 octets; bits reports how many leading bits of it are
+// significant (24, 28, 36 or 48). EUI-64 input is truncated to its first six octets,
+// which is all a vendor lookup needs. ok is false for anything else; Parse never panics.
 func Parse(mac string) (addr []byte, bits int, ok bool) {
 	var buf [8]byte
 	n, bits, ok := parseRaw(mac, &buf)
@@ -280,21 +276,20 @@ func Parse(mac string) (addr []byte, bits int, ok bool) {
 	return append([]byte(nil), buf[:n]...), bits, true
 }
 
-// parseRaw is the allocation-free core of [Parse]: it decodes mac into out and
-// reports how many octets it wrote and how many leading bits are significant.
-// Keeping it separate lets [Lookup], [IsLocallyAdministered] and [IsMulticast]
-// run without touching the heap.
+// parseRaw is the allocation-free core of [Parse]: it decodes mac into out and reports
+// how many octets it wrote and how many leading bits are significant. Keeping it separate
+// lets [Lookup], [IsLocallyAdministered] and [IsMulticast] run without touching the heap.
 func parseRaw(mac string, out *[8]byte) (n, bits int, ok bool) {
 	s := strings.TrimSpace(mac)
 	if s == "" || len(s) > 64 {
 		return 0, 0, false
 	}
 
-	// Collapse the separators into a hex-digit buffer. Single-digit groups in
-	// colon/dash notation are zero-padded ("0:50:56" -> "005056"); dot
-	// notation pads each group to four digits ("50.56aa.bbcc" ->
-	// "005056aabbcc"). Empty colon/dash groups are skipped, which makes a
-	// malformed run of separators fall through to the length check below.
+	// Collapse the separators into a hex-digit buffer. Single-digit groups in colon/dash
+	// notation are zero-padded ("0:50:56" -> "005056"); dot notation pads each group to
+	// four digits ("50.56aa.bbcc" -> "005056aabbcc"). Empty colon/dash groups are
+	// skipped, which makes a malformed run of separators fall through to the length check
+	// below.
 	var hex [16]byte
 	h := 0
 	switch {
@@ -358,8 +353,8 @@ func parseRaw(mac string, out *[8]byte) (n, bits int, ok bool) {
 		return 0, 0, false
 	}
 
-	// An odd number of digits is a sub-byte prefix: pad it to whole octets,
-	// the padding bits lying outside `bits` and therefore being ignored.
+	// An odd number of digits is a sub-byte prefix: pad it to whole octets, the padding
+	// bits lying outside `bits` and therefore being ignored.
 	if h%2 == 1 {
 		hex[h] = '0'
 		h++
@@ -390,8 +385,8 @@ func hexVal(c byte) byte {
 	return 0xff
 }
 
-// Normalize returns the MAC as lowercase "aa:bb:cc:dd:ee:ff", or "" when mac is
-// not a full six-octet address.
+// Normalize returns the MAC as lowercase "aa:bb:cc:dd:ee:ff", or "" when mac is not a
+// full six-octet address.
 func Normalize(mac string) string {
 	var b [8]byte
 	_, bits, ok := parseRaw(mac, &b)
@@ -410,32 +405,31 @@ func Normalize(mac string) string {
 	return string(out[:])
 }
 
-// IsLocallyAdministered reports whether mac has the U/L bit set - the
-// second-least-significant bit of the first octet. Such addresses are assigned
-// by the local network or generated at random (Wi-Fi MAC randomization,
-// containers, hypervisors) rather than by IEEE. It is false for invalid input.
+// IsLocallyAdministered reports whether mac has the U/L bit set: the
+// second-least-significant bit of the first octet. Such addresses are assigned by the
+// local network or generated at random (Wi-Fi MAC randomization, containers, hypervisors)
+// rather than by IEEE. It is false for invalid input.
 func IsLocallyAdministered(mac string) bool {
 	var b [8]byte
 	_, _, ok := parseRaw(mac, &b)
 	return ok && b[0]&0x02 != 0
 }
 
-// IsMulticast reports whether mac has the I/G (group) bit set - the
-// least-significant bit of the first octet. It is false for invalid input.
+// IsMulticast reports whether mac has the I/G (group) bit set: the least-significant bit
+// of the first octet. It is false for invalid input.
 func IsMulticast(mac string) bool {
 	var b [8]byte
 	_, _, ok := parseRaw(mac, &b)
 	return ok && b[0]&0x01 != 0
 }
 
-// Lookup returns the IEEE-registered vendor for mac, or "" when the prefix is
-// not registered and the address is globally administered.
+// Lookup returns the IEEE-registered vendor for mac, or "" when the prefix is not
+// registered and the address is globally administered.
 //
-// It accepts every notation [Parse] accepts, including a bare 24-, 28- or
-// 36-bit prefix, so Lookup("00:50:56") works. Locally administered addresses
-// are reported as described in the package documentation: "(randomized)" when
-// unregistered, "<Vendor> (locally administered)" when the prefix is
-// nevertheless registered.
+// It accepts every notation [Parse] accepts, including a bare 24-, 28- or 36-bit prefix,
+// so Lookup("00:50:56") works. Locally administered addresses are reported as described
+// in the package documentation: "(randomized)" when unregistered, "<Vendor> (locally
+// administered)" when the prefix is nevertheless registered.
 func Lookup(mac string) string {
 	var b [8]byte
 	_, bits, ok := parseRaw(mac, &b)
@@ -450,8 +444,8 @@ func Lookup(mac string) string {
 		return ""
 	}
 
-	// Registries index unicast OUIs; clear the group bit so multicast
-	// addresses still resolve to the owner of the matching unicast block.
+	// Registries index unicast OUIs; clear the group bit so multicast addresses still
+	// resolve to the owner of the matching unicast block.
 	b0 := b[0] &^ 0x01
 
 	d := load()

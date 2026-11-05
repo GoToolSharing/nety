@@ -2,8 +2,8 @@ package udpprobe
 
 import "strings"
 
-// ssdpPayload is a unicast M-SEARCH for every device type. MX is kept at 1 so a
-// compliant device answers almost immediately.
+// ssdpPayload is a unicast M-SEARCH for every device type. MX is kept at 1 so a compliant
+// device answers almost immediately.
 func ssdpPayload() []byte {
 	return []byte("M-SEARCH * HTTP/1.1\r\n" +
 		"HOST: 239.255.255.250:1900\r\n" +
@@ -30,8 +30,8 @@ func decodeSSDP(resp []byte) *Result {
 	if isSearch {
 		return nil
 	}
-	// An SSDP answer is identified by its mandatory headers; a bare HTTP 200
-	// with none of them is some other service.
+	// An SSDP answer is identified by its mandatory headers; a bare HTTP 200 with none of
+	// them is some other service.
 	_, hasUSN := hdrs["usn"]
 	_, hasST := hdrs["st"]
 	_, hasNT := hdrs["nt"]
@@ -73,8 +73,8 @@ func decodeSSDP(resp []byte) *Result {
 	return r
 }
 
-// ssdpFingerprint parses an SSDP SERVER header, which is conventionally
-// "<OS>/<ver> UPnP/<ver> <product>/<ver>".
+// ssdpFingerprint parses an SSDP SERVER header, which is conventionally "<OS>/<ver>
+// UPnP/<ver> <product>/<ver>".
 func ssdpFingerprint(server string, r *Result) {
 	fields := strings.Fields(server)
 	if len(fields) > 8 {

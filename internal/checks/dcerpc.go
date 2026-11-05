@@ -9,9 +9,9 @@ import (
 	"unicode/utf16"
 )
 
-// Minimal DCE/RPC (connection oriented, MS-RPCE) over SMB named pipes:
-// BIND / BIND_ACK and REQUEST / RESPONSE with fragment reassembly, plus the
-// NDR encoding of srvsvc NetrShareEnum (opnum 15) level 1.
+// Minimal DCE/RPC (connection oriented, MS-RPCE) over SMB named pipes: BIND / BIND_ACK
+// and REQUEST / RESPONSE with fragment reassembly, plus the NDR encoding of srvsvc
+// NetrShareEnum (opnum 15) level 1.
 
 const (
 	rpcPtypeRequest  = 0
@@ -37,8 +37,8 @@ var (
 	rpcNDRUUID = rpcUUID("8a885d04-1ceb-11c9-9fe8-08002b104860")
 )
 
-// rpcUUID encodes a textual UUID in its mixed-endian wire format. Only used
-// with constant inputs.
+// rpcUUID encodes a textual UUID in its mixed-endian wire format. Only used with constant
+// inputs.
 func rpcUUID(s string) []byte {
 	raw, err := hex.DecodeString(strings.ReplaceAll(s, "-", ""))
 	if err != nil || len(raw) != 16 {
@@ -181,8 +181,8 @@ func (e *rpcFaultError) Error() string {
 	return fmt.Sprintf("dcerpc fault 0x%08x", e.Status)
 }
 
-// rpcAssembleResponse reassembles RESPONSE fragments from data. It returns
-// the stub and done=true once the LAST fragment has been seen.
+// rpcAssembleResponse reassembles RESPONSE fragments from data. It returns the stub and
+// done=true once the LAST fragment has been seen.
 func rpcAssembleResponse(data []byte) (stub []byte, done bool, err error) {
 	pdus, _, err := rpcParsePDUs(data)
 	if err != nil {
@@ -213,8 +213,7 @@ func rpcAssembleResponse(data []byte) (stub []byte, done bool, err error) {
 	return stub, false, nil
 }
 
-// ---------------------------------------------------------------------------
-// NDR helpers
+// --------------------------------------------------------------------------- NDR helpers
 // ---------------------------------------------------------------------------
 
 type ndrWriter struct{ b []byte }
@@ -304,8 +303,8 @@ func partASanitize(s string) string {
 	return string(out)
 }
 
-// rpcNetShareEnumRequest encodes NetrShareEnum(ServerName, level 1, MaxLen
-// 0xffffffff, ResumeHandle 0).
+// rpcNetShareEnumRequest encodes NetrShareEnum(ServerName, level 1, MaxLen 0xffffffff,
+// ResumeHandle 0).
 func rpcNetShareEnumRequest(server string) []byte {
 	w := &ndrWriter{}
 	w.u32(0x00020000) // referent ServerName
@@ -354,8 +353,8 @@ func (s rpcShare) TypeName() string {
 
 const rpcMaxShares = 1024
 
-// rpcParseNetShareEnumResponse decodes the NetrShareEnum level 1 response
-// stub and returns the shares (WERROR != 0 is reported as an error).
+// rpcParseNetShareEnumResponse decodes the NetrShareEnum level 1 response stub and
+// returns the shares (WERROR != 0 is reported as an error).
 func rpcParseNetShareEnumResponse(stub []byte) ([]rpcShare, error) {
 	if len(stub) < 4 {
 		return nil, errRPCMalformed

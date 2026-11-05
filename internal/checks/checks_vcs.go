@@ -30,8 +30,8 @@ func init() {
 
 // vcsArtifact is one file worth asking for, with a test that proves the
 // response really is that file. Status codes are never enough on their own:
-// a single page application answers 200 with its shell for every path, and a
-// WAF answers 403 for paths that are not there at all.
+// a single page application answers 200 with its shell for every path, and a WAF answers
+// 403 for paths that are not there at all.
 type vcsArtifact struct {
 	path     string
 	what     string
@@ -44,13 +44,13 @@ var (
 	gitRemoteRe = regexp.MustCompile(`(?m)^\s*url\s*=\s*(\S+)`)
 )
 
-// envKeyRe matches a shell style assignment of an upper case key, which is
-// what a dotenv file is made of.
+// envKeyRe matches a shell style assignment of an upper case key, which is what a dotenv
+// file is made of.
 var envKeyRe = regexp.MustCompile(`(?m)^[A-Z][A-Z0-9_]{2,}\s*=`)
 
-// envSecretKeys are the keys that make a dotenv file a credential file. One
-// of them has to be present before anything is reported, so a stray text file
-// full of assignments does not become a finding.
+// envSecretKeys are the keys that make a dotenv file a credential file. One of them has
+// to be present before anything is reported, so a stray text file full of assignments
+// does not become a finding.
 var envSecretKeys = []string{
 	"APP_KEY", "APP_SECRET", "SECRET_KEY", "DB_PASSWORD", "DATABASE_URL",
 	"MYSQL_ROOT_PASSWORD", "POSTGRES_PASSWORD", "REDIS_PASSWORD",
@@ -75,8 +75,8 @@ var vcsArtifacts = []vcsArtifact{
 			if !bytes.Contains(body, []byte("[core]")) || !bytes.Contains(body, []byte("repositoryformatversion")) {
 				return "", false
 			}
-			// The remote URL names the internal git server, and sometimes
-			// carries a token. Only the host part is worth quoting.
+			// The remote URL names the internal git server, and sometimes carries a
+			// token. Only the host part is worth quoting.
 			if m := gitRemoteRe.FindSubmatch(body); m != nil {
 				return "git config with remote " + printable(m[1], 120), true
 			}
@@ -99,8 +99,8 @@ var vcsArtifacts = []vcsArtifact{
 	{
 		path: "/.env", what: "application environment file", severity: model.SevHigh,
 		confirm: func(body []byte, contentType string) (string, bool) {
-			// A site that answers every path with its HTML shell would match
-			// nothing below, but rule HTML out explicitly all the same.
+			// A site that answers every path with its HTML shell would match nothing
+			// below, but rule HTML out explicitly all the same.
 			if strings.Contains(strings.ToLower(contentType), "html") || bytes.Contains(body, []byte("<html")) {
 				return "", false
 			}
@@ -123,8 +123,8 @@ var vcsArtifacts = []vcsArtifact{
 			if len(found) == 0 {
 				return "", false
 			}
-			// The key names are the evidence. The values are secrets and are
-			// deliberately not copied into the finding.
+			// The key names are the evidence. The values are secrets and are deliberately
+			// not copied into the finding.
 			return fmt.Sprintf("dotenv file with %d assignments, including %s (values not recorded)",
 				len(envKeyRe.FindAll(body, -1)), strings.Join(limitStrings(found, 8), ", ")), true
 		},
@@ -158,9 +158,9 @@ func runHTTPVCSExposed(ctx context.Context, t *Target) []model.Finding {
 			err error
 		)
 		if i == 0 {
-			// The first request also settles which scheme answers. Keep the
-			// fallback scheme when it fails, so a single refused request does
-			// not leave the rest of the loop building unusable URLs.
+			// The first request also settles which scheme answers. Keep the fallback
+			// scheme when it fails, so a single refused request does not leave the rest
+			// of the loop building unusable URLs.
 			var sc string
 			if r, sc, err = webGetFirst(ctx, t, c, a.path, nil); sc != "" {
 				scheme = sc

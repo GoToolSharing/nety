@@ -30,8 +30,8 @@ func wsusApplies(t *Target) bool {
 	if s.Protocol != model.TCP {
 		return false
 	}
-	// 8531 is the TLS port: a WSUS that answers there is configured the way
-	// it should be, so only the cleartext side is worth probing.
+	// 8531 is the TLS port: a WSUS that answers there is configured the way it should be,
+	// so only the cleartext side is worth probing.
 	if isTLS(s) || s.Port == 8531 || s.Port == 443 {
 		return false
 	}
@@ -59,8 +59,8 @@ func runWSUSOverHTTP(ctx context.Context, t *Target) []model.Finding {
 		if err != nil || r.Status != http.StatusOK {
 			continue
 		}
-		// An .asmx endpoint answers a plain GET with its service description
-		// page. Confirming on the body keeps a catch-all 200 from counting.
+		// An .asmx endpoint answers a plain GET with its service description page.
+		// Confirming on the body keeps a catch-all 200 from counting.
 		if !bytes.Contains(r.Body, []byte(p.marker)) {
 			continue
 		}

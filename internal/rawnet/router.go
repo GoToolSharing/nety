@@ -5,8 +5,8 @@ import (
 	"net/netip"
 )
 
-// Path is how a destination is reached: egress interface, source address
-// and next hop (gateway, or the destination itself when on-link).
+// Path is how a destination is reached: egress interface, source address and next hop
+// (gateway, or the destination itself when on-link).
 type Path struct {
 	Ifi     *net.Interface
 	Src     netip.Addr

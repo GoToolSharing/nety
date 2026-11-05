@@ -19,15 +19,15 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// fragmentProbe sends a TCP SYN split across two IP fragments. A stateless
-// filter that only inspects the first fragment never sees the destination port
-// in the second one and may let the whole datagram through; the target's IP
-// stack reassembles it and answers normally.
+// fragmentProbe sends a TCP SYN split across two IP fragments. A stateless filter that
+// only inspects the first fragment never sees the destination port in the second one and
+// may let the whole datagram through; the target's IP stack reassembles it and answers
+// normally.
 //
-// The reply is read from a raw TCP socket, so the probe needs CAP_NET_RAW.
-// The kernel has no socket for the source port we used and will send its own
-// RST after the SYN-ACK; that is harmless and does not change the verdict,
-// which is decided by the first packet we see.
+// The reply is read from a raw TCP socket, so the probe needs CAP_NET_RAW. The kernel has
+// no socket for the source port we used and will send its own RST after the SYN-ACK; that
+// is harmless and does not change the verdict, which is decided by the first packet we
+// see.
 func (t *Tester) fragmentProbe(ctx context.Context, s probeSpec) probeResult {
 	if s.Proto == model.UDP {
 		return errResult("ip-fragment only applies to TCP targets")
@@ -230,8 +230,8 @@ func ipChecksum(h []byte) uint16 {
 	return ^uint16(sum)
 }
 
-// sendRawIPv4 transmits complete IPv4 packets through an IPPROTO_RAW socket,
-// which implies IP_HDRINCL.
+// sendRawIPv4 transmits complete IPv4 packets through an IPPROTO_RAW socket, which
+// implies IP_HDRINCL.
 func sendRawIPv4(dst netip.Addr, packets [][]byte) error {
 	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_RAW|unix.SOCK_CLOEXEC, unix.IPPROTO_RAW)
 	if err != nil {

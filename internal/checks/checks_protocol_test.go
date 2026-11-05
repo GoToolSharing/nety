@@ -17,12 +17,12 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// ---------------------------------------------------------------------------
-// Test harness: drive one registered check against an in-process server
+// --------------------------------------------------------------------------- Test
+// harness: drive one registered check against an in-process server
 // ---------------------------------------------------------------------------
 
-// fakeServer starts a TCP listener on loopback and serves every connection
-// with handle. It returns the port it bound.
+// fakeServer starts a TCP listener on loopback and serves every connection with handle.
+// It returns the port it bound.
 func fakeServer(t *testing.T, handle func(net.Conn)) int {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -80,15 +80,15 @@ func lookupCheck(t *testing.T, id string) *Check {
 	return nil
 }
 
-// probe runs one registered check against svc, going through Applies first so
-// the test also proves the check is scoped correctly.
+// probe runs one registered check against svc, going through Applies first so the test
+// also proves the check is scoped correctly.
 func probe(t *testing.T, id string, svc model.Service, all ...model.Service) []model.Finding {
 	t.Helper()
 	return probeTimeout(t, id, 2*time.Second, svc, all...)
 }
 
-// probeTimeout is probe with an explicit per-I/O timeout, for the cases where
-// the fake server deliberately stays silent.
+// probeTimeout is probe with an explicit per-I/O timeout, for the cases where the fake
+// server deliberately stays silent.
 func probeTimeout(t *testing.T, id string, timeout time.Duration, svc model.Service, all ...model.Service) []model.Finding {
 	t.Helper()
 	c := lookupCheck(t, id)
@@ -104,8 +104,8 @@ func probeTimeout(t *testing.T, id string, timeout time.Duration, svc model.Serv
 		Timeout:  timeout,
 		Log:      quietLogger(),
 		check:    c,
-		// The same per-host ceiling on authentication attempts the engine
-		// attaches, so the tests exercise what a real scan does.
+		// The same per-host ceiling on authentication attempts the engine attaches, so
+		// the tests exercise what a real scan does.
 		creds: newCredBudget(),
 	}
 	if c.HostLevel {
@@ -128,8 +128,8 @@ func udpSvc(name string, port int) model.Service {
 	return model.Service{IP: "127.0.0.1", Port: port, Protocol: model.UDP, Name: name, State: model.PortOpen}
 }
 
-// lines reads CRLF/LF terminated commands and dispatches them to reply.
-// It is the shape every text protocol fake below needs.
+// lines reads CRLF/LF terminated commands and dispatches them to reply. It is the shape
+// every text protocol fake below needs.
 func serveLines(c net.Conn, greeting string, reply func(cmd string) (resp string, closeConn bool)) {
 	if greeting != "" {
 		_, _ = io.WriteString(c, greeting)
@@ -155,13 +155,13 @@ func serveLines(c net.Conn, greeting string, reply func(cmd string) (resp string
 	}
 }
 
-// ---------------------------------------------------------------------------
-// The contract that matters most: no service, no finding
+// --------------------------------------------------------------------------- The
+// contract that matters most: no service, no finding
 // ---------------------------------------------------------------------------
 
-// TestNoFindingsWithoutServices runs the whole registry against a host with
-// no open service. Every check must stay silent: a check that fires without
-// its service would put a false finding in a client report.
+// TestNoFindingsWithoutServices runs the whole registry against a host with no open
+// service. Every check must stay silent: a check that fires without its service would put
+// a false finding in a client report.
 func TestNoFindingsWithoutServices(t *testing.T) {
 	c := New(quietLogger())
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -177,8 +177,8 @@ func TestNoFindingsWithoutServices(t *testing.T) {
 	}
 }
 
-// TestNoFindingsOnUnrelatedService points every check at a single open port
-// that speaks nothing any of them understands. Nothing may be reported.
+// TestNoFindingsOnUnrelatedService points every check at a single open port that speaks
+// nothing any of them understands. Nothing may be reported.
 func TestNoFindingsOnUnrelatedService(t *testing.T) {
 	port := fakeServer(t, func(c net.Conn) {
 		// Answer every probe with the same meaningless blob.
@@ -207,18 +207,18 @@ func TestNoFindingsOnUnrelatedService(t *testing.T) {
 	}
 }
 
-// inventoryOnlyChecks report an exposure from the service inventory alone.
-// The port scan already proved the port open and the protocol is insecure by
-// definition, so they still report when the probe connection fails. Every
-// other check must stay silent unless it actually spoke to the service.
+// inventoryOnlyChecks report an exposure from the service inventory alone. The port scan
+// already proved the port open and the protocol is insecure by definition, so they still
+// report when the probe connection fails. Every other check must stay silent unless it
+// actually spoke to the service.
 var inventoryOnlyChecks = map[string]bool{
 	"telnet-cleartext":  true,
 	"rservices-exposed": true,
 }
 
-// TestEveryCheckIsSilentOnADeadPort asserts that each check individually
-// reports nothing when the connection is refused: a check that reports on a
-// failed probe would invent findings whenever a host is firewalled mid-scan.
+// TestEveryCheckIsSilentOnADeadPort asserts that each check individually reports nothing
+// when the connection is refused: a check that reports on a failed probe would invent
+// findings whenever a host is firewalled mid-scan.
 func TestEveryCheckIsSilentOnADeadPort(t *testing.T) {
 	// Bind then close: the port is almost certainly free and refusing.
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -245,9 +245,9 @@ func TestEveryCheckIsSilentOnADeadPort(t *testing.T) {
 	}
 }
 
-// TestInventoryOnlyChecksStayNarrow keeps the exception list honest: a check
-// allowed to report without probing must apply to a protocol that is insecure
-// by definition, never to one whose weakness depends on its configuration.
+// TestInventoryOnlyChecksStayNarrow keeps the exception list honest: a check allowed to
+// report without probing must apply to a protocol that is insecure by definition, never
+// to one whose weakness depends on its configuration.
 func TestInventoryOnlyChecksStayNarrow(t *testing.T) {
 	if len(inventoryOnlyChecks) > 3 {
 		t.Fatalf("too many checks report without probing: %v", inventoryOnlyChecks)
@@ -267,8 +267,8 @@ func firstService(s []string) string {
 	return s[0]
 }
 
-// ---------------------------------------------------------------------------
-// Text protocols: in-process servers
+// --------------------------------------------------------------------------- Text
+// protocols: in-process servers
 // ---------------------------------------------------------------------------
 
 func TestFTPAnonymous(t *testing.T) {
@@ -440,9 +440,8 @@ func TestRsyncNoModules(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// NFS / ONC RPC
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- NFS / ONC
+// RPC ---------------------------------------------------------------------------
 
 // rpcReplyOK wraps a result body in an accepted ONC RPC reply, record marked.
 func rpcReplyOK(xid uint32, result []byte) []byte {
@@ -710,8 +709,8 @@ func TestIPMIAuthTypeNames(t *testing.T) {
 }
 
 func TestIPMIExposedAgainstFakeBMC(t *testing.T) {
-	// A Get Channel Authentication Capabilities reply advertising IPMI 2.0
-	// and an enabled anonymous login.
+	// A Get Channel Authentication Capabilities reply advertising IPMI 2.0 and an enabled
+	// anonymous login.
 	reply := make([]byte, 25)
 	copy(reply, []byte{0x06, 0x00, 0xff, 0x07})
 	reply[19] = 0x38 // command echoed
@@ -751,8 +750,8 @@ func TestIPMIExposedIgnoresGarbage(t *testing.T) {
 }
 
 func TestSNMPValuesSanitizesAgentOutput(t *testing.T) {
-	// sysDescr comes from an untrusted agent and ends up verbatim in a client
-	// report: control characters must go and the length must be capped.
+	// sysDescr comes from an untrusted agent and ends up verbatim in a client report:
+	// control characters must go and the length must be capped.
 	pkt := &gosnmp.SnmpPacket{Variables: []gosnmp.SnmpPDU{
 		{Name: strings.TrimPrefix(oidSysDescr, "."), Type: gosnmp.OctetString, Value: []byte("Linux\x00router\n6.1.0")},
 		{Name: strings.TrimPrefix(oidSysName, "."), Type: gosnmp.OctetString, Value: []byte(strings.Repeat("A", 2000))},
@@ -772,8 +771,8 @@ func TestSNMPValuesSanitizesAgentOutput(t *testing.T) {
 	}
 }
 
-// TestNFSWorldExportSeverity checks the severity split between a world
-// readable export and a merely listable one.
+// TestNFSWorldExportSeverity checks the severity split between a world readable export
+// and a merely listable one.
 func TestNFSWorldExportSeverity(t *testing.T) {
 	world := lookupCheck(t, "nfs-exports-world-readable")
 	listable := lookupCheck(t, "nfs-exports-listable")
@@ -797,8 +796,8 @@ func TestNFSWorldExportSeverity(t *testing.T) {
 	}
 }
 
-// TestCatalogCoversTheAuditBaseline asserts that the checks a segmentation
-// and exposure audit is expected to report are all registered.
+// TestCatalogCoversTheAuditBaseline asserts that the checks a segmentation and exposure
+// audit is expected to report are all registered.
 func TestCatalogCoversTheAuditBaseline(t *testing.T) {
 	want := []string{
 		"smb-signing-not-required", "smbv1-enabled", "smb-null-session",
@@ -826,8 +825,8 @@ func TestCatalogCoversTheAuditBaseline(t *testing.T) {
 	}
 }
 
-// TestOnlyCredentialChecksAreIntrusive makes sure nothing authenticates
-// outside the explicitly gated default-credential family.
+// TestOnlyCredentialChecksAreIntrusive makes sure nothing authenticates outside the
+// explicitly gated default-credential family.
 func TestOnlyCredentialChecksAreIntrusive(t *testing.T) {
 	for _, c := range New(nil).Catalog() {
 		if !c.Intrusive {

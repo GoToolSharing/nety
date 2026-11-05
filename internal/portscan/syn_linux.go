@@ -20,9 +20,9 @@ import (
 
 const synSupported = true
 
-// Ephemeral source port window for SYN probes when no SourcePort is forced.
-// It sits above Linux's default ip_local_port_range (32768-60999) so probes
-// never collide with the kernel's own connections.
+// Ephemeral source port window for SYN probes when no SourcePort is forced. It sits above
+// Linux's default ip_local_port_range (32768-60999) so probes never collide with the
+// kernel's own connections.
 const (
 	synPortBase = 61000
 	synPortSpan = 4096
@@ -66,9 +66,9 @@ type synHost struct {
 //     giving an RTT without state;
 //   - each SYN-ACK is answered with a RST so no half-open connection lingers.
 //
-// The Linux kernel, which has no socket for our probe source ports, also
-// answers SYN-ACKs with a RST: this is harmless (masscan users add a
-// firewall rule to silence it; we do not touch the firewall).
+// The Linux kernel, which has no socket for our probe source ports, also answers SYN-ACKs
+// with a RST: this is harmless (masscan users add a firewall rule to silence it; we do
+// not touch the firewall).
 func (s *Scanner) synScan(ctx context.Context, j *job) error {
 	wait := j.opts.Timeout
 	if wait <= 0 {
@@ -88,9 +88,9 @@ func (s *Scanner) synScan(ctx context.Context, j *job) error {
 
 	plan, egs, viaConnect, err := s.planSYN(ctx, j, router, neigh, limiter)
 	if err == nil && len(viaConnect) > 0 {
-		// Hosts behind non-Ethernet interfaces (VPN tun/wg, loopback,
-		// PPP) cannot be reached with crafted Ethernet frames: scan them
-		// with connect() once the SYN pass is over.
+		// Hosts behind non-Ethernet interfaces (VPN tun/wg, loopback, PPP) cannot be
+		// reached with crafted Ethernet frames: scan them with connect() once the SYN
+		// pass is over.
 		defer func() {
 			if ctx.Err() != nil {
 				return
@@ -307,10 +307,9 @@ send:
 	return nil
 }
 
-// planSYN resolves, for every host, the egress interface and the next-hop
-// MAC. On-link hosts are resolved with a rate-limited ARP/NDP sweep (hosts
-// that do not answer cannot receive our SYNs and are skipped); routed hosts
-// use their gateway's MAC.
+// planSYN resolves, for every host, the egress interface and the next-hop MAC. On-link
+// hosts are resolved with a rate-limited ARP/NDP sweep (hosts that do not answer cannot
+// receive our SYNs and are skipped); routed hosts use their gateway's MAC.
 func (s *Scanner) planSYN(ctx context.Context, j *job, router *rawnet.Router, neigh *rawnet.Neighbors, lim *rawnet.Limiter) ([]synHost, []*egress, []netip.Addr, error) {
 	plan := make([]synHost, len(j.hosts))
 	var viaConnect []netip.Addr

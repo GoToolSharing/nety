@@ -18,8 +18,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// The nmap-service-probes database is loaded at runtime from the local nmap
-// installation (it is NOT embedded: the file is distributed under the NPSL).
+// The nmap-service-probes database is loaded at runtime from the local nmap installation
+// (it is NOT embedded: the file is distributed under the NPSL).
 var nmapProbePaths = []string{
 	"/usr/share/nmap/nmap-service-probes",
 	"/usr/local/share/nmap/nmap-service-probes",
@@ -115,8 +115,7 @@ func (m *nmapMatch) compiled() (*regexp2.Regexp, error) {
 	return m.re, m.err
 }
 
-// ---------------------------------------------------------------------------
-// Loading
+// --------------------------------------------------------------------------- Loading
 // ---------------------------------------------------------------------------
 
 var (
@@ -133,11 +132,10 @@ func loadProbeDB(log *slog.Logger) *probeDB {
 // probesOverride is set by SetProbesPath.
 var probesOverride atomic.Pointer[string]
 
-// SetProbesPath points the probe-match layer at an nmap-service-probes file,
-// taking precedence over $NETY_NMAP_PROBES and the system locations. It is
-// meant to be called once at start-up (cmd/nety wires it from the
-// configuration) and has no effect once the file has been loaded, since the
-// database is parsed at most once per process.
+// SetProbesPath points the probe-match layer at an nmap-service-probes file, taking
+// precedence over $NETY_NMAP_PROBES and the system locations. It is meant to be called
+// once at start-up (cmd/nety wires it from the configuration) and has no effect once the
+// file has been loaded, since the database is parsed at most once per process.
 func SetProbesPath(path string) {
 	if path == "" {
 		probesOverride.Store(nil)
@@ -146,8 +144,8 @@ func SetProbesPath(path string) {
 	probesOverride.Store(&path)
 }
 
-// probeSearchPaths lists where the nmap data file is looked for: the
-// configured override, then $NETY_NMAP_PROBES, then the system locations.
+// probeSearchPaths lists where the nmap data file is looked for: the configured override,
+// then $NETY_NMAP_PROBES, then the system locations.
 func probeSearchPaths() []string {
 	paths := nmapProbePaths
 	if env := os.Getenv(EnvNmapProbes); env != "" {
@@ -182,8 +180,8 @@ func loadProbeDBFrom(log *slog.Logger, paths []string) *probeDB {
 	return nil
 }
 
-// parseProbeDB parses the nmap-service-probes format. Malformed match lines
-// are skipped; a malformed Probe line is an error.
+// parseProbeDB parses the nmap-service-probes format. Malformed match lines are skipped;
+// a malformed Probe line is an error.
 func parseProbeDB(r io.Reader) (*probeDB, error) {
 	db := &probeDB{byName: map[string]*nmapProbe{}}
 	sc := bufio.NewScanner(r)
@@ -385,8 +383,8 @@ func parseMatchLine(rest string, soft bool) (*nmapMatch, error) {
 	return m, nil
 }
 
-// latin1Pattern turns raw non-ASCII bytes of a pattern into the runes they
-// represent when the subject is decoded byte-per-rune.
+// latin1Pattern turns raw non-ASCII bytes of a pattern into the runes they represent when
+// the subject is decoded byte-per-rune.
 func latin1Pattern(s string) string {
 	for i := 0; i < len(s); i++ {
 		if s[i] >= 0x80 {
@@ -512,15 +510,14 @@ func runesToBytes(r []rune) []byte {
 	return b.Bytes()
 }
 
-// stripPossessive rewrites PCRE possessive quantifiers ("a++", "a*+", "a?+",
-// "a{2,3}+") into their greedy equivalents. regexp2 implements .NET syntax,
-// which has no possessive form; nmap's database uses it in a few dozen
-// patterns. Dropping the possessive marker only makes the match backtrack
-// where PCRE would not, and the compiled regexps carry a match timeout, so
-// the worst case stays bounded.
+// stripPossessive rewrites PCRE possessive quantifiers ("a++", "a*+", "a?+", "a{2,3}+")
+// into their greedy equivalents. regexp2 implements .NET syntax, which has no possessive
+// form; nmap's database uses it in a few dozen patterns. Dropping the possessive marker
+// only makes the match backtrack where PCRE would not, and the compiled regexps carry a
+// match timeout, so the worst case stays bounded.
 //
-// A quantifier is only recognised at a position where one is legal: an
-// escaped "\+" or a "+" inside a character class is left untouched.
+// A quantifier is only recognised at a position where one is legal: an escaped "\+" or a
+// "+" inside a character class is left untouched.
 func stripPossessive(pat string) string {
 	var b strings.Builder
 	b.Grow(len(pat))
@@ -574,16 +571,16 @@ func stripPossessive(pat string) string {
 			b.WriteByte(c)
 		}
 		if !isQuant {
-			// A group opener or an alternation cannot be quantified; anything
-			// else (a literal, a class, a closing paren) can.
+			// A group opener or an alternation cannot be quantified; anything else (a
+			// literal, a class, a closing paren) can.
 			quantifiable = c != '(' && c != '|' && c != 0
 			if c == 0 {
 				quantifiable = true
 			}
 			continue
 		}
-		// Consume the quantifier's modifier: "?" is lazy (kept), "+" is
-		// possessive (dropped).
+		// Consume the quantifier's modifier: "?" is lazy (kept), "+" is possessive
+		// (dropped).
 		if i+1 < len(pat) {
 			switch pat[i+1] {
 			case '+':

@@ -13,8 +13,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// ---------------------------------------------------------------------------
-// Harness for the HTTP checks
+// --------------------------------------------------------------------------- Harness for
+// the HTTP checks
 // ---------------------------------------------------------------------------
 
 // httpFake serves h on loopback and returns the port it bound.
@@ -711,8 +711,8 @@ func TestHTTPCredAttemptsAreCapped(t *testing.T) {
 	}
 }
 
-// TestHTTPCredCorpusIsFingerprintDriven keeps the promise that a product is
-// only ever offered its own documented defaults.
+// TestHTTPCredCorpusIsFingerprintDriven keeps the promise that a product is only ever
+// offered its own documented defaults.
 func TestHTTPCredCorpusIsFingerprintDriven(t *testing.T) {
 	seen := map[string]bool{}
 	for _, app := range httpCredApps {
@@ -741,8 +741,8 @@ func TestHTTPCredCorpusIsFingerprintDriven(t *testing.T) {
 	}
 }
 
-// TestNewChecksAreRegistered lists what this wave added, so a check that is
-// dropped or renamed fails here rather than silently leaving the catalog.
+// TestNewChecksAreRegistered lists what this wave added, so a check that is dropped or
+// renamed fails here rather than silently leaving the catalog.
 func TestNewChecksAreRegistered(t *testing.T) {
 	want := map[string]model.Severity{
 		"dns-zone-transfer":         model.SevHigh,

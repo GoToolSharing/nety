@@ -11,8 +11,7 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// ---------------------------------------------------------------------------
-// missions
+// --------------------------------------------------------------------------- missions
 // ---------------------------------------------------------------------------
 
 func (a *API) handleListMissions(w http.ResponseWriter, r *http.Request, u model.User) {
@@ -134,11 +133,10 @@ func (a *API) handleDeleteMission(w http.ResponseWriter, r *http.Request, u mode
 	a.ok(w, map[string]bool{"ok": true})
 }
 
-// handleResetMission empties a mission of everything the scans produced and
-// keeps everything the operator configured. It is the step before handing a
-// mission back for a second pass, and the one case where losing results is
-// the point, so it is deliberate: administrators only, and the caller has to
-// name the mission it is about to empty.
+// handleResetMission empties a mission of everything the scans produced and keeps
+// everything the operator configured. It is the step before handing a mission back for a
+// second pass, and the one case where losing results is the point, so it is deliberate:
+// administrators only, and the caller has to name the mission it is about to empty.
 func (a *API) handleResetMission(w http.ResponseWriter, r *http.Request, u model.User) {
 	m, ok := a.requireMission(w, r, u)
 	if !ok {
@@ -155,8 +153,8 @@ func (a *API) handleResetMission(w http.ResponseWriter, r *http.Request, u model
 			"type the mission name to confirm")
 		return
 	}
-	// A reset while work is in flight would race the runner: units would come
-	// back and write rows into a mission that is supposed to be empty.
+	// A reset while work is in flight would race the runner: units would come back and
+	// write rows into a mission that is supposed to be empty.
 	for _, id := range a.Runner.Running() {
 		if sc, err := a.Store.Scan(r.Context(), id); err == nil && sc.MissionID == m.ID {
 			a.fail(w, http.StatusConflict, "busy", "a scan is still running on this mission; stop it first")
@@ -185,10 +183,10 @@ func (a *API) handleGetMembers(w http.ResponseWriter, r *http.Request, u model.U
 		a.failStore(w, err, "members")
 		return
 	}
-	// Return the people, not just their ids. Listing every account is an
-	// administrator's privilege, so a plain operator had no way to turn these
-	// ids into names and saw an empty team on a mission they are part of.
-	// Who else is on your own mission is not a secret from you.
+	// Return the people, not just their ids. Listing every account is an administrator's
+	// privilege, so a plain operator had no way to turn these ids into names and saw an
+	// empty team on a mission they are part of. Who else is on your own mission is not a
+	// secret from you.
 	members := make([]missionMember, 0, len(ids))
 	for _, id := range ids {
 		mu, err := a.Store.UserByID(r.Context(), id)
@@ -203,8 +201,8 @@ func (a *API) handleGetMembers(w http.ResponseWriter, r *http.Request, u model.U
 	a.ok(w, map[string]any{"user_ids": ids, "members": members})
 }
 
-// missionMember is the public view of someone on a mission: enough to show
-// who they are, nothing more.
+// missionMember is the public view of someone on a mission: enough to show who they are,
+// nothing more.
 type missionMember struct {
 	ID          int64      `json:"id"`
 	Username    string     `json:"username"`
@@ -239,9 +237,9 @@ func (a *API) handleMissionSummary(w http.ResponseWriter, r *http.Request, u mod
 		return
 	}
 	ctx := r.Context()
-	// The counters have to say the same thing as the screens they send the
-	// operator to, so a skipped host's services and findings are left out
-	// here as well unless the caller asks for them.
+	// The counters have to say the same thing as the screens they send the operator to,
+	// so a skipped host's services and findings are left out here as well unless the
+	// caller asks for them.
 	withSkipped := includeSkipped(r)
 	networks, err := a.Store.ListNetworks(ctx, m.ID)
 	if err != nil {
@@ -258,10 +256,10 @@ func (a *API) handleMissionSummary(w http.ResponseWriter, r *http.Request, u mod
 		a.failStore(w, err, "services")
 		return
 	}
-	// The headline counters are "what is left to deal with", so a finding the
-	// operator has skipped or called a false positive is not one of them. It
-	// is still on the findings screen, with its status; it just stops shouting
-	// from the front page after being dealt with.
+	// The headline counters are "what is left to deal with", so a finding the operator
+	// has skipped or called a false positive is not one of them. It is still on the
+	// findings screen, with its status; it just stops shouting from the front page after
+	// being dealt with.
 	findingFilter := storeFindingFilter(m.ID, 0, withSkipped)
 	if !withSkipped {
 		findingFilter.Triage = model.LiveTriageStatuses()
@@ -332,8 +330,7 @@ func (a *API) handleMissionSummary(w http.ResponseWriter, r *http.Request, u mod
 	})
 }
 
-// ---------------------------------------------------------------------------
-// networks
+// --------------------------------------------------------------------------- networks
 // ---------------------------------------------------------------------------
 
 func (a *API) handleListNetworks(w http.ResponseWriter, r *http.Request, u model.User) {
@@ -503,8 +500,8 @@ func (a *API) handleInterfaces(w http.ResponseWriter, r *http.Request, _ model.U
 	a.ok(w, ifaces)
 }
 
-// handleDetectNetwork inspects the current attachment and returns a draft
-// network the operator can review before saving.
+// handleDetectNetwork inspects the current attachment and returns a draft network the
+// operator can review before saving.
 func (a *API) handleDetectNetwork(w http.ResponseWriter, r *http.Request, _ model.User) {
 	if a.Engines.NetInspector == nil {
 		a.engineMissing(w, "network detection")
@@ -544,8 +541,8 @@ func (a *API) handleDetectNetwork(w http.ResponseWriter, r *http.Request, _ mode
 	a.ok(w, draft)
 }
 
-// validateCIDRs rejects malformed network specifications early, with a message
-// naming the offending entry.
+// validateCIDRs rejects malformed network specifications early, with a message naming the
+// offending entry.
 func (a *API) validateCIDRs(w http.ResponseWriter, list []string, what string) bool {
 	for _, v := range list {
 		v = strings.TrimSpace(v)

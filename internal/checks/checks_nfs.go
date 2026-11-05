@@ -125,8 +125,8 @@ func runNFSExportList(ctx context.Context, t *Target) []model.Finding {
 	return []model.Finding{t.FindingOn(2049, model.TCP, ev)}
 }
 
-// nfsExports locates mountd (through rpcbind when available) and reads its
-// export list. It returns the exports and the mountd port it used.
+// nfsExports locates mountd (through rpcbind when available) and reads its export list.
+// It returns the exports and the mountd port it used.
 func nfsExports(ctx context.Context, t *Target) ([]nfsExport, int, error) {
 	var errs []error
 	for _, port := range nfsMountdPorts(ctx, t) {
@@ -145,8 +145,8 @@ func nfsExports(ctx context.Context, t *Target) ([]nfsExport, int, error) {
 	return nil, 0, errors.Join(errs...)
 }
 
-// nfsMountdPorts lists the ports to try for mountd, best first: whatever
-// rpcbind advertises, then the usual fixed ports.
+// nfsMountdPorts lists the ports to try for mountd, best first: whatever rpcbind
+// advertises, then the usual fixed ports.
 func nfsMountdPorts(ctx context.Context, t *Target) []int {
 	var ports []int
 	seen := map[int]bool{}
@@ -197,8 +197,8 @@ func portmapGetPort(ctx context.Context, t *Target, prog, vers uint32) (int, err
 	return int(p), nil
 }
 
-// mountExport calls MOUNTPROC3_EXPORT, which takes no argument and only
-// returns the export table: it mounts nothing and changes no state.
+// mountExport calls MOUNTPROC3_EXPORT, which takes no argument and only returns the
+// export table: it mounts nothing and changes no state.
 func mountExport(ctx context.Context, t *Target, port int) ([]nfsExport, error) {
 	body, err := rpcCall(ctx, t, port, progMount, 3, procMountExport, nil)
 	if err != nil {
@@ -211,8 +211,8 @@ func mountExport(ctx context.Context, t *Target, port int) ([]nfsExport, error) 
 	return parseExportList(body)
 }
 
-// parseExportList decodes the XDR linked list returned by EXPORT. Every length
-// is bounds checked and every list is capped: this parses hostile input.
+// parseExportList decodes the XDR linked list returned by EXPORT. Every length is bounds
+// checked and every list is capped: this parses hostile input.
 func parseExportList(b []byte) ([]nfsExport, error) {
 	x := &xdrReader{b: b}
 	var out []nfsExport
@@ -259,8 +259,8 @@ func sanitizeXDR(s string) string {
 	return truncate(strings.TrimSpace(s), 256)
 }
 
-// ---------------------------------------------------------------------------
-// Minimal ONC RPC (RFC 5531) client over TCP, read-only procedures only
+// --------------------------------------------------------------------------- Minimal ONC
+// RPC (RFC 5531) client over TCP, read-only procedures only
 // ---------------------------------------------------------------------------
 
 // rpcCall performs one AUTH_NULL RPC call and returns the result body.
@@ -303,8 +303,8 @@ func rpcMessage(xid, prog, vers, proc uint32, args []byte) []byte {
 	return append(out, body...)
 }
 
-// readRPCRecord reassembles a record-marked reply, bounded in both fragment
-// count and total size.
+// readRPCRecord reassembles a record-marked reply, bounded in both fragment count and
+// total size.
 func readRPCRecord(r io.Reader) ([]byte, error) {
 	var out []byte
 	for i := 0; i < maxRPCFragments; i++ {
@@ -373,8 +373,8 @@ func parseRPCReply(b []byte, wantXID uint32) ([]byte, error) {
 	return x.rest(), nil
 }
 
-// xdrReader is a bounds-checked cursor over an XDR buffer. No method panics
-// and none allocates from an attacker-controlled length without a cap.
+// xdrReader is a bounds-checked cursor over an XDR buffer. No method panics and none
+// allocates from an attacker-controlled length without a cap.
 type xdrReader struct {
 	b   []byte
 	off int

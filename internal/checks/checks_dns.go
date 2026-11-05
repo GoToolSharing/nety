@@ -32,15 +32,15 @@ func dnsApplies(t *Target) bool {
 	return svcIs(t.Service, model.TCP, []string{"domain", "dns", "dns-tcp"}, 53)
 }
 
-// dnsMaxZoneRecords bounds how much of a zone is read. The finding only needs
-// the zone name and a count, so there is no reason to pull a large zone into
-// memory; the transfer is abandoned once the cap is reached.
+// dnsMaxZoneRecords bounds how much of a zone is read. The finding only needs the zone
+// name and a count, so there is no reason to pull a large zone into memory; the transfer
+// is abandoned once the cap is reached.
 const dnsMaxZoneRecords = 20000
 
-// dnsZoneCandidates returns the zones worth asking for, most specific first.
-// Nothing here is guessed: every candidate comes from what the scan already
-// learned about the host, plus the reverse zone of its own subnet, which an
-// internal resolver is nearly always authoritative for.
+// dnsZoneCandidates returns the zones worth asking for, most specific first. Nothing here
+// is guessed: every candidate comes from what the scan already learned about the host,
+// plus the reverse zone of its own subnet, which an internal resolver is nearly always
+// authoritative for.
 func dnsZoneCandidates(t *Target) []string {
 	var out []string
 	seen := map[string]bool{}
@@ -58,9 +58,9 @@ func dnsZoneCandidates(t *Target) []string {
 			add(h[i+1:])
 		}
 	}
-	// The /24 reverse zone of the server itself. On an internal network the
-	// resolver that answers on this address is almost always the one holding
-	// the matching in-addr.arpa zone.
+	// The /24 reverse zone of the server itself. On an internal network the resolver that
+	// answers on this address is almost always the one holding the matching in-addr.arpa
+	// zone.
 	if a, err := netip.ParseAddr(t.IP); err == nil && a.Unmap().Is4() {
 		b := a.Unmap().As4()
 		add(fmt.Sprintf("%d.%d.%d.in-addr.arpa", b[2], b[1], b[0]))
@@ -71,8 +71,8 @@ func dnsZoneCandidates(t *Target) []string {
 	return out
 }
 
-// dnsPlausibleZone rejects anything that is not a usable domain name, since
-// the candidates come from fingerprint data that a host controls.
+// dnsPlausibleZone rejects anything that is not a usable domain name, since the
+// candidates come from fingerprint data that a host controls.
 func dnsPlausibleZone(z string) bool {
 	if len(z) == 0 || len(z) > 253 || !strings.Contains(z, ".") {
 		return false
@@ -102,16 +102,16 @@ func runDNSZoneTransfer(ctx context.Context, t *Target) []model.Finding {
 			continue
 		}
 		out = append(out, t.Finding(res))
-		// One proven transfer is enough evidence; asking for every remaining
-		// candidate only adds load and noise in the server's logs.
+		// One proven transfer is enough evidence; asking for every remaining candidate
+		// only adds load and noise in the server's logs.
 		break
 	}
 	return out
 }
 
-// dnsTryAXFR requests one zone and summarises what came back. It reads the
-// zone only to count it: no record data beyond the SOA is kept, so a client
-// report never carries someone else's internal inventory.
+// dnsTryAXFR requests one zone and summarises what came back. It reads the zone only to
+// count it: no record data beyond the SOA is kept, so a client report never carries
+// someone else's internal inventory.
 func dnsTryAXFR(ctx context.Context, t *Target, zone string) (string, error) {
 	m := new(dns.Msg)
 	m.SetAxfr(zone)
@@ -134,8 +134,8 @@ func dnsTryAXFR(ctx context.Context, t *Target, zone string) (string, error) {
 	for env := range ch {
 		if env.Error != nil {
 			xferErr = env.Error
-			// Keep draining: abandoning the channel would leak the reader
-			// goroutine inside the dns package.
+			// Keep draining: abandoning the channel would leak the reader goroutine
+			// inside the dns package.
 			continue
 		}
 		for _, rr := range env.RR {

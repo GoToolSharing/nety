@@ -84,8 +84,8 @@ func (a *API) handleMe(w http.ResponseWriter, r *http.Request) {
 		csrf = c.Value
 	}
 	if csrf == "" {
-		// The session survived a browser restart that dropped the non-persistent
-		// CSRF cookie; issue a fresh one rather than forcing a re-login.
+		// The session survived a browser restart that dropped the non-persistent CSRF
+		// cookie; issue a fresh one rather than forcing a re-login.
 		if t, err := auth.GenerateToken(); err == nil {
 			csrf = t
 			a.setCookie(w, csrfCookie, csrf, time.Now().Add(a.Config.SessionTTL), false)
@@ -118,8 +118,7 @@ func (a *API) handleChangePassword(w http.ResponseWriter, r *http.Request, u mod
 	a.ok(w, map[string]bool{"ok": true})
 }
 
-// ---------------------------------------------------------------------------
-// users
+// --------------------------------------------------------------------------- users
 // ---------------------------------------------------------------------------
 
 func (a *API) handleListUsers(w http.ResponseWriter, r *http.Request, _ model.User) {
@@ -323,8 +322,7 @@ func (a *API) handleAudit(w http.ResponseWriter, r *http.Request, _ model.User) 
 	a.ok(w, entries)
 }
 
-// ---------------------------------------------------------------------------
-// status
+// --------------------------------------------------------------------------- status
 // ---------------------------------------------------------------------------
 
 func (a *API) handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -360,8 +358,8 @@ func (a *API) handleStatus(w http.ResponseWriter, r *http.Request) {
 	a.ok(w, resp)
 }
 
-// userRef is how a user is referred to in the audit log when only the id is
-// known at that point in the handler.
+// userRef is how a user is referred to in the audit log when only the id is known at that
+// point in the handler.
 func userRef(id int64) string { return "user #" + itoa64(id) }
 
 // itoa64 is the decimal form of an id, used all over the audit messages.

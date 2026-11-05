@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// writePEM writes a DER blob as a PEM file with the given permissions,
-// creating it atomically so a crash cannot leave a half-written key behind.
+// writePEM writes a DER blob as a PEM file with the given permissions, creating it
+// atomically so a crash cannot leave a half-written key behind.
 func writePEM(path, blockType string, der []byte, perm os.FileMode) error {
 	tmp := path + ".tmp"
 	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)

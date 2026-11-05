@@ -35,12 +35,12 @@ func (a *API) handleListHosts(w http.ResponseWriter, r *http.Request, u model.Us
 	a.ok(w, hosts)
 }
 
-// addressQuery reads the `ip` parameter shared by the result listings. It
-// takes a single address or a CIDR prefix, v4 or v6, and answers false once it
-// has already written the error response.
+// addressQuery reads the `ip` parameter shared by the result listings. It takes a single
+// address or a CIDR prefix, v4 or v6, and answers false once it has already written the
+// error response.
 //
-// A malformed value is refused here rather than quietly matching nothing: an
-// operator who mistypes a subnet should be told, not shown an empty table.
+// A malformed value is refused here rather than quietly matching nothing: an operator who
+// mistypes a subnet should be told, not shown an empty table.
 func (a *API) addressQuery(w http.ResponseWriter, r *http.Request) (store.AddressFilter, bool) {
 	f, err := store.ParseAddressFilter(r.URL.Query().Get("ip"))
 	if err != nil {
@@ -50,9 +50,9 @@ func (a *API) addressQuery(w http.ResponseWriter, r *http.Request) (store.Addres
 	return f, true
 }
 
-// sortDescending reads the `dir` parameter shared by the result listings.
-// Anything but an explicit "desc" means ascending, which is what the first
-// click on a column header asks for.
+// sortDescending reads the `dir` parameter shared by the result listings. Anything but an
+// explicit "desc" means ascending, which is what the first click on a column header asks
+// for.
 func sortDescending(r *http.Request) bool {
 	return strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("dir")), "desc")
 }
@@ -81,8 +81,8 @@ func (a *API) handleGetHost(w http.ResponseWriter, r *http.Request, u model.User
 			asset = &v
 		}
 	}
-	// The caller asked for this host by id, so its own screen shows everything
-	// it has even when it is skipped and hidden from the mission listings.
+	// The caller asked for this host by id, so its own screen shows everything it has
+	// even when it is skipped and hidden from the mission listings.
 	findings, err := a.Store.ListFindings(r.Context(), store.FindingFilter{
 		MissionID: host.MissionID, NetworkID: host.NetworkID, HostID: host.ID,
 		IncludeSkippedHosts: true,
@@ -141,9 +141,9 @@ func (a *API) handleListServices(w http.ResponseWriter, r *http.Request, u model
 	a.ok(w, fillTriageAuthors(a, r, services, func(sv *model.Service) *model.Triage { return &sv.Triage }))
 }
 
-// triageQuery reads the repeatable, comma separated `triage` parameter shared
-// by the service and finding listings. It answers false once it has already
-// written the error response.
+// triageQuery reads the repeatable, comma separated `triage` parameter shared by the
+// service and finding listings. It answers false once it has already written the error
+// response.
 func (a *API) triageQuery(w http.ResponseWriter, r *http.Request) ([]model.TriageStatus, bool) {
 	var out []model.TriageStatus
 	for _, v := range r.URL.Query()["triage"] {
@@ -162,9 +162,9 @@ func (a *API) triageQuery(w http.ResponseWriter, r *http.Request) ([]model.Triag
 	return out, true
 }
 
-// fillTriageAuthors resolves the triage author names in one pass rather than
-// one query per row. pick points at the triage record carried by each item,
-// which is the only thing services and findings have in common here.
+// fillTriageAuthors resolves the triage author names in one pass rather than one query
+// per row. pick points at the triage record carried by each item, which is the only thing
+// services and findings have in common here.
 func fillTriageAuthors[T any](a *API, r *http.Request, items []T, pick func(*T) *model.Triage) []T {
 	need := false
 	for i := range items {
@@ -280,11 +280,10 @@ func (a *API) handleGetAsset(w http.ResponseWriter, r *http.Request, u model.Use
 	a.ok(w, map[string]any{"asset": asset, "hosts": mine})
 }
 
-// handleUpdateAsset edits a machine. Besides the label and the rest, it is
-// also where the machine is triaged, under the same `status` and `note` fields
-// a service or a finding takes: an asset is one thing, and one PATCH changes
-// it. A status set here reaches every address of the machine (see
-// store.SetAssetTriage).
+// handleUpdateAsset edits a machine. Besides the label and the rest, it is also where the
+// machine is triaged, under the same `status` and `note` fields a service or a finding
+// takes: an asset is one thing, and one PATCH changes it. A status set here reaches every
+// address of the machine (see store.SetAssetTriage).
 func (a *API) handleUpdateAsset(w http.ResponseWriter, r *http.Request, u model.User) {
 	asset, ok := a.requireAsset(w, r, u)
 	if !ok {
@@ -318,8 +317,8 @@ func (a *API) handleUpdateAsset(w http.ResponseWriter, r *http.Request, u model.
 		a.audit(r, u, asset.MissionID, "asset.triaged", detail)
 		a.withTriageAuthor(r, &updated.Triage)
 		a.Bus.PublishData(model.EvtAsset, asset.MissionID, 0, updated)
-		// A machine going out of scope takes its addresses with it, and every
-		// table keyed on those addresses changes under the operator's feet.
+		// A machine going out of scope takes its addresses with it, and every table keyed
+		// on those addresses changes under the operator's feet.
 		if req.Status != nil {
 			a.Bus.PublishData(model.EvtScanLog, asset.MissionID, 0, model.LogLine{
 				Level: "info", Message: "triage updated, resynchronise",
@@ -437,9 +436,9 @@ func (a *API) handleMatrix(w http.ResponseWriter, r *http.Request, u model.User)
 
 // handleScanDiff answers what changed between two scans of the same network.
 //
-// The scan in the path is one end of the comparison and `against` the other.
-// Which of the two is the baseline is decided by when they ran, not by how
-// they were passed, so the answer always names both ends explicitly.
+// The scan in the path is one end of the comparison and `against` the other. Which of the
+// two is the baseline is decided by when they ran, not by how they were passed, so the
+// answer always names both ends explicitly.
 func (a *API) handleScanDiff(w http.ResponseWriter, r *http.Request, u model.User) {
 	m, ok := a.requireMission(w, r, u)
 	if !ok {
@@ -510,10 +509,10 @@ func (a *API) handleScanDiff(w http.ResponseWriter, r *http.Request, u model.Use
 
 // exportDiff works out which pair of scans the diff in an export is about.
 //
-// `scan_id` and `against` name them. With neither, it is the last completed
-// scan of the mission against the one before it on the same network, which is
-// what an operator means by "what changed". A mission scanned only once has no
-// diff, and the sheet comes out with its header alone.
+// `scan_id` and `against` name them. With neither, it is the last completed scan of the
+// mission against the one before it on the same network, which is what an operator means
+// by "what changed". A mission scanned only once has no diff, and the sheet comes out
+// with its header alone.
 func (a *API) exportDiff(r *http.Request, missionID, networkID int64) *model.ScanDiff {
 	ctx := r.Context()
 	var (
@@ -568,14 +567,13 @@ func (a *API) handleExport(w http.ResponseWriter, r *http.Request, u model.User)
 
 	// An export is a deliverable, so two things stay out of it by default.
 	//
-	// What the operator set aside: a skipped host or machine with everything
-	// attached to it, and the services and findings marked skipped or a false
-	// positive. `include_dismissed=1` brings them back.
+	// What the operator set aside: a skipped host or machine with everything attached to
+	// it, and the services and findings marked skipped or a false positive.
+	// `include_dismissed=1` brings them back.
 	//
-	// And the findings nobody has reviewed yet, still at "to do": an unread
-	// check result is not a verdict to put in front of a client.
-	// `include_unreviewed=1` brings those back. It is findings only: the list
-	// of open ports is inventory and travels whole.
+	// And the findings nobody has reviewed yet, still at "to do": an unread check result
+	// is not a verdict to put in front of a client. `include_unreviewed=1` brings those
+	// back. It is findings only: the list of open ports is inventory and travels whole.
 	//
 	// Either way the file says how many rows were held back, and why.
 	scope := store.ExportScope{
@@ -599,8 +597,8 @@ func (a *API) handleExport(w http.ResponseWriter, r *http.Request, u model.User)
 		"attachment; filename=\""+filename+"\"; filename*=UTF-8''"+url.PathEscape(filename))
 
 	if err := a.Exporter.Export(w, format, data, networkID); err != nil {
-		// Headers are already sent; log and cut the response short rather than
-		// pretending the file is complete.
+		// Headers are already sent; log and cut the response short rather than pretending
+		// the file is complete.
 		a.Log.Error("export failed", "mission", m.ID, "format", format, "error", err)
 		return
 	}

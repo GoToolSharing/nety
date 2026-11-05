@@ -31,10 +31,10 @@ func snmpApplies(t *Target) bool {
 	return svcIs(t.Service, model.UDP, []string{"snmp"}, 161)
 }
 
-// snmpDefaultCommunities is deliberately tiny: these are the two strings every
-// vendor ships with. Community strings are not accounts and cannot be locked
-// out, but there is still no reason to enumerate a wordlist on a live network.
-// "private" is conventionally read-write, which is why finding it is worse.
+// snmpDefaultCommunities is deliberately tiny: these are the two strings every vendor
+// ships with. Community strings are not accounts and cannot be locked out, but there is
+// still no reason to enumerate a wordlist on a live network. "private" is conventionally
+// read-write, which is why finding it is worse.
 var snmpDefaultCommunities = []struct {
 	name  string
 	write bool
@@ -59,9 +59,9 @@ type snmpHit struct {
 	sysDescr  string
 }
 
-// runSNMPDefaultCommunity tries the two default community strings with
-// SNMPv2c then SNMPv1. Only GET requests are issued: NETY never sends a SET,
-// so a read-write community is reported but never exercised.
+// runSNMPDefaultCommunity tries the two default community strings with SNMPv2c then
+// SNMPv1. Only GET requests are issued: NETY never sends a SET, so a read-write community
+// is reported but never exercised.
 func runSNMPDefaultCommunity(ctx context.Context, t *Target) []model.Finding {
 	var hits []snmpHit
 	for _, comm := range snmpDefaultCommunities {
@@ -97,16 +97,16 @@ func runSNMPDefaultCommunity(ctx context.Context, t *Target) []model.Finding {
 
 	f := t.Finding(strings.Join(lines, "\n"))
 	if rw {
-		// "private" is the read-write community on virtually every stack:
-		// reconfiguring the device is one SET away.
+		// "private" is the read-write community on virtually every stack: reconfiguring
+		// the device is one SET away.
 		f.Severity = model.SevHigh
 		f.Title = "SNMP answers to the default read-write community string"
 	}
 	return []model.Finding{f}
 }
 
-// snmpTryCommunity issues one GET of the system group per SNMP version and
-// returns the first version that answered.
+// snmpTryCommunity issues one GET of the system group per SNMP version and returns the
+// first version that answered.
 func snmpTryCommunity(ctx context.Context, t *Target, community string) (*snmpHit, error) {
 	var errs []error
 	for _, v := range []gosnmp.SnmpVersion{gosnmp.Version2c, gosnmp.Version1} {
@@ -139,8 +139,8 @@ func snmpTryCommunity(ctx context.Context, t *Target, community string) (*snmpHi
 			continue
 		}
 		vals := snmpValues(pkt)
-		// An agent that rejects the community simply does not answer; a reply
-		// with no usable value means the system group is restricted.
+		// An agent that rejects the community simply does not answer; a reply with no
+		// usable value means the system group is restricted.
 		if vals[oidSysDescr] == "" && vals[oidSysName] == "" && vals[oidSysObjectID] == "" {
 			errs = append(errs, errors.New("snmp: empty system group"))
 			continue
@@ -155,8 +155,8 @@ func snmpTryCommunity(ctx context.Context, t *Target, community string) (*snmpHi
 	return nil, errors.Join(errs...)
 }
 
-// snmpValues extracts printable varbind values keyed by OID. Values come from
-// an untrusted agent: they are sanitized and capped.
+// snmpValues extracts printable varbind values keyed by OID. Values come from an
+// untrusted agent: they are sanitized and capped.
 func snmpValues(pkt *gosnmp.SnmpPacket) map[string]string {
 	out := map[string]string{}
 	if pkt == nil {

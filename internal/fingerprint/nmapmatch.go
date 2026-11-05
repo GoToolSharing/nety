@@ -64,8 +64,8 @@ func (m *nmapMatch) try(resp []rune) *matchResult {
 	return r
 }
 
-// expandTemplate substitutes $N, $P(N), $SUBST(N,"a","b") and $I(N,"<"|">")
-// in an nmap version template.
+// expandTemplate substitutes $N, $P(N), $SUBST(N,"a","b") and $I(N,"<"|">") in an nmap
+// version template.
 func expandTemplate(t string, group func(int) ([]byte, bool)) string {
 	if t == "" {
 		return ""
@@ -139,8 +139,8 @@ func expandTemplate(t string, group func(int) ([]byte, bool)) string {
 	return cleanText(s)
 }
 
-// templateArgs parses "(a,"b,c",d)" at the start of s, returning the args
-// and the number of bytes consumed (including parentheses).
+// templateArgs parses "(a,"b,c",d)" at the start of s, returning the args and the number
+// of bytes consumed (including parentheses).
 func templateArgs(s string) ([]string, int, bool) {
 	if len(s) == 0 || s[0] != '(' {
 		return nil, 0, false
@@ -179,8 +179,8 @@ func atoiSafe(s string) int {
 	return n
 }
 
-// matchResponse tries the probe's matches, then its fallbacks', then (TCP)
-// the NULL probe's ones, like nmap.
+// matchResponse tries the probe's matches, then its fallbacks', then (TCP) the NULL
+// probe's ones, like nmap.
 func (db *probeDB) matchResponse(p *nmapProbe, resp []byte) (hard, soft *matchResult) {
 	if len(resp) == 0 {
 		return nil, nil
@@ -228,8 +228,8 @@ type probeOutcome struct {
 	wrapped   bool   // every connection was closed without data
 }
 
-// tcpCandidates orders probes like nmap: probes listing the port first, then
-// the other probes allowed by intensity (rarity), in file order.
+// tcpCandidates orders probes like nmap: probes listing the port first, then the other
+// probes allowed by intensity (rarity), in file order.
 func (db *probeDB) tcpCandidates(proto model.Protocol, port uint16, ssl bool, intensity int) []*nmapProbe {
 	var first, rest []*nmapProbe
 	for _, p := range db.probes {
@@ -247,8 +247,8 @@ func (db *probeDB) tcpCandidates(proto model.Protocol, port uint16, ssl bool, in
 	return append(first, rest...)
 }
 
-// runTCP drives the TCP probes. nullResp is the banner already read on a
-// fresh connection (NULL probe). deadline bounds the whole phase.
+// runTCP drives the TCP probes. nullResp is the banner already read on a fresh connection
+// (NULL probe). deadline bounds the whole phase.
 func (db *probeDB) runTCP(ctx context.Context, log *slog.Logger, dial func(context.Context) (net.Conn, error),
 	port uint16, ssl bool, intensity int, nullResp []byte, timeout time.Duration, deadline time.Time) *probeOutcome {
 	out := &probeOutcome{wrapped: true}
@@ -308,8 +308,8 @@ func (db *probeDB) runTCP(ctx context.Context, log *slog.Logger, dial func(conte
 	return out
 }
 
-// runTCPFiltered runs only the named probes (used when the service is
-// already known, e.g. HTTP, to refine product/version cheaply).
+// runTCPFiltered runs only the named probes (used when the service is already known, e.g.
+// HTTP, to refine product/version cheaply).
 func (db *probeDB) runTCPFiltered(ctx context.Context, log *slog.Logger, dial func(context.Context) (net.Conn, error),
 	port uint16, ssl bool, nullResp []byte, timeout time.Duration, deadline time.Time, names []string) *probeOutcome {
 	out := &probeOutcome{}
@@ -373,8 +373,8 @@ func sendProbe(ctx context.Context, dial func(context.Context) (net.Conn, error)
 	return data, closed, nil
 }
 
-// runUDP sends the UDP probes listing the port (and the most common generic
-// ones) and matches the first datagram received.
+// runUDP sends the UDP probes listing the port (and the most common generic ones) and
+// matches the first datagram received.
 func (db *probeDB) runUDP(ctx context.Context, dial func(context.Context) (net.Conn, error),
 	port uint16, intensity int, timeout time.Duration, deadline time.Time) *probeOutcome {
 	out := &probeOutcome{}

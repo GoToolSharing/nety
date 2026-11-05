@@ -43,8 +43,8 @@ sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
 ### Kernel RSTs during a SYN scan
 
 The stateless SYN scanner sends packets the kernel knows nothing about, so the
-kernel answers the SYN-ACKs with a RST. This is harmless - the scanner reads
-the replies off AF_PACKET before the kernel acts - but it is noisy on the wire.
+kernel answers the SYN-ACKs with a RST. This is harmless, since the scanner reads
+the replies off AF_PACKET before the kernel acts, but it is noisy on the wire.
 To suppress it, drop outgoing RSTs from the scan source port:
 
 ```bash
@@ -84,7 +84,7 @@ Both work, and NETY picks the right behaviour on its own.
 Over Wi-Fi the kernel presents the association as an ordinary Ethernet link,
 so **host discovery, ARP, SYN and connect port scanning, UDP probing, service
 fingerprinting, identity collection, the checks and the routed segmentation
-techniques all behave exactly as they do on a cable** - same engines, same
+techniques all behave exactly as they do on a cable**: same engines, same
 rates, same results.
 
 Three things only exist on a wired switch port, and NETY detects a wireless
@@ -93,9 +93,9 @@ the driver:
 
 | Feature | On a cable | Over Wi-Fi |
 |---|---|---|
-| Passive CDP / LLDP / DTP / STP recon | yes | skipped - an access point does not relay these |
-| 802.1Q sub-interface and double tagging | yes | skipped - an AP does not carry tagged frames to a station |
-| DTP trunk negotiation | yes | skipped - there is no switch port to negotiate with |
+| Passive CDP / LLDP / DTP / STP recon | yes | skipped: an access point does not relay these |
+| 802.1Q sub-interface and double tagging | yes | skipped: an AP does not carry tagged frames to a station |
+| DTP trunk negotiation | yes | skipped: there is no switch port to negotiate with |
 
 The interface picker marks wireless NICs with *(Wi-Fi)* and explains this
 inline, the scan log records the decision, and the segmentation matrix is
@@ -107,7 +107,7 @@ Practical notes:
   slow* profile is a good starting point) and add a retry; a SYN scan at
   20 000 pps over the air will under-report.
 - Client isolation on the AP will make every other station look filtered. That
-  is a real segmentation finding, not a NETY limitation - but say so in the
+  is a real segmentation finding, not a NETY limitation, but say so in the
   report rather than presenting it as VLAN separation.
 - To test VLAN tagging you need a cable. If the client's assessment covers
   trunking, ask for a wired port.
@@ -150,7 +150,7 @@ nety serve --nmap-probes /usr/share/nmap/nmap-service-probes
 ```
 
 Without it, detection still works through TLS/HTTP/SSH inspection, the
-fingerprintx plugins and banner heuristics - just less precisely on exotic
+fingerprintx plugins and banner heuristics, just less precisely on exotic
 services.
 
 ## Tuning a scan
@@ -168,7 +168,7 @@ can accidentally flood a client network from the web interface.
 
 ## Segmentation testing
 
-1. Map each VLAN with a discovery scan first - segmentation has nothing to
+1. Map each VLAN with a discovery scan first: segmentation has nothing to
    replay otherwise.
 2. Plug into the VLAN you want to test *from*, select it, and start a
    **segmentation** scan.
@@ -182,28 +182,111 @@ including on cancellation and on shutdown. If the process is killed with
 `SIGKILL` it cannot clean up; check with `ip link` and `ip route` and remove
 any leftover `*.<vlan>` interface by hand.
 
+## Reading a result
+
+Three outcomes, used everywhere:
+
+| | Meaning |
+|---|---|
+| **Reachable** | The service answered. The boundary did not hold for this flow. |
+| **Closed (routed)** | The packet reached the host, which refused it. Nothing blocked the crossing; the port simply is not listening. |
+| **Filtered** | Nothing came back, or an ICMP prohibited answer did. The boundary held. |
+
+The distinction between *closed* and *filtered* is the whole point: one means
+routing works and the service is absent, the other means the filtering works.
+
+## Bypass techniques
+
+A segmentation scan tries each service several ways. The **Help** page inside
+the interface describes all of them, with the manual command to reproduce each
+one by hand.
+
+**Routing level**, on by default, nothing is changed on the switch:
+
+| Technique | Why it sometimes works |
+|---|---|
+| `direct` | The reference measurement everything else is compared against. |
+| `icmp` | ACLs are written for TCP and UDP and leave ICMP open for troubleshooting. |
+| `src-port-53/88/123/20/67/500` | Stateless rules often permit anything coming from DNS, Kerberos, NTP or DHCP source ports. |
+| `ipv6` | IPv6 filtering is routinely forgotten while IPv4 is locked down. |
+| `gateway-route` / `alt-gateway` | The router would forward it; the client simply has no route. Install one and ask again. |
+| `ip-fragment` | Some stateless filters mishandle fragmented packets. |
+
+**Layer 2**, off by default because they change switch-port state and can
+disturb a switch:
+
+| Technique | What it does |
+|---|---|
+| `dot1q-subif` | Builds a tagged sub-interface for the target VLAN and talks to it directly. |
+| `dtp-trunk` | Asks the port to become a trunk, then does the above. Only worth trying where the passive recon saw DTP. |
+| `double-tag` | Sends a doubly-tagged frame. One-way by nature, so a positive result is reported as *sent*, never as confirmed. |
+
+### What a result proves, and what it does not
+
+A **reachable** result is a measurement: that service answered from that
+position, at that moment. It does not say the boundary is open for everything,
+and a **filtered** result does not prove the opposite either, since the
+filtering may be stateful, time-based or tied to the address you happened to
+have.
+
+A `double-tag` result is the one to read carefully: the technique is one-way
+by construction, so NETY reports it as *sent*, never as confirmed. If it
+matters to the report, prove it another way.
+
+## Trying it without a client network
+
+The repository carries an integration lab: three Docker networks standing in
+for VLANs, with real services on them.
+
+```sh
+make lab-up      # bring the lab up
+make lab-verify  # check it from inside
+make lab-down    # tear it down, volumes included
+```
+
+There is also a demo dataset, which is entirely invented: RFC 1918 addresses,
+made-up hostnames, a made-up client. It is what the screenshots in the README
+are taken from.
+
+```sh
+go run ./cmd/netydemo -data ./demo-data
+nety serve --data ./demo-data --no-tls --listen 127.0.0.1:8080
+```
+
+## Scope and safety
+
+- **Only scan what you were asked to scan.** The mission carries a scope and
+  an exclusion list, and exclusions are enforced on every phase, including the
+  segmentation replay of hosts inventoried before the exclusion was added.
+- **The intrusive parts are opt-in.** Vendor default credentials are real
+  login attempts and land in the target's logs. The layer-2 techniques can
+  flap a switch port. Both are off until you turn them on, and both say so.
+- **Everything NETY changes on your own machine is reverted**: routes,
+  sub-interfaces and trunk negotiation, on completion, on cancellation and at
+  shutdown.
+
 ## Troubleshooting
 
-**"raw sockets are not available"** - the capabilities are missing. See above.
+**"raw sockets are not available"**: the capabilities are missing. See above.
 Scanning still works, in connect mode.
 
-**A scan is stuck in `running` after a crash** - it is not: restart NETY and
+**A scan is stuck in `running` after a crash**: it is not: restart NETY and
 `Recover` moves it to `paused`, then press Resume. Work units that were in
 flight are returned to the queue.
 
-**A scan failed with "no target to scan"** - the network has no known prefix
+**A scan failed with "no target to scan"**: the network has no known prefix
 and automatic targets was on with no explicit target. Set the prefixes on the
 network, or give targets.
 
-**The browser says the connection is not private** - expected with the
+**The browser says the connection is not private**: expected with the
 self-signed certificate. Compare the fingerprint with the one in the log.
 
-**Events stop updating in the interface** - the WebSocket dropped. The page
+**Events stop updating in the interface**: the WebSocket dropped. The page
 reconnects on its own; if it reports dropped events it refetches the tables.
 Nothing is lost either way: the database is the source of truth, the stream is
 only a notification channel.
 
-**The database is getting large** - it is a single SQLite file in the data
+**The database is getting large**: it is a single SQLite file in the data
 directory. Archive the mission, or copy the file; it is self-contained and safe
 to move once the process is stopped.
 
@@ -214,6 +297,6 @@ client-confidential:
 
 - the data directory is created `0700`, the TLS key `0600`;
 - every action is written to an audit log (who, what, which mission, from
-  where) - readable by administrators under **Admin → Audit**;
+  where), readable by administrators under **Admin → Audit**;
 - delete the mission, or the whole data directory, at the end of the
   engagement, per your retention policy.

@@ -311,12 +311,18 @@ export default function FindingsPage() {
         const BATCH = 2000
         let updated = 0
         for (let i = 0; i < ids.length; i += BATCH) {
-          const res = await api.triageFindingsBulk(missionId, ids.slice(i, i + BATCH), status)
+          const res = await api.triageFindingsBulk(
+            missionId,
+            ids.slice(i, i + BATCH),
+            status,
+          )
           updated += res.updated
         }
         setSelected(new Set())
         refresh()
-        toast.success(`${formatNumber(updated)} findings marked ${status.replace('_', ' ')}`)
+        toast.success(
+          `${formatNumber(updated)} findings marked ${status.replace('_', ' ')}`,
+        )
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Could not update the selection')
       }
@@ -513,7 +519,9 @@ export default function FindingsPage() {
           <Card>
             <EmptyState
               icon={<FindingIcon width={20} height={20} />}
-              title={all.length === 0 ? 'No finding yet' : 'No finding matches those filters'}
+              title={
+                all.length === 0 ? 'No finding yet' : 'No finding matches those filters'
+              }
               description={
                 all.length === 0 && triage.length === 0 && !address
                   ? 'The light checks run as part of a discovery scan when “Light checks” is enabled. They look for SMB signing, anonymous shares, default credentials, weak TLS, exposed management interfaces and similar quick wins.'
@@ -536,7 +544,9 @@ export default function FindingsPage() {
               title={
                 <span className="flex items-center gap-2">
                   <span>Findings</span>
-                  <span className="tabular text-muted">{formatNumber(filtered.length)}</span>
+                  <span className="tabular text-muted">
+                    {formatNumber(filtered.length)}
+                  </span>
                 </span>
               }
             />

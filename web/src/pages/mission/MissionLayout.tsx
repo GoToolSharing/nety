@@ -65,7 +65,9 @@ function SidebarLink({ item }: { item: NavItem }) {
           <span className="min-w-0 flex-1 truncate">{item.label}</span>
           {item.badge ??
             (typeof item.count === 'number' && item.count > 0 ? (
-              <span className="tabular text-[11px] text-faint">{formatNumber(item.count)}</span>
+              <span className="tabular text-[11px] text-faint">
+                {formatNumber(item.count)}
+              </span>
             ) : null)}
         </>
       )}
@@ -88,7 +90,10 @@ function MissionHeading({ missionId }: { missionId: number }) {
         <Skeleton className="h-4 w-36" />
       ) : (
         <>
-          <div className="truncate text-sm font-semibold text-fg" title={mission.data?.name}>
+          <div
+            className="truncate text-sm font-semibold text-fg"
+            title={mission.data?.name}
+          >
             {mission.data?.name ?? `Mission ${missionId}`}
           </div>
           {mission.data?.client && (
@@ -133,12 +138,27 @@ function MissionSections({ missionId }: { missionId: number }) {
         ) : undefined,
     },
     { to: `${base}/hosts`, label: 'Hosts', icon: <HostIcon />, count: s?.hosts },
-    { to: `${base}/services`, label: 'Services', icon: <ServiceIcon />, count: s?.services },
-    { to: `${base}/findings`, label: 'Findings', icon: <FindingIcon />, count: s?.findings },
+    {
+      to: `${base}/services`,
+      label: 'Services',
+      icon: <ServiceIcon />,
+      count: s?.services,
+    },
+    {
+      to: `${base}/findings`,
+      label: 'Findings',
+      icon: <FindingIcon />,
+      count: s?.findings,
+    },
     { to: `${base}/assets`, label: 'Assets', icon: <AssetIcon />, count: s?.assets },
     { to: `${base}/matrix`, label: 'Segmentation matrix', icon: <MatrixIcon /> },
     { to: `${base}/exports`, label: 'Exports', icon: <ExportIcon /> },
-    { to: `${base}/team`, label: 'Team', icon: <UsersIcon />, count: members.data?.members.length },
+    {
+      to: `${base}/team`,
+      label: 'Team',
+      icon: <UsersIcon />,
+      count: members.data?.members.length,
+    },
     { to: `${base}/settings`, label: 'Settings', icon: <SettingsIcon /> },
   ]
 
@@ -191,8 +211,12 @@ export function MissionSidebar({ missionId }: { missionId: number | null }) {
             <div className="px-2.5 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-wider text-faint">
               Administration
             </div>
-            <SidebarLink item={{ to: '/admin/users', label: 'Users', icon: <UsersIcon /> }} />
-            <SidebarLink item={{ to: '/admin/audit', label: 'Audit log', icon: <AuditIcon /> }} />
+            <SidebarLink
+              item={{ to: '/admin/users', label: 'Users', icon: <UsersIcon /> }}
+            />
+            <SidebarLink
+              item={{ to: '/admin/audit', label: 'Audit log', icon: <AuditIcon /> }}
+            />
           </>
         )}
       </div>
@@ -261,7 +285,11 @@ export default function MissionLayout() {
       <PageContainer>
         <EmptyState
           icon={<OverviewIcon width={20} height={20} />}
-          title={notFound ? 'This mission is not available to you' : 'Could not load the mission'}
+          title={
+            notFound
+              ? 'This mission is not available to you'
+              : 'Could not load the mission'
+          }
           description={
             notFound
               ? 'Either it does not exist, or your account is not a member of it. Ask an administrator to add you under Overview, Team.'

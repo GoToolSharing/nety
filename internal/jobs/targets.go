@@ -14,9 +14,9 @@ import (
 //	10.0.0.1-50          short range (last octet)
 //	2001:db8::/64        IPv6 CIDR
 //
-// Everything is normalised to a list of prefixes; ranges are decomposed into
-// the smallest set of prefixes that covers them exactly, so the rest of the
-// pipeline only ever deals with prefixes.
+// Everything is normalised to a list of prefixes; ranges are decomposed into the smallest
+// set of prefixes that covers them exactly, so the rest of the pipeline only ever deals
+// with prefixes.
 
 // ParseTargets expands a target specification into prefixes.
 func ParseTargets(specs []string) ([]netip.Prefix, error) {
@@ -144,19 +144,18 @@ func lastAddr(p netip.Prefix) netip.Addr {
 	return addr
 }
 
-// MaxScanAddresses is the largest space a single scan may enumerate: 2^24,
-// the size of an IPv4 /8.
+// MaxScanAddresses is the largest space a single scan may enumerate: 2^24, the size of an
+// IPv4 /8.
 //
-// It is a safety limit, not a performance one. The planner materialises a work
-// unit per chunk of addresses, so an unbounded space is not a slow scan but a
-// process that allocates until the kernel kills it. That is exactly what an
-// IPv6 /64 picked up from a local interface does.
+// It is a safety limit, not a performance one. The planner materialises a work unit per
+// chunk of addresses, so an unbounded space is not a slow scan but a process that
+// allocates until the kernel kills it. That is exactly what an IPv6 /64 picked up from a
+// local interface does.
 const MaxScanAddresses int64 = 1 << 24
 
-// CountAddresses reports how many addresses a prefix list covers. The second
-// return value is false when the real total is larger than limit, so a caller
-// can tell "exactly this many" from "at least this many" instead of printing a
-// cap as though it were a count.
+// CountAddresses reports how many addresses a prefix list covers. The second return value
+// is false when the real total is larger than limit, so a caller can tell "exactly this
+// many" from "at least this many" instead of printing a cap as though it were a count.
 func CountAddresses(prefixes []netip.Prefix, limit int64) (int64, bool) {
 	var total int64
 	for _, p := range prefixes {
@@ -174,10 +173,9 @@ func CountAddresses(prefixes []netip.Prefix, limit int64) (int64, bool) {
 
 // Scannable reports whether a prefix is something a scan can enumerate.
 //
-// Auto-targets take their prefixes from what was detected on the interface,
-// and older networks were saved with the link-local fe80::/64 among them.
-// Filtering here means those keep working instead of failing on every scan
-// until someone edits them by hand.
+// Auto-targets take their prefixes from what was detected on the interface, and older
+// networks were saved with the link-local fe80::/64 among them. Filtering here means
+// those keep working instead of failing on every scan until someone edits them by hand.
 func Scannable(p netip.Prefix) bool {
 	a := p.Addr()
 	switch {
@@ -191,8 +189,8 @@ func Scannable(p netip.Prefix) bool {
 	return p.Bits() >= 112
 }
 
-// KeepScannable drops the prefixes a scan could never enumerate, returning
-// what was dropped so the caller can say so in the log.
+// KeepScannable drops the prefixes a scan could never enumerate, returning what was
+// dropped so the caller can say so in the log.
 func KeepScannable(prefixes []netip.Prefix) (keep, dropped []netip.Prefix) {
 	for _, p := range prefixes {
 		if Scannable(p) {
@@ -204,9 +202,9 @@ func KeepScannable(prefixes []netip.Prefix) (keep, dropped []netip.Prefix) {
 	return keep, dropped
 }
 
-// CheckScanSize refuses a target space that cannot be enumerated, with a
-// message that names the offending prefix instead of leaving the operator to
-// guess why their scan died.
+// CheckScanSize refuses a target space that cannot be enumerated, with a message that
+// names the offending prefix instead of leaving the operator to guess why their scan
+// died.
 func CheckScanSize(prefixes []netip.Prefix, excludes []netip.Prefix) error {
 	for _, p := range prefixes {
 		if bits := p.Addr().BitLen() - p.Bits(); bits >= 62 {
@@ -244,12 +242,11 @@ func (f ExcludeFilter) Allows(addr netip.Addr) bool {
 	return true
 }
 
-// IterateAddresses calls fn for every address of the prefixes that passes the
-// filter. Network and broadcast addresses are included: hosts do answer on
-// them often enough to matter on an internal audit, and skipping them would be
-// wrong anyway for the prefixes produced by decomposing an explicit range.
-// It never materialises the whole space, so a /8 costs no memory. fn returning
-// false stops iteration.
+// IterateAddresses calls fn for every address of the prefixes that passes the filter.
+// Network and broadcast addresses are included: hosts do answer on them often enough to
+// matter on an internal audit, and skipping them would be wrong anyway for the prefixes
+// produced by decomposing an explicit range. It never materialises the whole space, so a
+// /8 costs no memory. fn returning false stops iteration.
 func IterateAddresses(prefixes []netip.Prefix, f ExcludeFilter, fn func(netip.Addr) bool) {
 	for _, p := range prefixes {
 		addr := p.Masked().Addr()
@@ -271,9 +268,9 @@ func IterateAddresses(prefixes []netip.Prefix, f ExcludeFilter, fn func(netip.Ad
 	}
 }
 
-// ChunkAddresses splits the space into slices of at most size addresses. It
-// stops after MaxScanAddresses so a caller that forgot to validate its input
-// cannot take the process down with it.
+// ChunkAddresses splits the space into slices of at most size addresses. It stops after
+// MaxScanAddresses so a caller that forgot to validate its input cannot take the process
+// down with it.
 func ChunkAddresses(prefixes []netip.Prefix, f ExcludeFilter, size int, fn func([]netip.Addr) bool) {
 	if size <= 0 {
 		size = 256

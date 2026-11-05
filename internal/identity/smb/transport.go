@@ -1,9 +1,8 @@
-// Package smb is a small, safe SMB2/3 client used by NETY for identity
-// collection and light checks. It supports NEGOTIATE (with SMB 3.1.1
-// negotiate contexts), NTLM SESSION_SETUP (anonymous, guest or NTLMv2),
-// TREE_CONNECT, named pipe CREATE / IOCTL(FSCTL_PIPE_TRANSCEIVE) / READ /
-// WRITE / CLOSE. It never signs or encrypts: it is meant for anonymous and
-// guest sessions and pre-authentication fingerprinting only.
+// Package smb is a small, safe SMB2/3 client used by NETY for identity collection and
+// light checks. It supports NEGOTIATE (with SMB 3.1.1 negotiate contexts), NTLM
+// SESSION_SETUP (anonymous, guest or NTLMv2), TREE_CONNECT, named pipe CREATE /
+// IOCTL(FSCTL_PIPE_TRANSCEIVE) / READ / WRITE / CLOSE. It never signs or encrypts: it is
+// meant for anonymous and guest sessions and pre-authentication fingerprinting only.
 //
 // Transport is direct TCP (445) or NetBIOS session service (139).
 package smb
@@ -40,9 +39,9 @@ type Transport struct {
 	stop    func() bool
 }
 
-// DialTransport opens a TCP connection to ip:port. For port 139 a NetBIOS
-// session request is performed (called name "*SMBSERVER" unless calledName
-// is given). ctx cancellation closes the connection.
+// DialTransport opens a TCP connection to ip:port. For port 139 a NetBIOS session request
+// is performed (called name "*SMBSERVER" unless calledName is given). ctx cancellation
+// closes the connection.
 func DialTransport(ctx context.Context, ip string, port int, timeout time.Duration, calledName string) (*Transport, error) {
 	if timeout <= 0 {
 		timeout = 5 * time.Second

@@ -32,19 +32,19 @@ missions), `viewer` (read-only on their missions).
 
 ## Missions
 
-`GET /api/missions` - missions the caller can see
+`GET /api/missions`: missions the caller can see
 `POST /api/missions` `{name, client?, description?, scope_cidrs?, exclude_cidrs?}`
 `GET /api/missions/{id}` · `PATCH /api/missions/{id}` · `DELETE /api/missions/{id}` (admin)
 `GET /api/missions/{id}/members` · `PUT /api/missions/{id}/members` `{user_ids: []}`
-`GET /api/missions/{id}/summary` - counts per network, severity totals, matrix size
+`GET /api/missions/{id}/summary`: counts per network, severity totals, matrix size
 
 ## Networks (one per VLAN / attachment point)
 
 `GET /api/missions/{id}/networks`
 `POST /api/missions/{id}/networks` `{name, vlan_id?, description?, interface?, local_ip?, prefixes?, gateway?, dns_servers?}`
 `GET|PATCH|DELETE /api/networks/{id}`
-`GET /api/interfaces` - local NICs the server can use
-`POST /api/networks/detect` `{interface?}` - auto-detect addressing/gateway/DNS/DHCP, returns a draft Network (does not save)
+`GET /api/interfaces`: local NICs the server can use
+`POST /api/networks/detect` `{interface?}`: auto-detect addressing/gateway/DNS/DHCP, returns a draft Network (does not save)
 
 ## Scans
 
@@ -69,14 +69,14 @@ missions), `viewer` (read-only on their missions).
 }
 ```
 `GET /api/missions/{id}/scans` · `GET /api/scans/{id}` · `DELETE /api/scans/{id}`
-`POST /api/scans/{id}/start` - start or **resume** (same endpoint; a paused or
+`POST /api/scans/{id}/start`: start or **resume** (same endpoint; a paused or
 interrupted scan continues exactly where it stopped)
 `POST /api/scans/{id}/pause` · `POST /api/scans/{id}/stop`
-`POST /api/scans/{id}/retry-failed` - requeue the failed work units
-`GET /api/scans/{id}/logs?after=<id>&limit=` - live log lines
-`GET /api/scan-profiles` - the built-in profiles for the launch form
-`GET /api/techniques` - segmentation techniques `{id, title, description, l2_active, one_way, default}`
-`GET /api/checks` - the check catalog
+`POST /api/scans/{id}/retry-failed`: requeue the failed work units
+`GET /api/scans/{id}/logs?after=<id>&limit=`: live log lines
+`GET /api/scan-profiles`: the built-in profiles for the launch form
+`GET /api/techniques`: segmentation techniques `{id, title, description, l2_active, one_way, default}`
+`GET /api/checks`: the check catalog
 
 A scan object carries `status` (`queued|running|paused|completed|failed|cancelled`),
 `phase`, `progress` (0..1), `phases[]` (`{phase,total,done,failed,active,started}`),
@@ -84,7 +84,7 @@ A scan object carries `status` (`queued|running|paused|completed|failed|cancelle
 
 ### Diff between two scans
 
-`GET /api/missions/{id}/scans/{scanID}/diff?against=<other scan id>` - what
+`GET /api/missions/{id}/scans/{scanID}/diff?against=<other scan id>`: what
 changed on a network between two of its scans. Without `against`, the server
 compares with the most recent earlier **completed** scan of the same network and
 says so in `from_picked`. Both scans must be on the same network.
@@ -176,8 +176,8 @@ recreated or not matched, and which columns this build had no place for.
 `GET /api/missions/{id}/assets?ip=&sort=&dir=`
 `GET /api/assets/{id}` · `PATCH /api/assets/{id}` `{label?, notes?, tags?, kind?, status?, note?}`
 `POST /api/assets/{id}/merge` `{source_id}`
-`GET /api/hosts/{id}` - host plus its services, asset and findings
-`GET /api/missions/{id}/matrix?include_skipped=` - `{networks: [...], cells: [...], techniques: [...]}`
+`GET /api/hosts/{id}`: host plus its services, asset and findings
+`GET /api/missions/{id}/matrix?include_skipped=`: `{networks: [...], cells: [...], techniques: [...]}`
 `GET /api/missions/{id}/reach?source_network_id=&include_skipped=`
 
 **Filtering by address.** `ip` takes a single address or a CIDR prefix, IPv4
@@ -325,7 +325,7 @@ findings and machines CSVs, the Excel workbook, the JSON dump and the reports.
 
 `GET /api/missions/{id}/export?format=<id>&network_id=&scan_id=&against=` -
 streams a file with `Content-Disposition`.
-`GET /api/export-formats` - `[{id, title, extension, content_type}]`
+`GET /api/export-formats`: `[{id, title, extension, content_type}]`
 
 Formats: `json`, `csv-hosts`, `csv-services`, `csv-findings`, `csv-reach`,
 `csv-assets`, `csv-matrix`, `csv-diff`, `nmap-xml`, `gnmap`, `targets-txt`,
@@ -345,7 +345,7 @@ instead, so a reader can see which ones were out of scope.
 
 ## Live events (WebSocket)
 
-`GET /api/missions/{id}/events` - upgrade to WebSocket. The server pushes
+`GET /api/missions/{id}/events`: upgrade to WebSocket. The server pushes
 `model.Event` envelopes:
 
 ```jsonc
@@ -363,6 +363,6 @@ and the client must refetch the affected tables.
 
 ## Status
 
-`GET /api/status` - version, uptime, privileges (whether raw sockets are
+`GET /api/status`: version, uptime, privileges (whether raw sockets are
 available), running scans, database counters. No auth required for the
 version field; the rest needs a session.

@@ -7,9 +7,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// A reset is the step before handing a mission back for a second pass: the
-// results go, the setup stays. Re-creating the VLANs by hand would make it
-// useless.
+// A reset is the step before handing a mission back for a second pass: the results go,
+// the setup stays. Re-creating the VLANs by hand would make it useless.
 func TestResetMissionDataKeepsTheSetupAndDropsTheResults(t *testing.T) {
 	st := testStore(t)
 	ctx := context.Background()

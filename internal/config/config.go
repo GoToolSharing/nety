@@ -1,5 +1,4 @@
-// Package config holds build metadata and the runtime configuration of the
-// NETY server.
+// Package config holds build metadata and the runtime configuration of the NETY server.
 package config
 
 import (
@@ -31,8 +30,8 @@ func VersionString() string {
 		Version, Commit, BuildDate, runtime.GOOS, runtime.GOARCH, runtime.Version())
 }
 
-// Config is the server configuration. Every field can be set by flag or by the
-// matching NETY_* environment variable.
+// Config is the server configuration. Every field can be set by flag or by the matching
+// NETY_* environment variable.
 type Config struct {
 	// Storage
 	DataDir string // directory holding the database, TLS material and exports

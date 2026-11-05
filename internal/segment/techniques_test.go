@@ -8,8 +8,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// allModelTechniques is every technique constant the frozen model contract
-// defines. The catalogue must cover exactly these.
+// allModelTechniques is every technique constant the frozen model contract defines. The
+// catalogue must cover exactly these.
 var allModelTechniques = []string{
 	model.TechDirect, model.TechSrcPort53, model.TechSrcPort88, model.TechSrcPort123,
 	model.TechSrcPort20, model.TechSrcPort67, model.TechSrcPort500, model.TechICMP,

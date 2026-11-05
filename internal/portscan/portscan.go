@@ -1,7 +1,6 @@
-// Package portscan implements the port scanning engine: a stateless,
-// masscan-style raw SYN scanner (Linux), a portable TCP connect() scanner and
-// a UDP scanner sending protocol-specific payloads. Only open ports are
-// reported.
+// Package portscan implements the port scanning engine: a stateless, masscan-style raw
+// SYN scanner (Linux), a portable TCP connect() scanner and a UDP scanner sending
+// protocol-specific payloads. Only open ports are reported.
 package portscan
 
 import (
@@ -29,8 +28,7 @@ const (
 	DefaultSYNRetries     = 1
 	DefaultConnectRetries = 0
 	DefaultUDPRetries     = 1
-	// MaxConnectWorkers bounds concurrent connect() attempts (file
-	// descriptors).
+	// MaxConnectWorkers bounds concurrent connect() attempts (file descriptors).
 	MaxConnectWorkers = 512
 )
 
@@ -49,8 +47,8 @@ func New(log *slog.Logger) engine.PortScanner {
 
 var _ engine.PortScanner = (*Scanner)(nil)
 
-// Scan scans opts.Hosts on opts.TCPPorts and opts.UDPPorts and reports open
-// ports through out (possibly concurrently).
+// Scan scans opts.Hosts on opts.TCPPorts and opts.UDPPorts and reports open ports through
+// out (possibly concurrently).
 //
 // Options semantics:
 //   - Mode: auto (SYN when raw sockets are available, else connect), syn,
@@ -62,9 +60,9 @@ var _ engine.PortScanner = (*Scanner)(nil)
 //     probe; connect = per-attempt dial timeout.
 //   - SourcePort: fixed source port (segmentation bypass); 0 = random.
 //
-// UDP is scanned with ordinary (unprivileged) UDP sockets in every mode: only
-// responses are reported, which the kernel delivers just as well as a raw
-// socket would, and no privileges are needed.
+// UDP is scanned with ordinary (unprivileged) UDP sockets in every mode: only responses
+// are reported, which the kernel delivers just as well as a raw socket would, and no
+// privileges are needed.
 func (s *Scanner) Scan(ctx context.Context, opts engine.PortScanOptions, out func(engine.PortResult)) error {
 	if out == nil {
 		return errors.New("portscan: nil output callback")
@@ -259,10 +257,10 @@ func newPortIndex(ports []uint16) *portIndex {
 	return &pi
 }
 
-// doneSet records which (host, port) indices already got a definitive
-// answer, to skip them on retry rounds and report each open port once. It
-// is a lock-free bitset for spaces up to 2^28 entries (32 MiB) and a map
-// beyond (answers are sparse in huge spaces).
+// doneSet records which (host, port) indices already got a definitive answer, to skip
+// them on retry rounds and report each open port once. It is a lock-free bitset for
+// spaces up to 2^28 entries (32 MiB) and a map beyond (answers are sparse in huge
+// spaces).
 type doneSet interface {
 	// testAndSet marks idx and reports whether it was already marked.
 	testAndSet(idx uint64) bool
@@ -310,9 +308,8 @@ func (d *mapDone) has(idx uint64) bool {
 	return ok
 }
 
-// emitter serialises nothing (the callback may be called concurrently per
-// the engine contract) but shields the scan from a panicking callback and
-// counts results.
+// emitter serialises nothing (the callback may be called concurrently per the engine
+// contract) but shields the scan from a panicking callback and counts results.
 type emitter struct {
 	out func(engine.PortResult)
 	n   atomic.Int64
@@ -366,8 +363,8 @@ func newProgress(fn engine.Progress, total int64) *progress {
 
 func (p *progress) add(n int64) { p.done.Add(n) }
 
-// skipTo raises the done counter to at least v (units skipped because their
-// host was unreachable or the phase ended early).
+// skipTo raises the done counter to at least v (units skipped because their host was
+// unreachable or the phase ended early).
 func (p *progress) skipTo(v int64) {
 	for {
 		cur := p.done.Load()

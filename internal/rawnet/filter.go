@@ -23,22 +23,22 @@ const (
 	EtherTypeVLAN = 0x8100
 )
 
-// FilterSpec describes which frames an AF_PACKET socket should receive.
-// Filtering in the kernel keeps the receive path cheap at high packet rates.
+// FilterSpec describes which frames an AF_PACKET socket should receive. Filtering in the
+// kernel keeps the receive path cheap at high packet rates.
 type FilterSpec struct {
-	// ARP accepts ARP frames (optionally only those whose target protocol
-	// address is LocalIPv4).
+	// ARP accepts ARP frames (optionally only those whose target protocol address is
+	// LocalIPv4).
 	ARP bool
-	// LocalIPv4 / LocalIPv6 restrict IP frames to this destination address
-	// (invalid = any destination). A family with no protocol in IPv4Protos /
-	// IPv6Protos is rejected entirely.
+	// LocalIPv4 / LocalIPv6 restrict IP frames to this destination address (invalid = any
+	// destination). A family with no protocol in IPv4Protos / IPv6Protos is rejected
+	// entirely.
 	LocalIPv4 netip.Addr
 	LocalIPv6 netip.Addr
 	// IPv4Protos / IPv6Protos list accepted IP protocol / next header values.
 	IPv4Protos []uint8
 	IPv6Protos []uint8
-	// DropOutgoing rejects frames sent by this host (PACKET_OUTGOING) using
-	// the Linux SKF_AD_PKTTYPE ancillary load.
+	// DropOutgoing rejects frames sent by this host (PACKET_OUTGOING) using the Linux
+	// SKF_AD_PKTTYPE ancillary load.
 	DropOutgoing bool
 }
 

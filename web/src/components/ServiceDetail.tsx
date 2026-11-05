@@ -27,7 +27,9 @@ function Section({
       >
         {title}
       </h3>
-      <div className="rounded-md border border-border bg-elevated/50 px-3 py-2">{children}</div>
+      <div className="rounded-md border border-border bg-elevated/50 px-3 py-2">
+        {children}
+      </div>
     </section>
   )
 }
@@ -171,7 +173,8 @@ export default function ServiceDetail({
               </span>
             </KeyValue>
             <KeyValue label="Key / signature">
-              {s.tls.key_algo} {s.tls.key_bits ? `${formatNumber(s.tls.key_bits)} bits` : ''} ·{' '}
+              {s.tls.key_algo}{' '}
+              {s.tls.key_bits ? `${formatNumber(s.tls.key_bits)} bits` : ''} ·{' '}
               {s.tls.sig_algo}
             </KeyValue>
             <KeyValue label="SANs">
@@ -183,7 +186,9 @@ export default function ServiceDetail({
             <KeyValue label="SHA-256" mono>
               <span className="flex items-center gap-1 break-all">
                 {s.tls.sha256 || '-'}
-                {s.tls.sha256 && <CopyButton value={s.tls.sha256} label="Copy fingerprint" />}
+                {s.tls.sha256 && (
+                  <CopyButton value={s.tls.sha256} label="Copy fingerprint" />
+                )}
               </span>
             </KeyValue>
             {s.tls.jarm && (
@@ -219,10 +224,14 @@ export default function ServiceDetail({
                 >
                   {s.http.status_code}
                 </Badge>
-                {s.http.location && <Mono className="text-muted">→ {s.http.location}</Mono>}
+                {s.http.location && (
+                  <Mono className="text-muted">→ {s.http.location}</Mono>
+                )}
               </span>
             </KeyValue>
-            <KeyValue label="Title">{s.http.title || <span className="text-faint">-</span>}</KeyValue>
+            <KeyValue label="Title">
+              {s.http.title || <span className="text-faint">-</span>}
+            </KeyValue>
             <KeyValue label="Server">
               {s.http.server || '-'}
               {s.http.powered_by ? (
@@ -232,7 +241,10 @@ export default function ServiceDetail({
             <KeyValue label="Content">
               {s.http.content_type || '-'}
               {s.http.content_length ? (
-                <span className="text-muted"> · {formatBytes(s.http.content_length)}</span>
+                <span className="text-muted">
+                  {' '}
+                  · {formatBytes(s.http.content_length)}
+                </span>
               ) : null}
             </KeyValue>
             <KeyValue label="Technologies">
@@ -280,7 +292,10 @@ export default function ServiceDetail({
               ) : (
                 <div className="space-y-1">
                   {(s.ssh.host_keys ?? []).map((k) => (
-                    <div key={`${k.type}-${k.sha256}`} className="flex items-center gap-1.5">
+                    <div
+                      key={`${k.type}-${k.sha256}`}
+                      className="flex items-center gap-1.5"
+                    >
                       <Badge tone="accent">{k.type}</Badge>
                       <Mono className="break-all text-muted">{k.sha256}</Mono>
                       <CopyButton value={k.sha256} label="Copy host key fingerprint" />

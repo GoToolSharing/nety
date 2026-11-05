@@ -36,21 +36,21 @@ func init() {
 	})
 }
 
-// httpCredPorts are the ports the products below listen on when the
-// fingerprinter could not name the service.
+// httpCredPorts are the ports the products below listen on when the fingerprinter could
+// not name the service.
 var httpCredPorts = []int{
 	3000, 5000, 5001, 8000, 8080, 8081, 8088, 8089, 8090, 8161, 8200, 8443,
 	8983, 9000, 9001, 9090, 9200, 15672,
 }
 
-// httpCredMaxPerProduct bounds the attempts against any single product. Every
-// product below locks out at five failures or does not lock out at all, so
-// three leaves room for an operator's own earlier attempts in the same day.
+// httpCredMaxPerProduct bounds the attempts against any single product. Every product
+// below locks out at five failures or does not lock out at all, so three leaves room for
+// an operator's own earlier attempts in the same day.
 const httpCredMaxPerProduct = 3
 
-// httpCredApp is one product: how to recognise it, and the credentials its
-// vendor documents. Recognition comes first and gates everything else, so a
-// product is never offered another product's passwords.
+// httpCredApp is one product: how to recognise it, and the credentials its vendor
+// documents. Recognition comes first and gates everything else, so a product is never
+// offered another product's passwords.
 type httpCredApp struct {
 	name   string
 	detect func(fp string, s model.Service) bool
@@ -157,8 +157,8 @@ func runHTTPDefaultCreds(ctx context.Context, t *Target) []model.Finding {
 	return nil
 }
 
-// httpCredBodyHints adds the product names that only appear in the page body
-// to the fingerprint text, lowercased so detection stays case insensitive.
+// httpCredBodyHints adds the product names that only appear in the page body to the
+// fingerprint text, lowercased so detection stays case insensitive.
 func httpCredBodyHints(body []byte) string {
 	var hints []string
 	for _, name := range []string{
@@ -174,19 +174,17 @@ func httpCredBodyHints(body []byte) string {
 	return strings.Join(hints, " ")
 }
 
-// ---------------------------------------------------------------------------
-// Shared attempt helpers
+// --------------------------------------------------------------------------- Shared
+// attempt helpers
 //
-// Every attempt passes through t.credAttempt, which holds the per-host
-// ceiling. Once it is spent the helpers stop trying rather than falling back
-// to another path, so adding products to the table above can never raise the
-// number of failed logons a host sees.
+// Every attempt passes through t.credAttempt, which holds the per-host ceiling. Once it
+// is spent the helpers stop trying rather than falling back to another path, so adding
+// products to the table above can never raise the number of failed logons a host sees.
 // ---------------------------------------------------------------------------
 
-// httpCredBasicAt tries Basic credentials against the first path that
-// actually challenges for them. Requiring the challenge first is what keeps
-// an endpoint that answers 200 to everyone from being read as a successful
-// login.
+// httpCredBasicAt tries Basic credentials against the first path that actually challenges
+// for them. Requiring the challenge first is what keeps an endpoint that answers 200 to
+// everyone from being read as a successful login.
 func httpCredBasicAt(ctx context.Context, t *Target, c *http.Client, scheme, product string, paths []string, marker string, creds [][2]string) (string, bool) {
 	for _, p := range paths {
 		if ctx.Err() != nil {
@@ -221,8 +219,8 @@ func httpCredBasicAt(ctx context.Context, t *Target, c *http.Client, scheme, pro
 	return "", false
 }
 
-// httpCredPost sends one login request on a credential the caller already
-// reserved budget for.
+// httpCredPost sends one login request on a credential the caller already reserved budget
+// for.
 func httpCredPost(ctx context.Context, t *Target, c *http.Client, u string, body []byte, hdr map[string]string) (*webResp, bool) {
 	if !t.credAttempt() {
 		return nil, false
@@ -248,8 +246,8 @@ func httpCredMarkerNote(marker string) string {
 	return fmt.Sprintf(", response contains %q", marker)
 }
 
-// httpCredSessionSet reports whether the response set a session cookie whose
-// name contains want: the sign that a form login was accepted.
+// httpCredSessionSet reports whether the response set a session cookie whose name
+// contains want: the sign that a form login was accepted.
 func httpCredSessionSet(r *webResp, want string) bool {
 	for _, sc := range r.Header.Values("Set-Cookie") {
 		if strings.Contains(strings.ToLower(sc), strings.ToLower(want)) {
@@ -259,12 +257,11 @@ func httpCredSessionSet(r *webResp, want string) bool {
 	return false
 }
 
-// ---------------------------------------------------------------------------
-// Per product attempts
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Per product
+// attempts ---------------------------------------------------------------------------
 
-// Tomcat Manager: Basic auth on /manager/html. LockOutRealm locks a user
-// after 5 failures by default: at most 3 attempts.
+// Tomcat Manager: Basic auth on /manager/html. LockOutRealm locks a user after 5 failures
+// by default: at most 3 attempts.
 func httpCredTomcat(ctx context.Context, t *Target, c *http.Client, scheme string) (string, bool) {
 	u := webURL(t, scheme, "/manager/html")
 	r, err := webDo(ctx, c, http.MethodGet, u, nil, nil)
@@ -344,16 +341,16 @@ func httpCredIDRAC(ctx context.Context, t *Target, c *http.Client, scheme string
 	return fmt.Sprintf("iDRAC Redfish GET %s accepts root:calvin (HTTP 200)", u), true
 }
 
-// ActiveMQ: the web console is behind Jetty Basic auth, defaults admin:admin
-// and user:user.
+// ActiveMQ: the web console is behind Jetty Basic auth, defaults admin:admin and
+// user:user.
 func httpCredActiveMQ(ctx context.Context, t *Target, c *http.Client, scheme string) (string, bool) {
 	return httpCredBasicAt(ctx, t, c, scheme, "ActiveMQ console",
 		[]string{"/admin/", "/api/jolokia/read/java.lang:type=Runtime"}, "",
 		[][2]string{{"admin", "admin"}, {"user", "user"}})
 }
 
-// Nexus Repository: admin:admin123 on 3.x before the random password, and on
-// every 2.x install.
+// Nexus Repository: admin:admin123 on 3.x before the random password, and on every 2.x
+// install.
 func httpCredNexus(ctx context.Context, t *Target, c *http.Client, scheme string) (string, bool) {
 	return httpCredBasicAt(ctx, t, c, scheme, "Nexus Repository",
 		[]string{"/service/rest/v1/security/users", "/service/local/users"}, "",
@@ -429,8 +426,8 @@ func httpCredLibreNMS(ctx context.Context, t *Target, c *http.Client, scheme str
 
 var pfSenseCSRFRe = regexp.MustCompile(`name=['"]__csrf_magic['"]\s+value=['"]([^'"]+)['"]`)
 
-// pfSense: admin:pfsense. The login form carries a CSRF token, so one GET is
-// needed before the single attempt.
+// pfSense: admin:pfsense. The login form carries a CSRF token, so one GET is needed
+// before the single attempt.
 func httpCredPfSense(ctx context.Context, t *Target, c *http.Client, scheme string) (string, bool) {
 	u := webURL(t, scheme, "/index.php")
 	r, err := webDo(ctx, c, http.MethodGet, u, nil, nil)
@@ -465,8 +462,8 @@ func httpCredPfSense(ctx context.Context, t *Target, c *http.Client, scheme stri
 	return fmt.Sprintf("pfSense POST %s accepts admin:pfsense (HTTP %d to %q)", u, rr.Status, rr.Header.Get("Location")), true
 }
 
-// Synology DSM: the setup wizard creates admin with an empty password, and
-// plenty of appliances are never taken past that point.
+// Synology DSM: the setup wizard creates admin with an empty password, and plenty of
+// appliances are never taken past that point.
 func httpCredSynology(ctx context.Context, t *Target, c *http.Client, scheme string) (string, bool) {
 	u := webURL(t, scheme, "/webapi/auth.cgi?api=SYNO.API.Auth&version=3&method=login&account=admin&passwd=&session=nety&format=sid")
 	if !t.credAttempt() {
@@ -488,8 +485,8 @@ func httpCredSynology(ctx context.Context, t *Target, c *http.Client, scheme str
 	return fmt.Sprintf("Synology DSM %s accepts the account 'admin' with an empty password (a session id was issued)", webURL(t, scheme, "/webapi/auth.cgi")), true
 }
 
-// Ubiquiti: ubnt:ubnt on airOS radios and on a UniFi controller that was
-// never taken through its setup.
+// Ubiquiti: ubnt:ubnt on airOS radios and on a UniFi controller that was never taken
+// through its setup.
 func httpCredUbiquiti(ctx context.Context, t *Target, c *http.Client, scheme string) (string, bool) {
 	u := webURL(t, scheme, "/api/login")
 	body, _ := json.Marshal(map[string]string{"username": "ubnt", "password": "ubnt"})
@@ -516,16 +513,16 @@ func httpCredSplunk(ctx context.Context, t *Target, c *http.Client, scheme strin
 	return fmt.Sprintf("Splunk POST %s accepts admin:changeme (a session key was returned)", u), true
 }
 
-// Elasticsearch / OpenSearch: elastic:changeme on 5.x and 6.x, and
-// admin:admin on an OpenSearch demo configuration.
+// Elasticsearch / OpenSearch: elastic:changeme on 5.x and 6.x, and admin:admin on an
+// OpenSearch demo configuration.
 func httpCredElasticsearch(ctx context.Context, t *Target, c *http.Client, scheme string) (string, bool) {
 	return httpCredBasicAt(ctx, t, c, scheme, "Elasticsearch",
 		[]string{"/_cluster/health", "/"}, "cluster_name",
 		[][2]string{{"elastic", "changeme"}, {"elastic", "elastic"}, {"admin", "admin"}})
 }
 
-// Airflow: airflow:airflow from the quick start, exercised through the stable
-// REST API so no CSRF token is needed.
+// Airflow: airflow:airflow from the quick start, exercised through the stable REST API so
+// no CSRF token is needed.
 func httpCredAirflow(ctx context.Context, t *Target, c *http.Client, scheme string) (string, bool) {
 	return httpCredBasicAt(ctx, t, c, scheme, "Airflow",
 		[]string{"/api/v1/dags", "/api/v1/config"}, "",
@@ -577,9 +574,8 @@ func httpCredKeycloak(ctx context.Context, t *Target, c *http.Client, scheme str
 
 var phpMyAdminTokenRe = regexp.MustCompile(`name=['"]token['"]\s+value=['"]([^'"]+)['"]`)
 
-// phpMyAdmin: the account it signs in with is the database's, and the stock
-// XAMPP and WAMP builds leave MySQL root without a password. Only that one
-// combination is tried.
+// phpMyAdmin: the account it signs in with is the database's, and the stock XAMPP and
+// WAMP builds leave MySQL root without a password. Only that one combination is tried.
 func httpCredPHPMyAdmin(ctx context.Context, t *Target, c *http.Client, scheme string) (string, bool) {
 	base := webURL(t, scheme, "/index.php")
 	r, err := webDo(ctx, c, http.MethodGet, base, nil, nil)
@@ -623,8 +619,8 @@ func httpCredSonarQube(ctx context.Context, t *Target, c *http.Client, scheme st
 	return fmt.Sprintf("SonarQube POST %s accepts admin:admin (HTTP %d, JWT session issued)", u, r.Status), true
 }
 
-// Solr: the reference guide's example security.json ships solr:SolrRocks, and
-// it is copied into real deployments as often as it is read.
+// Solr: the reference guide's example security.json ships solr:SolrRocks, and it is
+// copied into real deployments as often as it is read.
 func httpCredSolr(ctx context.Context, t *Target, c *http.Client, scheme string) (string, bool) {
 	return httpCredBasicAt(ctx, t, c, scheme, "Solr",
 		[]string{"/solr/admin/info/system?wt=json", "/solr/admin/cores?wt=json"}, "",
@@ -638,8 +634,8 @@ func httpCredArtifactory(ctx context.Context, t *Target, c *http.Client, scheme 
 		[][2]string{{"admin", "password"}})
 }
 
-// HashiCorp Vault in dev mode: the root token is literally "root", and an
-// unsealed dev server on a network is a secret store with no secrets kept.
+// HashiCorp Vault in dev mode: the root token is literally "root", and an unsealed dev
+// server on a network is a secret store with no secrets kept.
 func httpCredVault(ctx context.Context, t *Target, c *http.Client, scheme string) (string, bool) {
 	u := webURL(t, scheme, "/v1/sys/mounts")
 	r, err := webDo(ctx, c, http.MethodGet, u, nil, nil)
@@ -657,9 +653,9 @@ func httpCredVault(ctx context.Context, t *Target, c *http.Client, scheme string
 	return fmt.Sprintf("HashiCorp Vault GET %s accepts the development root token \"root\": the server is running in dev mode with its secret engines readable", u), true
 }
 
-// httpCredPrinterDefaults holds each vendor's documented administrator
-// credential. A printer is only offered the credentials of the vendor whose
-// name is in its own fingerprint.
+// httpCredPrinterDefaults holds each vendor's documented administrator credential. A
+// printer is only offered the credentials of the vendor whose name is in its own
+// fingerprint.
 var httpCredPrinterDefaults = []struct {
 	vendor string
 	words  []string

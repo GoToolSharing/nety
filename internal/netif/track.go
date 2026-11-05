@@ -7,13 +7,13 @@ import (
 	"sync"
 )
 
-// Every function in this package that changes the system registers an undo
-// action here. RestoreAll replays them in reverse order, so a sub-interface is
-// only deleted after the routes and addresses that were added on it.
+// Every function in this package that changes the system registers an undo action here.
+// RestoreAll replays them in reverse order, so a sub-interface is only deleted after the
+// routes and addresses that were added on it.
 //
-// The registry is process-wide on purpose: a panic or a SIGINT handler
-// anywhere in NETY can call netif.RestoreAll() and be sure nothing NETY
-// created is left behind on the operator's machine or on the client's switch.
+// The registry is process-wide on purpose: a panic or a SIGINT handler anywhere in NETY
+// can call netif.RestoreAll() and be sure nothing NETY created is left behind on the
+// operator's machine or on the client's switch.
 
 type change struct {
 	id   uint64
@@ -38,9 +38,9 @@ func trackChange(desc string, undo func() error) uint64 {
 	return id
 }
 
-// forgetChange drops a registered undo action without running it. It is called
-// when the change has already been reverted explicitly (e.g. DelRoute after
-// AddRoute), so RestoreAll does not try again.
+// forgetChange drops a registered undo action without running it. It is called when the
+// change has already been reverted explicitly (e.g. DelRoute after AddRoute), so
+// RestoreAll does not try again.
 func forgetChange(id uint64) {
 	if id == 0 {
 		return
@@ -55,8 +55,8 @@ func forgetChange(id uint64) {
 	}
 }
 
-// trackKeyed registers an undo action under a stable key so that an explicit
-// revert (DelRoute after AddRoute) can drop it from the registry.
+// trackKeyed registers an undo action under a stable key so that an explicit revert
+// (DelRoute after AddRoute) can drop it from the registry.
 func trackKeyed(key, desc string, undo func() error) {
 	id := trackChange(desc, undo)
 	tracker.mu.Lock()
@@ -80,9 +80,9 @@ func forgetKeyed(key string) {
 	}
 }
 
-// Keys under which the creating functions register their undo action. They
-// live here, not in the Linux-only file, because the keyed-undo helpers below
-// are part of the portable API.
+// Keys under which the creating functions register their undo action. They live here, not
+// in the Linux-only file, because the keyed-undo helpers below are part of the portable
+// API.
 
 func vlanKey(name string) string { return "vlan|" + name }
 
@@ -94,13 +94,13 @@ func routeKey(dst netip.Prefix, via netip.Addr, iface string) string {
 	return "route|" + dst.String() + "|" + via.String() + "|" + iface
 }
 
-// undoKeyed runs the undo action registered under key, if there is one, and
-// drops it. When there is none - because the thing already existed and NETY
-// did not create it - it does nothing and reports no error.
+// undoKeyed runs the undo action registered under key, if there is one, and drops it.
+// When there is none, because the thing already existed and NETY did not create it, it
+// does nothing and reports no error.
 //
-// This is the safe way for a caller to unwind: it reverts exactly what NETY
-// made and never touches a sub-interface, address or route that was already
-// on the operator's machine.
+// This is the safe way for a caller to unwind: it reverts exactly what NETY made and
+// never touches a sub-interface, address or route that was already on the operator's
+// machine.
 func undoKeyed(key string) error {
 	tracker.mu.Lock()
 	id, ok := tracker.keys[key]
@@ -136,8 +136,8 @@ func UndoRoute(dst netip.Prefix, via netip.Addr, iface string) error {
 	return undoKeyed(routeKey(dst, via, iface))
 }
 
-// PendingChanges lists the system changes NETY has made and not yet undone,
-// oldest first. The UI shows it so an operator can see what is still applied.
+// PendingChanges lists the system changes NETY has made and not yet undone, oldest first.
+// The UI shows it so an operator can see what is still applied.
 func PendingChanges() []string {
 	tracker.mu.Lock()
 	defer tracker.mu.Unlock()
@@ -148,9 +148,9 @@ func PendingChanges() []string {
 	return out
 }
 
-// RestoreAll undoes every change NETY made, most recent first, and clears the
-// registry. It keeps going after a failure and returns the joined errors, so
-// one stuck route never prevents the rest of the cleanup.
+// RestoreAll undoes every change NETY made, most recent first, and clears the registry.
+// It keeps going after a failure and returns the joined errors, so one stuck route never
+// prevents the rest of the cleanup.
 //
 // It is idempotent and safe to call from a deferred recover.
 func RestoreAll() error {

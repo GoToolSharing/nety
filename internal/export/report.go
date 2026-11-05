@@ -12,9 +12,9 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// The Markdown and HTML reports are the human-facing deliverable: an executive
-// summary, the inventory per network, the segmentation matrix and the
-// findings. They are generated from the same outline so the two stay in sync.
+// The Markdown and HTML reports are the human-facing deliverable: an executive summary,
+// the inventory per network, the segmentation matrix and the findings. They are generated
+// from the same outline so the two stay in sync.
 
 type reportSummary struct {
 	Networks     int
@@ -93,8 +93,7 @@ func buildSummary(d model.MissionData) reportSummary {
 	return s
 }
 
-// ---------------------------------------------------------------------------
-// Markdown
+// --------------------------------------------------------------------------- Markdown
 // ---------------------------------------------------------------------------
 
 func writeMarkdown(w io.Writer, d model.MissionData) error {
@@ -304,9 +303,8 @@ func writeMarkdown(w io.Writer, d model.MissionData) error {
 			if err := p("### [%s] %s - %s\n\n", strings.ToUpper(string(f.Severity)), mdEscape(f.Title), loc); err != nil {
 				return err
 			}
-			// The operator's verdict goes above the check's own text: a reader
-			// wants to know whether this one was confirmed before reading why
-			// the check fired.
+			// The operator's verdict goes above the check's own text: a reader wants to
+			// know whether this one was confirmed before reading why the check fired.
 			if err := p("_Review: %s_", triageLabel(f.Triage.Status)); err != nil {
 				return err
 			}
@@ -509,8 +507,7 @@ func dedupe(in []string) []string {
 	return out
 }
 
-// ---------------------------------------------------------------------------
-// HTML
+// --------------------------------------------------------------------------- HTML
 // ---------------------------------------------------------------------------
 
 func writeHTML(w io.Writer, d model.MissionData) error {
@@ -702,9 +699,8 @@ func writeHTML(w io.Writer, d model.MissionData) error {
 				f.Severity, strings.ToUpper(string(f.Severity)), e(f.Title), e(loc)); err != nil {
 				return err
 			}
-			// The operator's verdict goes above the check's own text: a reader
-			// wants to know whether this one was confirmed before reading why
-			// the check fired.
+			// The operator's verdict goes above the check's own text: a reader wants to
+			// know whether this one was confirmed before reading why the check fired.
 			status := f.Triage.Status
 			if status == "" {
 				status = model.TriageTodo

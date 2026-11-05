@@ -8,8 +8,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// MS-RPRN, the Print System Remote Protocol:
-// 12345678-1234-abcd-ef00-0123456789ab v1.0 over the \pipe\spoolss named pipe.
+// MS-RPRN, the Print System Remote Protocol: 12345678-1234-abcd-ef00-0123456789ab v1.0
+// over the \pipe\spoolss named pipe.
 var rpcSpoolssUUID = rpcUUID("12345678-1234-abcd-ef00-0123456789ab")
 
 func init() {
@@ -27,12 +27,11 @@ func init() {
 	})
 }
 
-// runMSRPRNSpooler establishes an anonymous SMB session, opens the spooler
-// pipe and binds to the interface. It stops there on purpose: proving the
-// interface is listening needs a BIND_ACK and nothing more. The calls that
-// make the spooler authenticate somewhere (RpcRemoteFindFirstPrinterChange-
-// NotificationEx and friends) are never sent, so no authentication is ever
-// coerced out of the host.
+// runMSRPRNSpooler establishes an anonymous SMB session, opens the spooler pipe and binds
+// to the interface. It stops there on purpose: proving the interface is listening needs a
+// BIND_ACK and nothing more. The calls that make the spooler authenticate somewhere
+// (RpcRemoteFindFirstPrinterChange- NotificationEx and friends) are never sent, so no
+// authentication is ever coerced out of the host.
 func runMSRPRNSpooler(ctx context.Context, t *Target) []model.Finding {
 	c, err := smb.Dial(ctx, t.IP, t.Service.Port, t.Timeout)
 	if err != nil {

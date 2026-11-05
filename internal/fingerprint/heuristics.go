@@ -5,13 +5,13 @@ import (
 	"strings"
 )
 
-// bannerRule recognises a service from the bytes it volunteers on connect (or
-// from the answer to the NULL probe). These rules are the safety net used when
-// nmap's service-probes file is not installed: they cover the protocols an
-// internal network is actually made of, nothing more.
+// bannerRule recognises a service from the bytes it volunteers on connect (or from the
+// answer to the NULL probe). These rules are the safety net used when nmap's
+// service-probes file is not installed: they cover the protocols an internal network is
+// actually made of, nothing more.
 //
-// re is matched against the printable rendering of the banner (see printable),
-// so \r, \n and \xNN escapes are literal two/four-character sequences.
+// re is matched against the printable rendering of the banner (see printable), so \r, \n
+// and \xNN escapes are literal two/four-character sequences.
 type bannerRule struct {
 	re      *regexp.Regexp
 	name    string
@@ -92,8 +92,8 @@ var bannerRules = []bannerRule{
 
 func rx(s string) *regexp.Regexp { return regexp.MustCompile(`(?i)` + s) }
 
-// bannerMatch identifies a service from a printable banner. ok is false when
-// nothing recognisable was found.
+// bannerMatch identifies a service from a printable banner. ok is false when nothing
+// recognisable was found.
 func bannerMatch(banner string) (r bannerRule, version string, ok bool) {
 	if banner == "" {
 		return bannerRule{}, "", false
@@ -144,8 +144,8 @@ func expandGroups(tpl string, m []string) string {
 	return strings.TrimSpace(b.String())
 }
 
-// looksHTTP reports whether a volunteered banner is an HTTP response, which
-// happens with servers that answer before reading the request line.
+// looksHTTP reports whether a volunteered banner is an HTTP response, which happens with
+// servers that answer before reading the request line.
 func looksHTTP(b []byte) bool {
 	return len(b) >= 5 && strings.HasPrefix(strings.ToUpper(string(b[:5])), "HTTP/")
 }

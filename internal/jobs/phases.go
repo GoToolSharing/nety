@@ -16,8 +16,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/store"
 )
 
-// Work-unit payloads. Each is a small JSON document stored in scan_work, so a
-// resume rebuilds the exact same unit of work after a restart.
+// Work-unit payloads. Each is a small JSON document stored in scan_work, so a resume
+// rebuilds the exact same unit of work after a restart.
 type (
 	l2Payload struct {
 		Interface string `json:"interface"`
@@ -73,12 +73,11 @@ func marshalUnits[T any](items []T) ([]json.RawMessage, error) {
 	return out, nil
 }
 
-// ---------------------------------------------------------------------------
-// planning
+// --------------------------------------------------------------------------- planning
 // ---------------------------------------------------------------------------
 
-// plan creates the initial work units of a scan. It is idempotent: resuming a
-// scan that already has units adds nothing.
+// plan creates the initial work units of a scan. It is idempotent: resuming a scan that
+// already has units adds nothing.
 func (r *Runner) plan(ctx context.Context, sc model.Scan) error {
 	net, err := r.st.Network(ctx, sc.NetworkID)
 	if err != nil && sc.NetworkID != 0 {
@@ -87,15 +86,15 @@ func (r *Runner) plan(ctx context.Context, sc model.Scan) error {
 
 	// Each phase is planned on its own and only if it has no work yet.
 	//
-	// Checking "does this scan have any phase at all" instead would make
-	// planning all-or-nothing: a process that died after writing the L2 unit
-	// but before the discovery ones left a scan that resumed into a plan
-	// missing its main phase, ran the L2 recon, found nothing to do and
-	// reported itself completed. Per-phase, a resume finishes the plan.
+	// Checking "does this scan have any phase at all" instead would make planning
+	// all-or-nothing: a process that died after writing the L2 unit but before the
+	// discovery ones left a scan that resumed into a plan missing its main phase, ran the
+	// L2 recon, found nothing to do and reported itself completed. Per-phase, a resume
+	// finishes the plan.
 
-	// L2 recon of the switch port we are plugged into. A checks scan works
-	// from the inventory and never touches the wire at layer 2, so it is the
-	// one kind that skips this.
+	// L2 recon of the switch port we are plugged into. A checks scan works from the
+	// inventory and never touches the wire at layer 2, so it is the one kind that skips
+	// this.
 	if sc.Kind != model.ScanChecks && r.eng.NetInspector != nil && net.Interface != "" {
 		has, err := r.phaseHasWork(ctx, sc.ID, model.PhaseL2)
 		if err != nil {
@@ -125,8 +124,8 @@ func (r *Runner) plan(ctx context.Context, sc model.Scan) error {
 		return r.planChecks(ctx, sc)
 	}
 
-	// The scanning phases are fed by discovery, so once any of them exists the
-	// plan is under way and must not be rebuilt on top of itself.
+	// The scanning phases are fed by discovery, so once any of them exists the plan is
+	// under way and must not be rebuilt on top of itself.
 	started, err := r.phaseHasWork(ctx, sc.ID,
 		model.PhaseDiscovery, model.PhasePortsTCP, model.PhasePortsUDP)
 	if err != nil {
@@ -145,9 +144,9 @@ func (r *Runner) plan(ctx context.Context, sc model.Scan) error {
 	}
 	filter := NewExcludeFilter(excludes)
 
-	// Refuse an impossible scope before building a single work unit. Without
-	// this an IPv6 /64 picked up from a local interface takes the process down
-	// with it, which looks to the operator like an unexplained restart.
+	// Refuse an impossible scope before building a single work unit. Without this an IPv6
+	// /64 picked up from a local interface takes the process down with it, which looks to
+	// the operator like an unexplained restart.
 	if err := CheckScanSize(targets, excludes); err != nil {
 		return err
 	}
@@ -196,15 +195,14 @@ func (r *Runner) planPortUnits(ctx context.Context, sc model.Scan, targets []net
 	return r.addPortUnits(ctx, sc, addrs, tcp, udp)
 }
 
-// addPortUnits chunks host×port space into work units of about PortChunk
-// probes each.
+// addPortUnits chunks host×port space into work units of about PortChunk probes each.
 func (r *Runner) addPortUnits(ctx context.Context, sc model.Scan, addrs []netip.Addr, tcp, udp []uint16) error {
 	add := func(phase model.WorkPhase, portList []uint16, proto model.Protocol) error {
 		if len(portList) == 0 || len(addrs) == 0 {
 			return nil
 		}
-		// A crash between the TCP and the UDP call would otherwise duplicate
-		// the first one when the plan is finished on resume.
+		// A crash between the TCP and the UDP call would otherwise duplicate the first
+		// one when the plan is finished on resume.
 		if has, err := r.phaseHasWork(ctx, sc.ID, phase); err != nil || has {
 			return err
 		}
@@ -255,8 +253,8 @@ func (r *Runner) scanPorts(sc model.Scan) (tcp, udp []uint16, err error) {
 	return tcp, udp, nil
 }
 
-// resolveTargets merges the explicit targets, the network prefixes and the
-// mission scope, then the exclusions.
+// resolveTargets merges the explicit targets, the network prefixes and the mission scope,
+// then the exclusions.
 func (r *Runner) resolveTargets(ctx context.Context, sc model.Scan, net model.Network) ([]netip.Prefix, []netip.Prefix, error) {
 	specs := append([]string{}, sc.Options.Targets...)
 	if sc.Options.AutoTargets {
@@ -269,8 +267,8 @@ func (r *Runner) resolveTargets(ctx context.Context, sc model.Scan, net model.Ne
 	if err != nil {
 		return nil, nil, err
 	}
-	// Auto-targets come from what was detected on the interface, which
-	// includes addressing that is not a scan scope.
+	// Auto-targets come from what was detected on the interface, which includes
+	// addressing that is not a scan scope.
 	targets, dropped := KeepScannable(targets)
 	if len(dropped) > 0 {
 		r.log.Info("jobs: prefixes dropped from the scope, not scannable",
@@ -284,8 +282,8 @@ func (r *Runner) resolveTargets(ctx context.Context, sc model.Scan, net model.Ne
 	return targets, excludes, nil
 }
 
-// exclusions gathers everything that must never be probed: the scan's own
-// exclusion list, the mission-wide one, and the operator's own address.
+// exclusions gathers everything that must never be probed: the scan's own exclusion list,
+// the mission-wide one, and the operator's own address.
 func (r *Runner) exclusions(ctx context.Context, sc model.Scan, net model.Network) ([]netip.Prefix, error) {
 	specs := append([]string{}, sc.Options.Excludes...)
 	if m, err := r.st.Mission(ctx, sc.MissionID); err == nil {
@@ -311,9 +309,8 @@ func (r *Runner) exclusionFilter(ctx context.Context, sc model.Scan) (ExcludeFil
 	return NewExcludeFilter(excludes), nil
 }
 
-// planSegment builds the segmentation work units: every service discovered on
-// the OTHER networks of the mission becomes a target to try to reach from
-// here.
+// planSegment builds the segmentation work units: every service discovered on the OTHER
+// networks of the mission becomes a target to try to reach from here.
 func (r *Runner) planSegment(ctx context.Context, sc model.Scan) error {
 	networks, err := r.st.ListNetworks(ctx, sc.MissionID)
 	if err != nil {
@@ -324,9 +321,9 @@ func (r *Runner) planSegment(ctx context.Context, sc model.Scan) error {
 		wanted[id] = true
 	}
 
-	// Exclusions are a scope boundary, not a discovery detail: an address the
-	// client told us to stay away from must not be probed from here either,
-	// even though it was inventoried before the exclusion was added.
+	// Exclusions are a scope boundary, not a discovery detail: an address the client told
+	// us to stay away from must not be probed from here either, even though it was
+	// inventoried before the exclusion was added.
 	filter, err := r.exclusionFilter(ctx, sc)
 	if err != nil {
 		return err
@@ -372,10 +369,10 @@ func (r *Runner) planSegment(ctx context.Context, sc model.Scan) error {
 			if !inScope(h.IP) {
 				continue
 			}
-			// A skipped host is out of scope for the operator, and its
-			// services are already left out by the service listing. Probing
-			// it at host level would contradict that, and it would put the
-			// machine back in the matrix through the ICMP row.
+			// A skipped host is out of scope for the operator, and its services are
+			// already left out by the service listing. Probing it at host level would
+			// contradict that, and it would put the machine back in the matrix through
+			// the ICMP row.
 			if h.Triage.Status == model.TriageSkipped {
 				skippedHosts++
 				continue
@@ -418,14 +415,14 @@ func (r *Runner) planSegment(ctx context.Context, sc model.Scan) error {
 	return nil
 }
 
-// generate creates the work units of the phase that follows the one that just
-// finished, from the results stored so far.
+// generate creates the work units of the phase that follows the one that just finished,
+// from the results stored so far.
 //
-// A phase only reaches this point once it has fully completed, but `execute`
-// walks every phase again on a resume, so a phase that was already complete
-// before the pause would get here a second time. Generating again would append
-// a duplicate set of units and redo work the scan had already done, which is
-// exactly what requirement R2 forbids - hence the guard below.
+// A phase only reaches this point once it has fully completed, but `execute` walks every
+// phase again on a resume, so a phase that was already complete before the pause would
+// get here a second time. Generating again would append a duplicate set of units and redo
+// work the scan had already done, which is exactly what requirement R2 forbids, hence
+// the guard below.
 func (r *Runner) generate(ctx context.Context, sc model.Scan, finished model.WorkPhase) error {
 	if generated, ok := generatedPhases[finished]; ok {
 		already, err := r.phaseHasWork(ctx, sc.ID, generated...)
@@ -482,9 +479,9 @@ func (r *Runner) generate(ctx context.Context, sc model.Scan, finished model.Wor
 	return nil
 }
 
-// generatedPhases maps a finished phase to the phases whose units it creates.
-// Host discovery feeds both port-scan phases, so both must be considered when
-// deciding whether generation already happened.
+// generatedPhases maps a finished phase to the phases whose units it creates. Host
+// discovery feeds both port-scan phases, so both must be considered when deciding whether
+// generation already happened.
 var generatedPhases = map[model.WorkPhase][]model.WorkPhase{
 	model.PhaseDiscovery:   {model.PhasePortsTCP, model.PhasePortsUDP},
 	model.PhasePortsUDP:    {model.PhaseFingerprint},
@@ -540,16 +537,14 @@ func (r *Runner) addFingerprintUnits(ctx context.Context, sc model.Scan) error {
 
 // planChecks seeds a scan that works from what previous scans already found.
 //
-// There is no discovery and no port scan here: the operator mapped the
-// network once, often with the checks switched off, and now wants the
-// detection and the checks run over that inventory. The three phases already
-// chain to one another exactly as they do after a port scan, so all this has
-// to do is feed the first one that is enabled.
+// There is no discovery and no port scan here: the operator mapped the network once,
+// often with the checks switched off, and now wants the detection and the checks run over
+// that inventory. The three phases already chain to one another exactly as they do after
+// a port scan, so all this has to do is feed the first one that is enabled.
 //
-// Nothing is duplicated by running it twice: hosts, services and findings are
-// all keyed on what identifies them, so a second pass updates the rows that
-// are there instead of adding more, and it leaves the operator's triage
-// alone.
+// Nothing is duplicated by running it twice: hosts, services and findings are all keyed
+// on what identifies them, so a second pass updates the rows that are there instead of
+// adding more, and it leaves the operator's triage alone.
 func (r *Runner) planChecks(ctx context.Context, sc model.Scan) error {
 	// Any of the three phases existing means the plan is already under way.
 	started, err := r.phaseHasWork(ctx, sc.ID,
@@ -598,8 +593,8 @@ func (r *Runner) addHostUnits(ctx context.Context, sc model.Scan, phase model.Wo
 	return nil
 }
 
-// ---------------------------------------------------------------------------
-// phase implementations - every result is stored and published immediately
+// --------------------------------------------------------------------------- phase
+// implementations: every result is stored and published immediately
 // ---------------------------------------------------------------------------
 
 func (r *Runner) execL2(ctx context.Context, sc model.Scan, _ *runState, u model.WorkUnit) error {
@@ -615,9 +610,9 @@ func (r *Runner) execL2(ctx context.Context, sc model.Scan, _ *runState, u model
 		dur = 45 * time.Second
 	}
 
-	// Over Wi-Fi there is no switch port to learn about: CDP, LLDP, DTP and
-	// STP are wired link protocols and an access point does not relay them to
-	// a station. Say so instead of listening for 45 seconds to find nothing.
+	// Over Wi-Fi there is no switch port to learn about: CDP, LLDP, DTP and STP are wired
+	// link protocols and an access point does not relay them to a station. Say so instead
+	// of listening for 45 seconds to find nothing.
 	if r.interfaceIsWireless(p.Interface) {
 		r.logScan(ctx, sc, "info", fmt.Sprintf(
 			"%s is a Wi-Fi interface: skipping the switch-port recon (CDP/LLDP/DTP/STP exist only on a wired port). "+
@@ -1063,13 +1058,12 @@ func (r *Runner) buildReachTargets(ctx context.Context, sc model.Scan, p segment
 	return out, nil
 }
 
-// ---------------------------------------------------------------------------
-// small helpers
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- small
+// helpers ---------------------------------------------------------------------------
 
-// interfaceIsWireless reports whether the named interface is a Wi-Fi link.
-// Unknown interfaces are treated as wired, which is the safe default: at worst
-// the recon runs and finds nothing.
+// interfaceIsWireless reports whether the named interface is a Wi-Fi link. Unknown
+// interfaces are treated as wired, which is the safe default: at worst the recon runs and
+// finds nothing.
 func (r *Runner) interfaceIsWireless(name string) bool {
 	if name == "" || r.eng.NetInspector == nil {
 		return false
@@ -1101,8 +1095,8 @@ func (r *Runner) timeout(sc model.Scan) time.Duration {
 	return r.opts.DefaultTimeout
 }
 
-// sameL2 reports whether the host sits on the same layer-2 segment as us, so
-// its MAC address is its own and not a router's.
+// sameL2 reports whether the host sits on the same layer-2 segment as us, so its MAC
+// address is its own and not a router's.
 func sameL2(net model.Network, h model.Host) bool {
 	if h.MAC == "" {
 		return false

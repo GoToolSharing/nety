@@ -137,9 +137,9 @@ func runRsync(ctx context.Context, t *Target) []model.Finding {
 	return []model.Finding{f}
 }
 
-// rsyncProbeModule asks for a module and reports whether the daemon grants
-// access without authentication. No file is listed or transferred: the
-// connection is closed right after the daemon's answer.
+// rsyncProbeModule asks for a module and reports whether the daemon grants access without
+// authentication. No file is listed or transferred: the connection is closed right after
+// the daemon's answer.
 func rsyncProbeModule(ctx context.Context, t *Target, name string) (bool, string) {
 	if strings.ContainsAny(name, "\n\r") {
 		return false, ""

@@ -11,8 +11,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// Turning a failed connection into a verdict is the whole point of a
-// segmentation test, so this mapping is the most important twenty lines of the
+// Turning a failed connection into a verdict is the whole point of a segmentation test,
+// so this mapping is the most important twenty lines of the
 // package:
 //
 //	connection established  -> reachable   the flow crosses the boundary
@@ -23,11 +23,11 @@ import (
 //	ICMP unreachable        -> unreachable no route, or a device answered
 //	                                       "administratively prohibited"
 //
-// "closed" is a finding, not a non-result: it proves the segmentation lets the
-// packet through even though nothing is listening.
+// "closed" is a finding, not a non-result: it proves the segmentation lets the packet
+// through even though nothing is listening.
 
-// classify maps a dial/read error to a reachability status and a short human
-// explanation. A nil error means the probe succeeded.
+// classify maps a dial/read error to a reachability status and a short human explanation.
+// A nil error means the probe succeeded.
 func classify(err error) (model.ReachStatus, string) {
 	if err == nil {
 		return model.ReachOpen, "connection established"
@@ -65,11 +65,10 @@ func classify(err error) (model.ReachStatus, string) {
 	return model.ReachError, err.Error()
 }
 
-// classifyErrno maps the errno a connect(2)/read(2) returns. On Linux the
-// kernel has already translated the incoming ICMP error for us
-// (icmp_err_convert): port-unreachable becomes ECONNREFUSED, net/host
-// unreachable and the "administratively prohibited" codes become
-// ENETUNREACH/EHOSTUNREACH.
+// classifyErrno maps the errno a connect(2)/read(2) returns. On Linux the kernel has
+// already translated the incoming ICMP error for us (icmp_err_convert): port-unreachable
+// becomes ECONNREFUSED, net/host unreachable and the "administratively prohibited" codes
+// become ENETUNREACH/EHOSTUNREACH.
 func classifyErrno(e syscall.Errno) (model.ReachStatus, string, bool) {
 	switch e {
 	case syscall.ECONNREFUSED:
@@ -116,9 +115,8 @@ func isTimeout(err error) bool {
 	return false
 }
 
-// classifyUDP adapts classify to a UDP probe, where silence is ambiguous: a
-// filtering device and a service that simply does not answer our payload look
-// identical from here.
+// classifyUDP adapts classify to a UDP probe, where silence is ambiguous: a filtering
+// device and a service that simply does not answer our payload look identical from here.
 func classifyUDP(err error, gotReply bool) (model.ReachStatus, string) {
 	if gotReply {
 		return model.ReachOpen, "service answered the UDP probe"

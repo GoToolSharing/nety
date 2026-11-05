@@ -73,8 +73,8 @@ func (d *dialer) connDial(useTLS bool) func(context.Context) (net.Conn, error) {
 	}
 }
 
-// ctxConn closes the underlying connection when the context is cancelled so
-// that blocked reads/writes return promptly.
+// ctxConn closes the underlying connection when the context is cancelled so that blocked
+// reads/writes return promptly.
 type ctxConn struct {
 	net.Conn
 	stop func() bool
@@ -90,11 +90,10 @@ func bindConn(ctx context.Context, c net.Conn) net.Conn {
 	return &ctxConn{Conn: c, stop: stop}
 }
 
-// readResponse reads from c until the peer closes, maxResponse bytes are
-// read, total elapses, or (once some data arrived) the line stays idle for
-// idle. stopFn, when non-nil, is evaluated after each read and stops early
-// when it returns true. closed reports whether the peer closed the
-// connection (EOF / reset).
+// readResponse reads from c until the peer closes, maxResponse bytes are read, total
+// elapses, or (once some data arrived) the line stays idle for idle. stopFn, when
+// non-nil, is evaluated after each read and stops early when it returns true. closed
+// reports whether the peer closed the connection (EOF / reset).
 func readResponse(c net.Conn, total, idle time.Duration, stopFn func([]byte) bool) (data []byte, closed bool, err error) {
 	deadline := time.Now().Add(total)
 	buf := make([]byte, 4096)
@@ -140,8 +139,8 @@ func isRefused(err error) bool {
 	return errors.Is(err, syscall.ECONNREFUSED)
 }
 
-// printable renders raw bytes as a printable, nmap-like escaped string
-// truncated to maxBanner characters.
+// printable renders raw bytes as a printable, nmap-like escaped string truncated to
+// maxBanner characters.
 func printable(b []byte) string {
 	var sb strings.Builder
 	const hexd = "0123456789ABCDEF"

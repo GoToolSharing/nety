@@ -20,8 +20,8 @@ func (fakeTimeout) Error() string   { return "i/o timeout" }
 func (fakeTimeout) Timeout() bool   { return true }
 func (fakeTimeout) Temporary() bool { return true }
 
-// dialErr wraps errno the way net.Dialer does, so the test exercises the real
-// unwrapping path rather than a bare errno.
+// dialErr wraps errno the way net.Dialer does, so the test exercises the real unwrapping
+// path rather than a bare errno.
 func dialErr(errno syscall.Errno) error {
 	return &net.OpError{
 		Op:   "dial",
@@ -102,8 +102,8 @@ func TestClassifyCancellationIsNotAVerdict(t *testing.T) {
 	}
 }
 
-// Some code paths only hand us a message; the string fallback must still get
-// the three important verdicts right.
+// Some code paths only hand us a message; the string fallback must still get the three
+// important verdicts right.
 func TestClassifyStringFallback(t *testing.T) {
 	cases := map[string]model.ReachStatus{
 		"dial tcp 10.0.0.1:445: connect: connection refused":     model.ReachClosed,

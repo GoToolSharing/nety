@@ -16,21 +16,19 @@ import (
 
 // Moving a whole mission between installations.
 //
-// The case this exists for: a mission is finished, the machine it ran on is
-// about to be wiped, and the engagement has to come back months later exactly
-// as it was. A CSV or a report is a reading of the results; this is the
-// results themselves, down to the paused work units of an unfinished scan and
-// the note an operator wrote against one service.
+// The case this exists for: a mission is finished, the machine it ran on is about to be
+// wiped, and the engagement has to come back months later exactly as it was. A CSV or a
+// report is a reading of the results; this is the results themselves, down to the paused
+// work units of an unfinished scan and the note an operator wrote against one service.
 //
-// It is deliberately driven by the table list below rather than by the Go
-// model. Every column a table has travels, whatever it is, so a column added
-// later is carried without anyone remembering to update an exporter. The price
-// is that the bundle is tied to the schema, which is why it carries a format
-// version and the schema version it came from.
+// It is deliberately driven by the table list below rather than by the Go model. Every
+// column a table has travels, whatever it is, so a column added later is carried without
+// anyone remembering to update an exporter. The price is that the bundle is tied to the
+// schema, which is why it carries a format version and the schema version it came from.
 
-// TransferFormat is the bundle layout. Raise it only for a change an older
-// NETY could not read correctly, since a bundle states it and an import
-// refuses what it does not understand.
+// TransferFormat is the bundle layout. Raise it only for a change an older NETY could not
+// read correctly, since a bundle states it and an import refuses what it does not
+// understand.
 const TransferFormat = 1
 
 // MissionBundle is a whole mission, portable between installations.
@@ -46,10 +44,9 @@ type MissionBundle struct {
 	Counts        map[string]int `json:"counts,omitempty"`
 }
 
-// BundleUser is an account some row of the bundle points at: the author of a
-// triage note, whoever started a scan, a member of the mission. Only what is
-// needed to find the same person again on the other installation travels, and
-// no password hash ever does.
+// BundleUser is an account some row of the bundle points at: the author of a triage note,
+// whoever started a scan, a member of the mission. Only what is needed to find the same
+// person again on the other installation travels, and no password hash ever does.
 type BundleUser struct {
 	ID          int64  `json:"id"`
 	Username    string `json:"username"`
@@ -67,25 +64,25 @@ type BundleTable struct {
 // transferTable describes how one table is collected and put back.
 type transferTable struct {
 	name string
-	// where is the predicate that selects this mission's rows, with one
-	// placeholder for the mission id.
+	// where is the predicate that selects this mission's rows, with one placeholder for
+	// the mission id.
 	where string
-	// refs maps a column to the table whose ids it holds. "users" is special:
-	// those are resolved by username rather than by a remembered id, because
-	// the accounts on the other installation are not the same accounts.
+	// refs maps a column to the table whose ids it holds. "users" is special: those are
+	// resolved by username rather than by a remembered id, because the accounts on the
+	// other installation are not the same accounts.
 	refs map[string]string
-	// referenced says other tables point at this one's ids, so the mapping
-	// from old id to new has to be kept.
+	// referenced says other tables point at this one's ids, so the mapping from old id to
+	// new has to be kept.
 	referenced bool
-	// required lists the reference columns a row cannot do without. Most
-	// reference columns are allowed to be 0, meaning "none", but a row that
-	// exists only to join two others has nothing left to say once one of them
-	// is gone, and the database refuses it anyway.
+	// required lists the reference columns a row cannot do without. Most reference
+	// columns are allowed to be 0, meaning "none", but a row that exists only to join two
+	// others has nothing left to say once one of them is gone, and the database refuses
+	// it anyway.
 	required []string
 }
 
-// transferTables is in insertion order: a table only ever refers to one listed
-// before it, so a single pass can remap as it goes.
+// transferTables is in insertion order: a table only ever refers to one listed before it,
+// so a single pass can remap as it goes.
 var transferTables = []transferTable{
 	{name: "missions", where: "id = ?", referenced: true},
 	{
@@ -162,9 +159,9 @@ var transferTables = []transferTable{
 
 // ExportMission collects a whole mission into a portable bundle.
 //
-// The audit log is deliberately left behind: it belongs to the installation
-// and not to the mission, and a single entry of it can name work on another
-// client. Sessions and password hashes never travel either.
+// The audit log is deliberately left behind: it belongs to the installation and not to
+// the mission, and a single entry of it can name work on another client. Sessions and
+// password hashes never travel either.
 func (s *Store) ExportMission(ctx context.Context, missionID int64, version string) (MissionBundle, error) {
 	b := MissionBundle{
 		Format:     TransferFormat,
@@ -190,8 +187,8 @@ func (s *Store) ExportMission(ctx context.Context, missionID int64, version stri
 			return b, err
 		}
 		if len(cols) == 0 {
-			// A table this build does not have cannot be exported, and that
-			// is not an error: it simply has nothing to say.
+			// A table this build does not have cannot be exported, and that is not an
+			// error: it simply has nothing to say.
 			continue
 		}
 		rows, err := s.r.QueryContext(ctx,
@@ -211,9 +208,9 @@ func (s *Store) ExportMission(ctx context.Context, missionID int64, version stri
 				return b, fmt.Errorf("store: export %s: %w", t.name, err)
 			}
 			for i, v := range vals {
-				// Every text column comes back as bytes. Left as bytes it
-				// would travel base64 encoded and come back a different type,
-				// so it is turned into the string it already is.
+				// Every text column comes back as bytes. Left as bytes it would travel
+				// base64 encoded and come back a different type, so it is turned into the
+				// string it already is.
 				if raw, ok := v.([]byte); ok {
 					vals[i] = string(raw)
 				}
@@ -280,13 +277,13 @@ func (s *Store) bundleUsers(ctx context.Context, ids map[int64]bool) ([]BundleUs
 type ImportOptions struct {
 	// Name overrides the mission's name. Empty keeps the one in the bundle.
 	Name string
-	// CreateMissingUsers recreates, disabled and with no usable password, the
-	// accounts the bundle names and this installation does not have. Without
-	// it their work is imported unattributed, which on a report that has to
-	// say who tested what is a real loss.
+	// CreateMissingUsers recreates, disabled and with no usable password, the accounts
+	// the bundle names and this installation does not have. Without it their work is
+	// imported unattributed, which on a report that has to say who tested what is a real
+	// loss.
 	CreateMissingUsers bool
-	// OwnerID is added to the mission's members, so whoever imported it can
-	// open it even when none of the original members exist here.
+	// OwnerID is added to the mission's members, so whoever imported it can open it even
+	// when none of the original members exist here.
 	OwnerID int64
 }
 
@@ -295,25 +292,25 @@ type ImportResult struct {
 	MissionID int64          `json:"mission_id"`
 	Name      string         `json:"name"`
 	Counts    map[string]int `json:"counts"`
-	// UsersCreated and UsersUnmatched name accounts, so an administrator can
-	// see whose work was reattached and whose was not.
+	// UsersCreated and UsersUnmatched name accounts, so an administrator can see whose
+	// work was reattached and whose was not.
 	UsersCreated   []string `json:"users_created,omitempty"`
 	UsersUnmatched []string `json:"users_unmatched,omitempty"`
-	// SkippedColumns names what the bundle carried and this build has no
-	// column for, which is what a restore onto an older NETY loses.
+	// SkippedColumns names what the bundle carried and this build has no column for,
+	// which is what a restore onto an older NETY loses.
 	SkippedColumns []string `json:"skipped_columns,omitempty"`
-	// DroppedRows counts, per table, the rows that lost something they could
-	// not exist without, which in practice is a membership whose account is
-	// not on this installation.
+	// DroppedRows counts, per table, the rows that lost something they could not exist
+	// without, which in practice is a membership whose account is not on this
+	// installation.
 	DroppedRows map[string]int `json:"dropped_rows,omitempty"`
 }
 
 // ImportMission writes a bundle back as a new mission.
 //
-// It never merges into an existing mission and never overwrites one. A restore
-// that silently reconciled two versions of the same engagement would be a very
-// good way to lose evidence, so this always creates, and the operator deletes
-// what they meant to replace.
+// It never merges into an existing mission and never overwrites one. A restore that
+// silently reconciled two versions of the same engagement would be a very good way to
+// lose evidence, so this always creates, and the operator deletes what they meant to
+// replace.
 func (s *Store) ImportMission(ctx context.Context, b MissionBundle, opts ImportOptions) (ImportResult, error) {
 	res := ImportResult{Counts: map[string]int{}}
 	if b.Format > TransferFormat {
@@ -344,9 +341,8 @@ func (s *Store) ImportMission(ctx context.Context, b MissionBundle, opts ImportO
 		}
 		res.UsersCreated, res.UsersUnmatched = created, unmatched
 
-		// ids maps a table to "the id this row had in the bundle" against
-		// "the id it has here". Nothing in the bundle's numbering survives:
-		// this database has its own.
+		// ids maps a table to "the id this row had in the bundle" against "the id it has
+		// here". Nothing in the bundle's numbering survives: this database has its own.
 		ids := map[string]map[int64]int64{"users": users}
 		skipped := map[string]bool{}
 
@@ -366,8 +362,8 @@ func (s *Store) ImportMission(ctx context.Context, b MissionBundle, opts ImportO
 				continue
 			}
 
-			// Only the columns both sides have travel. A column this build
-			// does not know is reported rather than dropped in silence.
+			// Only the columns both sides have travel. A column this build does not know
+			// is reported rather than dropped in silence.
 			var use []int
 			var cols []string
 			for i, c := range dump.Columns {
@@ -446,8 +442,8 @@ func (s *Store) ImportMission(ctx context.Context, b MissionBundle, opts ImportO
 			`SELECT name FROM missions WHERE id = ?`, res.MissionID).Scan(&res.Name); err != nil {
 			return fmt.Errorf("store: import: %w", err)
 		}
-		// Whoever restored it has to be able to open it, even when not one of
-		// the original members exists on this installation.
+		// Whoever restored it has to be able to open it, even when not one of the
+		// original members exists on this installation.
 		if opts.OwnerID > 0 {
 			if _, err := tx.ExecContext(ctx,
 				`INSERT INTO mission_users (mission_id, user_id) VALUES (?, ?)
@@ -464,8 +460,8 @@ func (s *Store) ImportMission(ctx context.Context, b MissionBundle, opts ImportO
 	return res, nil
 }
 
-// resolveBundleUsers matches the bundle's accounts to this installation's by
-// username, which is the only name a person keeps across two databases.
+// resolveBundleUsers matches the bundle's accounts to this installation's by username,
+// which is the only name a person keeps across two databases.
 func resolveBundleUsers(ctx context.Context, tx *sql.Tx, users []BundleUser, create bool) (map[int64]int64, []string, []string, error) {
 	out := map[int64]int64{}
 	var created, unmatched []string
@@ -487,9 +483,8 @@ func resolveBundleUsers(ctx context.Context, tx *sql.Tx, users []BundleUser, cre
 			unmatched = append(unmatched, u.Username)
 			continue
 		}
-		// Disabled, and with a password hash that cannot be produced by any
-		// password, so recreating the account restores the attribution
-		// without creating a way in.
+		// Disabled, and with a password hash that cannot be produced by any password, so
+		// recreating the account restores the attribution without creating a way in.
 		role := u.Role
 		if role == "" {
 			role = string(model.RoleOperator)
@@ -510,9 +505,9 @@ func resolveBundleUsers(ctx context.Context, tx *sql.Tx, users []BundleUser, cre
 	return out, created, unmatched, nil
 }
 
-// remapID turns an id as the bundle numbered it into the id it has here. An
-// id with no mapping becomes 0, which every one of these columns treats as
-// "none" rather than as a dangling reference.
+// remapID turns an id as the bundle numbered it into the id it has here. An id with no
+// mapping becomes 0, which every one of these columns treats as "none" rather than as a
+// dangling reference.
 func remapID(ids map[string]map[int64]int64, table string, v any) any {
 	old := asInt64(v)
 	if old == 0 {
@@ -526,9 +521,9 @@ func remapID(ids map[string]map[int64]int64, table string, v any) any {
 	return int64(0)
 }
 
-// normalizeBundleValue turns what JSON decoding produced back into something
-// the driver can bind. Numbers arrive as json.Number so a millisecond
-// timestamp or a large id survives the trip exactly.
+// normalizeBundleValue turns what JSON decoding produced back into something the driver
+// can bind. Numbers arrive as json.Number so a millisecond timestamp or a large id
+// survives the trip exactly.
 func normalizeBundleValue(v any) any {
 	switch t := v.(type) {
 	case nil:
@@ -574,8 +569,8 @@ func asInt64(v any) int64 {
 	return 0
 }
 
-// tableColumnList returns a table's columns in their declared order, or an
-// empty slice when this build has no such table.
+// tableColumnList returns a table's columns in their declared order, or an empty slice
+// when this build has no such table.
 func (s *Store) tableColumnList(ctx context.Context, table string) ([]string, error) {
 	rows, err := s.r.QueryContext(ctx,
 		`SELECT name FROM pragma_table_info(?) ORDER BY cid`, table)
@@ -645,9 +640,9 @@ func sortedKeys(m map[string]bool) []string {
 	return out
 }
 
-// bundleChecksum covers everything that describes the mission, so a truncated
-// or edited file is refused instead of being restored as a partial engagement.
-// The checksum field itself is left out of what it covers.
+// bundleChecksum covers everything that describes the mission, so a truncated or edited
+// file is refused instead of being restored as a partial engagement. The checksum field
+// itself is left out of what it covers.
 func bundleChecksum(b MissionBundle) string {
 	b.Checksum = ""
 	h := sha256.New()

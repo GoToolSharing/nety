@@ -1,12 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type ListParams } from '@/lib/api'
-import type {
-  AssetPatch,
-  MissionInput,
-  NetworkInput,
-  Role,
-  ScanInput,
-} from '@/types/api'
+import type { AssetPatch, MissionInput, NetworkInput, Role, ScanInput } from '@/types/api'
 
 /**
  * Central query-key registry. The live WebSocket layer patches caches by key
@@ -80,7 +74,12 @@ const STATIC = { staleTime: 60 * 60 * 1000, gcTime: 2 * 60 * 60 * 1000 }
 // ---------------------------------------------------------------------------
 
 export const useInterfaces = (enabled = true) =>
-  useQuery({ queryKey: qk.interfaces, queryFn: api.interfaces, enabled, staleTime: 15_000 })
+  useQuery({
+    queryKey: qk.interfaces,
+    queryFn: api.interfaces,
+    enabled,
+    staleTime: 15_000,
+  })
 
 export const useScanProfiles = () =>
   useQuery({ queryKey: qk.profiles, queryFn: api.scanProfiles, ...STATIC })
@@ -345,7 +344,11 @@ export const useMatrix = (missionId: number, includeSkipped = false) =>
     enabled: missionId > 0,
   })
 
-export const useReach = (missionId: number, sourceNetworkId?: number, includeSkipped = false) =>
+export const useReach = (
+  missionId: number,
+  sourceNetworkId?: number,
+  includeSkipped = false,
+) =>
   useQuery({
     queryKey: qk.reach(missionId, sourceNetworkId, includeSkipped),
     queryFn: () => api.reach(missionId, sourceNetworkId, includeSkipped || undefined),

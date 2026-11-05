@@ -9,9 +9,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// The whole point of the key is that comparing two of them as text is
-// comparing the two addresses as numbers, which is what `ORDER BY ip` could
-// never do.
+// The whole point of the key is that comparing two of them as text is comparing the two
+// addresses as numbers, which is what `ORDER BY ip` could never do.
 func TestIPSortKeyOrdersAddressesNumerically(t *testing.T) {
 	ordered := []string{
 		"0.0.0.0",
@@ -77,8 +76,8 @@ func TestParseAddressFilterRefusesNonsense(t *testing.T) {
 	}
 }
 
-// seedAddresses puts one service and one finding on each address, so the
-// filter can be exercised on both listings.
+// seedAddresses puts one service and one finding on each address, so the filter can be
+// exercised on both listings.
 func seedAddresses(t *testing.T, s *Store, missionID int64, ips []string) {
 	t.Helper()
 	ctx := context.Background()
@@ -205,8 +204,8 @@ func TestAddressFilterOnHostsAndAssets(t *testing.T) {
 	}
 }
 
-// A sort key the server does not know must leave the listing in its default
-// order rather than being pasted into the query.
+// A sort key the server does not know must leave the listing in its default order rather
+// than being pasted into the query.
 func TestUnknownSortFallsBackToTheDefault(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -242,8 +241,8 @@ func TestSortedPagingShowsEachRowOnce(t *testing.T) {
 	s := testStore(t)
 	m := testMission(t, s)
 
-	// Several services share an address and several share a port, so every
-	// sort has ties to break.
+	// Several services share an address and several share a port, so every sort has ties
+	// to break.
 	var seeded int
 	for i := 0; i < 7; i++ {
 		for _, port := range []int{22, 80, 443} {
@@ -284,8 +283,8 @@ func TestSortedPagingShowsEachRowOnce(t *testing.T) {
 	}
 }
 
-// Severity sorts by weight, not alphabetically: critical belongs above low,
-// which "critical" < "high" < "low" < "medium" would never give.
+// Severity sorts by weight, not alphabetically: critical belongs above low, which
+// "critical" < "high" < "low" < "medium" would never give.
 func TestFindingsSortBySeverityRank(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)

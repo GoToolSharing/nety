@@ -38,8 +38,8 @@ func ipmiApplies(t *Target) bool {
 	return svcIs(t.Service, model.UDP, []string{"asf-rmcp", "ipmi", "rmcp"}, 623)
 }
 
-// ipmiGetChannelAuthCaps is the IPMI v1.5 "Get Channel Authentication
-// Capabilities" request asking for IPMI v2 extended data.
+// ipmiGetChannelAuthCaps is the IPMI v1.5 "Get Channel Authentication Capabilities"
+// request asking for IPMI v2 extended data.
 var ipmiGetChannelAuthCaps = []byte{
 	0x06, 0x00, 0xff, 0x07, // RMCP
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // auth none, seq, session id
@@ -244,8 +244,8 @@ func runIPMICipherZero(ctx context.Context, t *Target) []model.Finding {
 		hex.EncodeToString(r.ManagedID)))}
 }
 
-// ipmiUsers are the user names tried (at most 4 attempts, no password is
-// ever sent: RAKP1 only asks for the server's HMAC).
+// ipmiUsers are the user names tried (at most 4 attempts, no password is ever sent: RAKP1
+// only asks for the server's HMAC).
 var ipmiUsers = []string{"ADMIN", "admin", "root", "Administrator"}
 
 func runIPMIRakp(ctx context.Context, t *Target) []model.Finding {

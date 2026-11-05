@@ -51,8 +51,8 @@ export default function ForcePasswordChange() {
         <div className="mb-5 text-center">
           <h1 className="text-lg font-semibold">Choose a new password</h1>
           <p className="mt-1 text-sm text-muted">
-            {user?.display_name || user?.username}, this account still uses the password it was
-            created with. Set your own before continuing.
+            {user?.display_name || user?.username}, this account still uses the password
+            it was created with. Set your own before continuing.
           </p>
         </div>
 
@@ -81,7 +81,13 @@ export default function ForcePasswordChange() {
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
           />
-          <Button type="submit" variant="primary" size="lg" className="w-full" loading={busy}>
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            className="w-full"
+            loading={busy}
+          >
             Set password and continue
           </Button>
         </form>

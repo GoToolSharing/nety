@@ -56,8 +56,8 @@ func TestDoubleTagFrameLayout(t *testing.T) {
 		t.Errorf("IP total length = %d, want %d", total, 20+8+len(magic))
 	}
 
-	// Both checksums must verify: a wrong one would be silently dropped by the
-	// first router and the technique would look like a false negative.
+	// Both checksums must verify: a wrong one would be silently dropped by the first
+	// router and the technique would look like a false negative.
 	if got := verifyChecksum(ip[:20]); got != 0 {
 		t.Errorf("IPv4 header checksum does not verify (%#04x)", got)
 	}
@@ -76,8 +76,8 @@ func TestDoubleTagFrameLayout(t *testing.T) {
 	}
 }
 
-// verifyChecksum recomputes the ones-complement sum over a block that already
-// contains its checksum; the result must be zero.
+// verifyChecksum recomputes the ones-complement sum over a block that already contains
+// its checksum; the result must be zero.
 func verifyChecksum(b []byte) uint16 {
 	var sum uint32
 	for i := 0; i+1 < len(b); i += 2 {
@@ -140,9 +140,8 @@ func TestUDPPayloadsAreServiceSpecific(t *testing.T) {
 			t.Errorf("port %d: payload %x does not look like the expected request", c.port, got)
 		}
 	}
-	// An unknown service still gets a byte, so the host can answer with an
-	// ICMP port-unreachable and be classified as "closed" rather than
-	// "filtered".
+	// An unknown service still gets a byte, so the host can answer with an ICMP
+	// port-unreachable and be classified as "closed" rather than "filtered".
 	if got := udpPayload(9999, "mystery"); len(got) == 0 {
 		t.Error("an unknown UDP service must still be probed with something")
 	}

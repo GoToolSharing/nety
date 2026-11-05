@@ -1,8 +1,8 @@
-# NETY - architecture & contracts
+# NETY architecture and contracts
 
 NETY is a single static Go binary (Linux, `CGO_ENABLED=0`) for internal-network
 pentests. It serves an authenticated web platform (React SPA embedded with
-`go:embed`) and drives native Go scanning engines - **no nmap/masscan
+`go:embed`) and drives native Go scanning engines, with **no nmap or masscan
 subprocess**, everything is implemented in-process so results stream out as
 they are found.
 
@@ -23,17 +23,17 @@ they are found.
 
 ## Non-negotiable requirements
 
-### R1 - Live results
+### R1. Live results
 No result may wait for the end of a scan. Every host, port, service, finding
 and reachability result is **persisted and broadcast the moment it is known**:
 
-- engines stream through callbacks (`out func(...)`) - never return bulk slices;
+- engines stream through callbacks (`out func(...)`) and never return bulk slices;
 - the runner writes each result to SQLite immediately (batched by a short
   flush window, ≤ 250 ms) and publishes a `model.Event` on the bus;
 - the API pushes events to the SPA over WebSocket, so tables fill up live;
 - progress (`scan.progress`, `scan.phase`) is updated continuously.
 
-### R2 - Pause / resume / stop, crash-safe
+### R2. Pause / resume / stop, crash-safe
 A scan is split into persisted **work units** (`model.WorkUnit`) per phase
 (`model.WorkPhase`). The runner claims units, executes them, marks them done.
 Consequences:
@@ -42,7 +42,7 @@ Consequences:
   `paused`; *resume* continues exactly where it stopped;
 - *stop* is a cancel; already-collected data stays;
 - if the process dies mid-scan, units left `running` are reset to `pending` at
-  startup and the scan can be resumed the next day - nothing is lost and
+  startup and the scan can be resumed the next day: nothing is lost and
   nothing is redone;
 - phases generate the units of the next phase as they produce results
   (discovery → port scan → fingerprint → …), so a resume replays only the
@@ -51,7 +51,7 @@ Consequences:
 Work units are sized so one unit is seconds-to-a-minute of work (e.g. 4096
 host×port probes, one service to fingerprint, one reachability test).
 
-### R3 - Triage belongs to the operator, not to a scan
+### R3. Triage belongs to the operator, not to a scan
 
 A scan reports what is exposed and which checks fired. Working out whether
 each service, and each finding, is actually a problem is manual, one at a
@@ -70,7 +70,7 @@ So each service, each finding, each host and each asset carries a
 They are deliberately identical, down to the endpoint shapes and the controls:
 moving from one screen to the other should not mean learning anything new.
 
-### R3b - Skipping a machine is a filter, not a cascade
+### R3b. Skipping a machine is a filter, not a cascade
 
 There is always a machine that is out of scope: a client workstation, the
 pentester's own laptop, a device nobody may touch. It is parked by skipping its
@@ -80,14 +80,14 @@ not bring it back).
 
 What hangs off a skipped host is **hidden, never written to**. The service,
 finding and reachability listings exclude those rows in SQL (`NOT EXISTS`
-against `hosts`), and the counts that have to agree with them - the mission
-summary, the triage summary, the matrix cells - are filtered the same way. The
+against `hosts`), and the counts that have to agree with them (the mission
+summary, the triage summary, the matrix cells) are filtered the same way. The
 operator may already have triaged some of those services by hand, and that work
 has to be exactly where they left it when the host goes back in scope. Rows
 with no host are never hidden, `include_skipped=true` turns the filter off, and
 exports never apply it: a deliverable carries everything that was found.
 
-### R4 - No tooling installed on the operator's workstation
+### R4. No tooling installed on the operator's workstation
 All builds, tests and integration labs run in **Docker** (`Dockerfile`,
 `docker-compose.yml`, `make` targets). The repo never requires installing Go,
 Node, nmap or anything else on the host.
@@ -127,11 +127,11 @@ Node, nmap or anything else on the host.
   works everywhere.
 - Structured logging with `log/slog`; no `fmt.Println` in library code.
 - Contexts everywhere; cancellation stops work quickly and cleans up (sockets
-  closed, routes and sub-interfaces removed - always, including on panic).
+  closed, routes and sub-interfaces removed, always, including on panic).
 - Results stream through callbacks; callbacks are called concurrently and must
   be safe to call from several goroutines.
 - Bounded memory: a /16 × 1000 ports scan must not allocate the whole space
   (use the permutation iterator, not a materialised list).
 - Unit tests for pure logic (`go test ./...`), run in Docker.
 - `model` and `engine` are frozen contracts: coordinate before changing them.
-- Nothing is installed on the host - use `make` targets, which run Docker.
+- Nothing is installed on the host: use the `make` targets, which run Docker.

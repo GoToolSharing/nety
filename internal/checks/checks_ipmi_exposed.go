@@ -23,9 +23,8 @@ func init() {
 	})
 }
 
-// runIPMIExposed confirms a live BMC with a single read-only "Get Channel
-// Authentication Capabilities" request. No session is opened and no
-// credential is sent.
+// runIPMIExposed confirms a live BMC with a single read-only "Get Channel Authentication
+// Capabilities" request. No session is opened and no credential is sent.
 func runIPMIExposed(ctx context.Context, t *Target) []model.Finding {
 	c, err := t.DialUDP(ctx, t.Service.Port)
 	if err != nil {
@@ -51,8 +50,8 @@ func runIPMIExposed(ctx context.Context, t *Target) []model.Finding {
 	} else {
 		details = append(details, "IPMI 1.5 only")
 	}
-	// Byte 23 of the reply carries the v1.5 authentication type support bits
-	// and byte 24 the "null user"/"anonymous login" status bits.
+	// Byte 23 of the reply carries the v1.5 authentication type support bits and byte 24
+	// the "null user"/"anonymous login" status bits.
 	if len(reply) >= 25 {
 		if types := ipmiAuthTypeNames(reply[21]); len(types) > 0 {
 			details = append(details, "authentication types offered: "+strings.Join(types, ", "))

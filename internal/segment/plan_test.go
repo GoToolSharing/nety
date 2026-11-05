@@ -50,8 +50,8 @@ func jobsFor(p plan, tech string) []job {
 	return out
 }
 
-// Several services on one host must collapse into a single ICMP test: pinging
-// the same address five times teaches nothing new and clutters the matrix.
+// Several services on one host must collapse into a single ICMP test: pinging the same
+// address five times teaches nothing new and clutters the matrix.
 func TestPlanDeduplicatesHostLevelICMP(t *testing.T) {
 	targets := []engine.ReachTarget{
 		svc("10.20.0.10", 80, model.TCP, 1, 11),

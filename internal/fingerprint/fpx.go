@@ -15,11 +15,10 @@ import (
 
 	"github.com/GoToolSharing/nety/internal/model"
 
-	// Blank imports: every fingerprintx protocol plugin registers itself in an
-	// init(). We list them one by one instead of importing pkg/scan so that
-	// its HTTP plugin -- the only one pulling a third-party wappalyzer
-	// dependency, and the one layer NETY implements itself anyway -- stays out
-	// of the build.
+	// Blank imports: every fingerprintx protocol plugin registers itself in an init(). We
+	// list them one by one instead of importing pkg/scan so that its HTTP plugin -- the
+	// only one pulling a third-party wappalyzer dependency, and the one layer NETY
+	// implements itself anyway -- stays out of the build.
 	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/dhcp"
 	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/dns"
 	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/echo"
@@ -59,14 +58,13 @@ import (
 	_ "github.com/praetorian-inc/fingerprintx/pkg/plugins/services/vnc"
 )
 
-// fingerprintx is used as a LIBRARY: we drive its protocol plugins ourselves
-// (Plugin.Run takes a net.Conn) instead of calling its scanner, so that every
-// connection is ours - context-bound, deadlined and counted.
+// fingerprintx is used as a LIBRARY: we drive its protocol plugins ourselves (Plugin.Run
+// takes a net.Conn) instead of calling its scanner, so that every connection is ours -
+// context-bound, deadlined and counted.
 //
-// By default only the plugins that claim the port (PortPriority) are run, so
-// an unidentified port costs at most a couple of extra connections. A full
-// sweep over every plugin is opt-in through a high FingerprintOptions.
-// Intensity and is still capped.
+// By default only the plugins that claim the port (PortPriority) are run, so an
+// unidentified port costs at most a couple of extra connections. A full sweep over every
+// plugin is opt-in through a high FingerprintOptions. Intensity and is still capped.
 const (
 	fpxFullSweepIntensity = 8
 	fpxMaxFullSweep       = 16
@@ -87,8 +85,8 @@ var fpxPlugins = sync.OnceValue(func() map[plugins.Protocol][]plugins.Plugin {
 	return out
 })
 
-// probeFPX runs the fingerprintx plugins against the target and returns the
-// first positive identification, or nil.
+// probeFPX runs the fingerprintx plugins against the target and returns the first
+// positive identification, or nil.
 func (f *fingerprinter) probeFPX(ctx context.Context, d *dialer, useTLS bool, intensity int) *plugins.Service {
 	proto := plugins.TCP
 	switch {
@@ -148,9 +146,9 @@ func pluginClaims(p plugins.Plugin, port uint16) (claims bool) {
 	return p.PortPriority(port)
 }
 
-// runFPXPlugin gives one plugin a fresh, context-bound connection. Third-party
-// parsing code faces hostile input here, so a panic is contained and logged
-// rather than taking the scan down.
+// runFPXPlugin gives one plugin a fresh, context-bound connection. Third-party parsing
+// code faces hostile input here, so a panic is contained and logged rather than taking
+// the scan down.
 func (f *fingerprinter) runFPXPlugin(
 	ctx context.Context, d *dialer, p plugins.Plugin,
 	target plugins.Target, useTLS bool, timeout time.Duration,
@@ -278,8 +276,8 @@ func fillFromFPX(svc *model.Service, s *plugins.Service) {
 	svc.Confidence = ConfFingerprintX
 }
 
-// fpxProductName gives a human product label for the protocols fingerprintx
-// identifies but does not name.
+// fpxProductName gives a human product label for the protocols fingerprintx identifies
+// but does not name.
 var fpxProducts = map[string]string{
 	"mongodb": "MongoDB", "mssql": "Microsoft SQL Server", "mysql": "MySQL",
 	"postgresql": "PostgreSQL", "redis": "Redis key-value store",

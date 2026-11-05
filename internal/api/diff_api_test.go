@@ -9,12 +9,12 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// A scan of a VLAN only means something next to the previous one, which is
-// what this route answers. The seeding below walks the two passes in order so
-// the finish stamps come out in the right order too.
+// A scan of a VLAN only means something next to the previous one, which is what this
+// route answers. The seeding below walks the two passes in order so the finish stamps
+// come out in the right order too.
 
-// runScan records one pass over a network: a scan that completes, with the
-// rows it found written against it.
+// runScan records one pass over a network: a scan that completes, with the rows it found
+// written against it.
 func runScan(t *testing.T, e *testEnv, missionID, networkID int64, found func(scanID int64)) model.Scan {
 	t.Helper()
 	ctx := t.Context()
@@ -28,8 +28,8 @@ func runScan(t *testing.T, e *testEnv, missionID, networkID int64, found func(sc
 	if err := e.store.SetScanStatus(ctx, sc.ID, model.ScanCompleted, ""); err != nil {
 		t.Fatalf("complete scan: %v", err)
 	}
-	// Finish stamps are milliseconds, and the diff reads them to tell the two
-	// passes apart, so give the next one a moment of its own.
+	// Finish stamps are milliseconds, and the diff reads them to tell the two passes
+	// apart, so give the next one a moment of its own.
 	time.Sleep(3 * time.Millisecond)
 	out, err := e.store.Scan(ctx, sc.ID)
 	if err != nil {
@@ -65,8 +65,8 @@ func TestScanDiffEndpoint(t *testing.T) {
 
 	base := "/api/missions/" + itoa(m.ID) + "/scans/"
 
-	// With no `against`, the server picks the previous completed scan and
-	// says which one it was.
+	// With no `against`, the server picks the previous completed scan and says which one
+	// it was.
 	var diff model.ScanDiff
 	if st := alice.do("GET", base+itoa(wednesday.ID)+"/diff", nil, &diff); st != http.StatusOK {
 		t.Fatalf("diff: status %d", st)
@@ -82,8 +82,8 @@ func TestScanDiffEndpoint(t *testing.T) {
 		t.Fatalf("unexpected counts: %+v", diff.Counts)
 	}
 
-	// Naming it explicitly gives the same answer, and no longer claims the
-	// server chose it.
+	// Naming it explicitly gives the same answer, and no longer claims the server chose
+	// it.
 	var explicit model.ScanDiff
 	if st := alice.do("GET", base+itoa(wednesday.ID)+"/diff?against="+itoa(monday.ID),
 		nil, &explicit); st != http.StatusOK {
@@ -93,8 +93,8 @@ func TestScanDiffEndpoint(t *testing.T) {
 		t.Fatalf("explicit diff disagrees: picked=%v counts=%+v", explicit.FromPicked, explicit.Counts)
 	}
 
-	// The first scan of a network has nothing behind it, which is an answer,
-	// not an error.
+	// The first scan of a network has nothing behind it, which is an answer, not an
+	// error.
 	var first model.ScanDiff
 	if st := alice.do("GET", base+itoa(monday.ID)+"/diff", nil, &first); st != http.StatusOK {
 		t.Fatalf("first scan diff: status %d", st)
@@ -117,8 +117,8 @@ func TestScanDiffEndpoint(t *testing.T) {
 	}
 }
 
-// TestScanDiffIsMissionScoped keeps a diff from being a way round mission
-// membership, and from confirming that another mission's scan exists.
+// TestScanDiffIsMissionScoped keeps a diff from being a way round mission membership, and
+// from confirming that another mission's scan exists.
 func TestScanDiffIsMissionScoped(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("alice", model.RoleOperator)
@@ -143,9 +143,9 @@ func TestScanDiffIsMissionScoped(t *testing.T) {
 	}
 }
 
-// TestExportCarriesTheDiff checks the wiring rather than the rendering: an
-// export asked for without naming a scan still works out which two it is
-// about, and the diff travels in the file.
+// TestExportCarriesTheDiff checks the wiring rather than the rendering: an export asked
+// for without naming a scan still works out which two it is about, and the diff travels
+// in the file.
 func TestExportCarriesTheDiff(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("alice", model.RoleOperator)

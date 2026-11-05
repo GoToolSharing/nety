@@ -43,8 +43,8 @@ func ldapUseTLS(s model.Service) bool {
 	return isTLS(s) || s.Port == 636 || s.Port == 3269 || strings.EqualFold(s.Name, "ldaps")
 }
 
-// ---------------------------------------------------------------------------
-// Minimal BER / LDAPv3 encoding
+// --------------------------------------------------------------------------- Minimal BER
+// / LDAPv3 encoding
 // ---------------------------------------------------------------------------
 
 func ldapInt(tag byte, v int) []byte {

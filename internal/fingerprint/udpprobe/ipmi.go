@@ -2,8 +2,8 @@ package udpprobe
 
 import "strconv"
 
-// ipmiRqSeq is the fixed, synthetic requester sequence number; a BMC echoes it
-// in the response, which is what we verify.
+// ipmiRqSeq is the fixed, synthetic requester sequence number; a BMC echoes it in the
+// response, which is what we verify.
 const ipmiRqSeq byte = 0x15
 
 const (
@@ -20,11 +20,11 @@ func ipmiChecksum(b []byte) byte {
 	return -sum
 }
 
-// ipmiPayload is a Get Channel Authentication Capabilities request for the
-// current channel at ADMINISTRATOR privilege, inside an unauthenticated
-// IPMI v1.5 session. Both 1.5 and 2.0 BMCs answer it, and a 2.0 BMC advertises
-// its v2.0 support in the extended-capabilities byte - so one probe covers
-// both. This is the request ipmitool and ipmi-version use.
+// ipmiPayload is a Get Channel Authentication Capabilities request for the current
+// channel at ADMINISTRATOR privilege, inside an unauthenticated IPMI v1.5 session. Both
+// 1.5 and 2.0 BMCs answer it, and a 2.0 BMC advertises its v2.0 support in the
+// extended-capabilities byte, so one probe covers both. This is the request ipmitool and
+// ipmi-version use.
 func ipmiPayload() []byte {
 	msg := []byte{
 		0x20,                     // rsAddr: BMC

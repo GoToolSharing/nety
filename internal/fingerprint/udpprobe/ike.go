@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// Fixed, synthetic initiator cookies / SPIs. A responder echoes the initiator
-// cookie verbatim, so verifying it is what earns confidence 90.
+// Fixed, synthetic initiator cookies / SPIs. A responder echoes the initiator cookie
+// verbatim, so verifying it is what earns confidence 90.
 var (
 	ikeV1Cookie = [8]byte{0x4e, 0x45, 0x54, 0x59, 0x01, 0x00, 0x00, 0x01}
 	ikeV2SPI    = [8]byte{0x4e, 0x45, 0x54, 0x59, 0x02, 0x00, 0x00, 0x02}
@@ -43,10 +43,9 @@ func ikeV1Transform(num byte, last bool, attrs []byte) []byte {
 	return append(out, attrs...)
 }
 
-// ikeV1Payload is an IKEv1 Main Mode SA proposal offering the eight classic
-// transforms (AES-256/AES-128/3DES/DES x SHA1/MD5, PSK, DH group 2). Almost
-// every IKEv1 responder on the planet accepts at least one of them, and the one
-// it picks is itself a fingerprint.
+// ikeV1Payload is an IKEv1 Main Mode SA proposal offering the eight classic transforms
+// (AES-256/AES-128/3DES/DES x SHA1/MD5, PSK, DH group 2). Almost every IKEv1 responder on
+// the planet accepts at least one of them, and the one it picks is itself a fingerprint.
 func ikeV1Payload() []byte {
 	type combo struct {
 		enc, keyLen, hash uint16
@@ -93,10 +92,9 @@ func ikeV1Payload() []byte {
 	return out
 }
 
-// ikeSynthetic fills n bytes with a deterministic, obviously synthetic pattern.
-// Used for the IKEv2 key-exchange value and nonce: we never complete the
-// handshake, so no real entropy is needed - and a fixed pattern keeps the probe
-// reproducible and auditable.
+// ikeSynthetic fills n bytes with a deterministic, obviously synthetic pattern. Used for
+// the IKEv2 key-exchange value and nonce: we never complete the handshake, so no real
+// entropy is needed, and a fixed pattern keeps the probe reproducible and auditable.
 func ikeSynthetic(n int, seed uint32) []byte {
 	if n <= 0 {
 		return nil
@@ -122,8 +120,7 @@ func ikeV2Transform(last bool, typ byte, id uint16, attrs []byte) []byte {
 	return append(out, attrs...)
 }
 
-// ikeV2Payload is an IKEv2 IKE_SA_INIT offering AES-CBC-128 / HMAC-SHA1 /
-// modp2048.
+// ikeV2Payload is an IKEv2 IKE_SA_INIT offering AES-CBC-128 / HMAC-SHA1 / modp2048.
 func ikeV2Payload() []byte {
 	transforms := concat(
 		ikeV2Transform(false, 1, 12, ikeAttrBasic(14, 128)), // ENCR_AES_CBC, 128 bit
@@ -307,8 +304,8 @@ func decodeIKESA(content []byte, major byte, r *Result) {
 		r.set("ike.doi", strconv.FormatUint(uint64(doi), 10))
 		content = content[8:] // skip DOI + situation
 	}
-	// Proposal payload header: next(1) res(1) len(2) num(1) protocol(1)
-	// spiSize(1) numTransforms(1)
+	// Proposal payload header: next(1) res(1) len(2) num(1) protocol(1) spiSize(1)
+	// numTransforms(1)
 	if len(content) < 8 {
 		return
 	}
@@ -326,8 +323,8 @@ func decodeIKESA(content []byte, major byte, r *Result) {
 		return
 	}
 	trans := content[off:plen]
-	// Only the first (accepted) transform matters: a responder returns exactly
-	// the one it chose.
+	// Only the first (accepted) transform matters: a responder returns exactly the one it
+	// chose.
 	if len(trans) < 8 {
 		return
 	}

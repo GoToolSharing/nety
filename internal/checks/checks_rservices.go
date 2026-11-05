@@ -54,10 +54,10 @@ func rservicesApplies(t *Target) bool {
 
 func svcLower(s model.Service) string { return strings.ToLower(strings.TrimSpace(s.Name)) }
 
-// runRServices reports the exposure. The r-services protocols start with the
-// client sending its credentials, so there is no banner to read and no way to
-// probe them further without attempting a login: NETY reports the exposure
-// from the open port alone and never authenticates.
+// runRServices reports the exposure. The r-services protocols start with the client
+// sending its credentials, so there is no banner to read and no way to probe them further
+// without attempting a login: NETY reports the exposure from the open port alone and
+// never authenticates.
 func runRServices(_ context.Context, t *Target) []model.Finding {
 	name := rservicePorts[t.Service.Port]
 	if name == "" {

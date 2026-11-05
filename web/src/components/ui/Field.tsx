@@ -109,7 +109,11 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
           ref={ref}
           id={id}
           required={required}
-          className={cn('input-base appearance-none pr-9', error && 'border-crit', className)}
+          className={cn(
+            'input-base appearance-none pr-9',
+            error && 'border-crit',
+            className,
+          )}
           style={{
             backgroundImage:
               "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='%23888'><path d='M2.5 4.5 6 8l3.5-3.5z'/></svg>\")",

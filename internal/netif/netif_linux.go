@@ -72,14 +72,13 @@ func toPrefix(n *net.IPNet) (netip.Prefix, bool) {
 	return netip.PrefixFrom(addr.Unmap(), ones), true
 }
 
-// Detect reports what the machine sees on the segment attached to iface.
-// An empty iface means "the interface holding the default route".
+// Detect reports what the machine sees on the segment attached to iface. An empty iface
+// means "the interface holding the default route".
 //
-// Detect is passive apart from one detail: when the default gateway is not in
-// the neighbour cache, it sends a single UDP datagram to the gateway's discard
-// port to make the kernel ARP for it, then re-reads the cache. No scanning and
-// no DHCP traffic is generated; the DHCP server is reported only when a lease
-// file names it.
+// Detect is passive apart from one detail: when the default gateway is not in the
+// neighbour cache, it sends a single UDP datagram to the gateway's discard port to make
+// the kernel ARP for it, then re-reads the cache. No scanning and no DHCP traffic is
+// generated; the DHCP server is reported only when a lease file names it.
 func (n *Inspector) Detect(ctx context.Context, iface string) (engine.NetContext, error) {
 	var nc engine.NetContext
 
@@ -109,10 +108,10 @@ func (n *Inspector) Detect(ctx context.Context, iface string) (engine.NetContext
 		default:
 			nc.LocalIPv6 = append(nc.LocalIPv6, a)
 		}
-		// Only prefixes that make sense as a scan scope. A link-local /64 is
-		// an addressing artefact, not a segment to enumerate: offering it as
-		// scannable scope invites a scan of 2^64 addresses. The address itself
-		// is still kept in LocalIPv6, where it is useful.
+		// Only prefixes that make sense as a scan scope. A link-local /64 is an
+		// addressing artefact, not a segment to enumerate: offering it as scannable scope
+		// invites a scan of 2^64 addresses. The address itself is still kept in
+		// LocalIPv6, where it is useful.
 		if scannablePrefix(p) {
 			nc.Prefixes = append(nc.Prefixes, p.Masked())
 		}
@@ -166,8 +165,8 @@ func (n *Inspector) resolveInterface(iface string) (netlink.Link, netip.Addr, er
 	return l, gw, nil
 }
 
-// defaultRoute returns the ifindex and next hop of the IPv4 default route,
-// falling back to IPv6.
+// defaultRoute returns the ifindex and next hop of the IPv4 default route, falling back
+// to IPv6.
 func defaultRoute() (int, netip.Addr, bool) {
 	for _, family := range []int{unix.AF_INET, unix.AF_INET6} {
 		routes, err := netlink.RouteList(nil, family)
@@ -222,8 +221,8 @@ func defaultGatewayOn(ifIndex int) netip.Addr {
 	return netip.Addr{}
 }
 
-// gatewayOn returns any next hop reachable through ifIndex, used when the
-// interface has no default route of its own.
+// gatewayOn returns any next hop reachable through ifIndex, used when the interface has
+// no default route of its own.
 func gatewayOn(ifIndex int) netip.Addr {
 	for _, family := range []int{unix.AF_INET, unix.AF_INET6} {
 		routes, err := netlink.RouteList(nil, family)
@@ -242,8 +241,8 @@ func gatewayOn(ifIndex int) netip.Addr {
 	return netip.Addr{}
 }
 
-// resolveNeighbour reads the gateway's MAC from the kernel neighbour table,
-// nudging the kernel into ARPing/NDing for it if the entry is missing.
+// resolveNeighbour reads the gateway's MAC from the kernel neighbour table, nudging the
+// kernel into ARPing/NDing for it if the entry is missing.
 func (n *Inspector) resolveNeighbour(ctx context.Context, ifIndex int, ip netip.Addr) net.HardwareAddr {
 	family := unix.AF_INET
 	if !ip.Is4() {
@@ -284,8 +283,8 @@ func lookupNeighbour(ifIndex, family int, ip netip.Addr) (net.HardwareAddr, bool
 	return nil, false
 }
 
-// nudgeNeighbour sends one datagram to the discard port so the kernel resolves
-// the next hop. Nothing is received and the payload is empty.
+// nudgeNeighbour sends one datagram to the discard port so the kernel resolves the next
+// hop. Nothing is received and the payload is empty.
 func nudgeNeighbour(ip netip.Addr) {
 	c, err := net.DialTimeout("udp", net.JoinHostPort(ip.String(), "9"), 300*time.Millisecond)
 	if err != nil {
@@ -308,8 +307,8 @@ func dedupPrefixes(in []netip.Prefix) []netip.Prefix {
 	return out
 }
 
-// sortIPv6 puts global unicast addresses before link-local ones so callers can
-// take the first element as "the" address.
+// sortIPv6 puts global unicast addresses before link-local ones so callers can take the
+// first element as "the" address.
 func sortIPv6(a []netip.Addr) {
 	sort.SliceStable(a, func(i, j int) bool {
 		return rankV6(a[i]) < rankV6(a[j])

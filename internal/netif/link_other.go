@@ -6,9 +6,8 @@ import (
 	"net/netip"
 )
 
-// Stubs so the whole tree compiles (and its pure logic stays testable) on
-// darwin. Everything that needs netlink / AF_PACKET returns
-// engine.ErrUnsupported.
+// Stubs so the whole tree compiles (and its pure logic stays testable) on darwin.
+// Everything that needs netlink / AF_PACKET returns engine.ErrUnsupported.
 
 // AddVLAN is Linux-only.
 func AddVLAN(parent string, vlanID int) (string, error) {

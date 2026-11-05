@@ -16,7 +16,12 @@ import { Card, CardHeader, KeyValue, PageHeader } from '@/components/ui/Card'
 import { Button, IconButton, LinkButton } from '@/components/ui/Button'
 import { Modal, ConfirmDialog } from '@/components/ui/Modal'
 import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
-import { CardSkeleton, EmptyState, ErrorState, InlineAlert } from '@/components/ui/Feedback'
+import {
+  CardSkeleton,
+  EmptyState,
+  ErrorState,
+  InlineAlert,
+} from '@/components/ui/Feedback'
 import { Badge } from '@/components/ui/Badge'
 import { Mono, RelativeTime } from '@/components/common'
 import { useToast } from '@/components/ui/Toast'
@@ -131,7 +136,9 @@ function NetworkFormModal({
         ...f,
         name:
           f.name ||
-          (draft.vlan_id ? `VLAN ${draft.vlan_id}` : draft.interface || 'Detected network'),
+          (draft.vlan_id
+            ? `VLAN ${draft.vlan_id}`
+            : draft.interface || 'Detected network'),
         vlan_id: draft.vlan_id ? String(draft.vlan_id) : f.vlan_id,
         interface: draft.interface || f.interface,
         local_ip: draft.local_ip || f.local_ip,
@@ -155,7 +162,7 @@ function NetworkFormModal({
     setError(null)
     const body = toInput(form)
     if (!body.name) {
-      setError('Give the network a name - "VLAN 20 - Servers" reads well in the report.')
+      setError('Give the network a name. "VLAN 20, servers" reads well in the report.')
       return
     }
     try {
@@ -222,11 +229,12 @@ function NetworkFormModal({
           </div>
           {(interfaces.data ?? []).some((i) => i.name === detectIface && i.wireless) && (
             <p className="mt-2 rounded border border-border bg-surface px-3 py-2 text-xs text-muted">
-              <span className="font-medium text-fg">Wi-Fi interface.</span> Discovery, port
-              scanning, fingerprinting and the routed segmentation techniques all behave
-              exactly as they do on a cable. Only the switch-port work is skipped: an access
-              point does not carry 802.1Q tags to a station and does not speak CDP, LLDP or
-              DTP, so the passive switch-port recon and the layer-2 techniques do not apply.
+              <span className="font-medium text-fg">Wi-Fi interface.</span> Discovery,
+              port scanning, fingerprinting and the routed segmentation techniques all
+              behave exactly as they do on a cable. Only the switch-port work is skipped:
+              an access point does not carry 802.1Q tags to a station and does not speak
+              CDP, LLDP or DTP, so the passive switch-port recon and the layer-2
+              techniques do not apply.
             </p>
           )}
           {detected && (
@@ -237,7 +245,8 @@ function NetworkFormModal({
                   {detected.interface || '-'}
                 </KeyValue>
                 <KeyValue label="Local IP / MAC" mono>
-                  {detected.local_ip || '-'} {detected.local_mac ? `· ${detected.local_mac}` : ''}
+                  {detected.local_ip || '-'}{' '}
+                  {detected.local_mac ? `· ${detected.local_mac}` : ''}
                 </KeyValue>
                 <KeyValue label="Gateway" mono>
                   {detected.gateway || '-'}
@@ -254,8 +263,8 @@ function NetworkFormModal({
           )}
           {interfaces.isError && (
             <p className="mt-2 text-xs text-warn">
-              The interface list is unavailable (the server may lack the privileges to enumerate
-              NICs). Fill the fields by hand.
+              The interface list is unavailable (the server may lack the privileges to
+              enumerate NICs). Fill the fields by hand.
             </p>
           )}
         </section>
@@ -264,7 +273,7 @@ function NetworkFormModal({
           <TextField
             label="Name"
             required
-            placeholder="VLAN 20 - Servers"
+            placeholder="VLAN 20, servers"
             value={form.name}
             onChange={(e) => set('name')(e.target.value)}
           />
@@ -357,10 +366,10 @@ function L2Panel({ network }: { network: Network }) {
               {l2.dtp_mode && <Badge tone="crit">DTP mode: {l2.dtp_mode}</Badge>}
             </div>
             <p className="mt-1 text-xs text-fg/90">
-              DTP frames were seen on this access port. Anyone plugging in here can negotiate a
-              trunk and gain access to every VLAN the port carries - VLAN segmentation is void
-              at this location. Report it as a finding on its own, and use the L2-active
-              segmentation techniques to demonstrate it.
+              DTP frames were seen on this access port. Anyone plugging in here can
+              negotiate a trunk and gain access to every VLAN the port carries: VLAN
+              segmentation is void at this location. Report it as a finding on its own,
+              and use the L2-active segmentation techniques to demonstrate it.
             </p>
           </div>
         </div>
@@ -401,7 +410,7 @@ function L2Panel({ network }: { network: Network }) {
           {l2.captured_at ? (
             <RelativeTime value={l2.captured_at} />
           ) : (
-            <span className="text-faint">never - run an l2probe scan</span>
+            <span className="text-faint">never, run an l2probe scan</span>
           )}
         </KeyValue>
       </div>
@@ -444,7 +453,9 @@ function L2Panel({ network }: { network: Network }) {
                   <td className="tabular text-muted">
                     {n.native_vlan || '-'} / {n.voice_vlan || '-'}
                   </td>
-                  <td className="text-muted">{(n.capabilities ?? []).join(', ') || '-'}</td>
+                  <td className="text-muted">
+                    {(n.capabilities ?? []).join(', ') || '-'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -454,9 +465,9 @@ function L2Panel({ network }: { network: Network }) {
         nothing && (
           <div className="border-t border-border px-4 py-3 text-xs text-muted">
             No CDP, LLDP, DTP or STP frame captured on this port yet. Launch an{' '}
-            <strong className="text-fg">l2probe</strong> scan to listen passively for a minute -
-            it is silent and tells you who the switch is, which VLANs it carries and whether the
-            port offers trunking.
+            <strong className="text-fg">l2probe</strong> scan to listen passively for a
+            minute: it is silent and tells you who the switch is, which VLANs it carries
+            and whether the port offers trunking.
           </div>
         )
       )}
@@ -525,7 +536,9 @@ function NetworkCard({
         </KeyValue>
         <KeyValue label="Local IP / MAC" mono>
           {network.local_ip || '-'}
-          {network.local_mac ? <span className="text-muted"> · {network.local_mac}</span> : null}
+          {network.local_mac ? (
+            <span className="text-muted"> · {network.local_mac}</span>
+          ) : null}
         </KeyValue>
         <KeyValue label="Prefixes" mono>
           {(network.prefixes ?? []).join(', ') || <span className="text-faint">-</span>}
@@ -534,9 +547,14 @@ function NetworkCard({
           {network.gateway || <span className="text-faint">-</span>}
         </KeyValue>
         <KeyValue label="DNS" mono>
-          {(network.dns_servers ?? []).join(', ') || <span className="text-faint">-</span>}
+          {(network.dns_servers ?? []).join(', ') || (
+            <span className="text-faint">-</span>
+          )}
           {(network.domain_search ?? []).length > 0 && (
-            <span className="text-muted"> · search {(network.domain_search ?? []).join(' ')}</span>
+            <span className="text-muted">
+              {' '}
+              · search {(network.domain_search ?? []).join(' ')}
+            </span>
           )}
         </KeyValue>
         <KeyValue label="DHCP server" mono>
@@ -613,8 +631,9 @@ export default function NetworksPage() {
           icon={<TrunkIcon />}
           title="Trunk negotiation offered on an access port"
         >
-          {trunking.map((n) => n.name).join(', ')} - the switch answers DTP here. Enable the
-          L2-active techniques in a segmentation scan to prove how far a trunk would reach.
+          {trunking.map((n) => n.name).join(', ')}: the switch answers DTP here. Enable
+          the L2-active techniques in a segmentation scan to prove how far a trunk would
+          reach.
         </InlineAlert>
       )}
 
@@ -687,8 +706,9 @@ export default function NetworksPage() {
         busy={remove.isPending}
         body={
           <>
-            The hosts, services and findings collected on this network are deleted with it. Scans
-            that targeted it keep their history but lose their results. This cannot be undone.
+            The hosts, services and findings collected on this network are deleted with
+            it. Scans that targeted it keep their history but lose their results. This
+            cannot be undone.
           </>
         }
         onConfirm={async () => {

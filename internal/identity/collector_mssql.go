@@ -41,8 +41,7 @@ func tdsPacket(typ byte, id byte, payload []byte) []byte {
 	return append(b, payload...)
 }
 
-// buildPrelogin builds a PRELOGIN payload (VERSION, ENCRYPTION, INSTOPT,
-// THREADID, MARS).
+// buildPrelogin builds a PRELOGIN payload (VERSION, ENCRYPTION, INSTOPT, THREADID, MARS).
 func buildPrelogin(encryption byte) []byte {
 	type opt struct {
 		tok  byte
@@ -152,8 +151,8 @@ func parsePrelogin(b []byte) (preloginInfo, error) {
 	return p, errors.New("tds: too many prelogin options")
 }
 
-// buildLogin7SSPI builds a LOGIN7 payload requesting integrated security
-// with the given SSPI blob.
+// buildLogin7SSPI builds a LOGIN7 payload requesting integrated security with the given
+// SSPI blob.
 func buildLogin7SSPI(server string, sspi []byte) []byte {
 	const fixed = 94
 	b := make([]byte, fixed)
@@ -190,8 +189,8 @@ func buildLogin7SSPI(server string, sspi []byte) []byte {
 	return b
 }
 
-// extractSSPIToken returns the content of the first SSPI (0xED) token that
-// looks like NTLMSSP or SPNEGO data.
+// extractSSPIToken returns the content of the first SSPI (0xED) token that looks like
+// NTLMSSP or SPNEGO data.
 func extractSSPIToken(payload []byte) []byte {
 	for i := 0; i+3 <= len(payload); i++ {
 		if payload[i] != 0xed {
@@ -209,8 +208,8 @@ func extractSSPIToken(payload []byte) []byte {
 	return nil
 }
 
-// tdsConn carries TDS packets, optionally with TLS negotiated inside
-// PRELOGIN packets (MS-TDS 2.2.6.5 / 3.2.5.2).
+// tdsConn carries TDS packets, optionally with TLS negotiated inside PRELOGIN packets
+// (MS-TDS 2.2.6.5 / 3.2.5.2).
 type tdsConn struct {
 	raw     net.Conn
 	br      *bufio.Reader
@@ -304,8 +303,8 @@ func (a *tdsTLSAdapter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// probeMSSQL reads the PRELOGIN version and requests an NTLM CHALLENGE via
-// LOGIN7 integrated security. The login is never completed.
+// probeMSSQL reads the PRELOGIN version and requests an NTLM CHALLENGE via LOGIN7
+// integrated security. The login is never completed.
 func (c *collector) probeMSSQL(ctx context.Context, sink *evidenceSink, ip string, port int) error {
 	pctx, cancel := withTimeout(ctx, 3*c.ioTimeout)
 	defer cancel()
@@ -348,8 +347,8 @@ func (c *collector) probeMSSQL(ctx context.Context, sink *evidenceSink, ip strin
 	if err := t.writePacket(tdsLogin7, buildLogin7SSPI(ip, ntlm.NegotiateMessage())); err != nil {
 		return err
 	}
-	// With ENCRYPT_OFF only the LOGIN7 packet is encrypted: the reply is
-	// plaintext. With ENCRYPT_ON/REQ it is TLS. Peek to decide.
+	// With ENCRYPT_OFF only the LOGIN7 packet is encrypted: the reply is plaintext. With
+	// ENCRYPT_ON/REQ it is TLS. Peek to decide.
 	_ = raw.SetReadDeadline(time.Now().Add(c.ioTimeout))
 	first, err := t.br.Peek(1)
 	if err != nil {

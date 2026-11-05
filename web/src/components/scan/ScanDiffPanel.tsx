@@ -27,7 +27,10 @@ const CHANGE_TONE: Record<DiffChange, 'accent' | 'warn' | 'info' | 'neutral'> = 
  * The same five changes read differently depending on what they happened to:
  * a host appears, a port opens, a finding is raised.
  */
-const LABELS: Record<'host' | 'service' | 'finding', Partial<Record<DiffChange, string>>> = {
+const LABELS: Record<
+  'host' | 'service' | 'finding',
+  Partial<Record<DiffChange, string>>
+> = {
   host: { added: 'new', removed: 'gone', moved: 'moved', same: 'unchanged' },
   service: { added: 'opened', removed: 'closed', changed: 'version changed' },
   finding: { added: 'raised', removed: 'no longer raised' },
@@ -178,7 +181,9 @@ function findingRow(f: ScanDiffFinding) {
 
 /** "3 new · 1 gone · 24 unchanged" with the zeroes left out. */
 function summarise(parts: [number, string][]): string {
-  const kept = parts.filter(([n]) => n > 0).map(([n, label]) => `${formatNumber(n)} ${label}`)
+  const kept = parts
+    .filter(([n]) => n > 0)
+    .map(([n, label]) => `${formatNumber(n)} ${label}`)
   return kept.length > 0 ? kept.join(' · ') : 'nothing'
 }
 
@@ -275,7 +280,8 @@ export default function ScanDiffPanel({
                 (<RelativeTime value={diff.from.finished_at} />)
               </>
             )}
-            {diff.from_picked && ' · picked automatically as the last completed scan before this one'}
+            {diff.from_picked &&
+              ' · picked automatically as the last completed scan before this one'}
           </p>
 
           {!diff.changed ? (

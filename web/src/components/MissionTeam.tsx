@@ -59,7 +59,9 @@ export default function MissionTeam({ missionId }: { missionId: number }) {
                 className="inline-flex items-center gap-1.5 rounded border border-border bg-elevated px-2 py-1 text-xs"
               >
                 <UsersIcon width={12} height={12} className="text-faint" />
-                <span className="font-medium text-fg">{u.display_name || u.username}</span>
+                <span className="font-medium text-fg">
+                  {u.display_name || u.username}
+                </span>
                 <Badge tone={u.role === 'admin' ? 'accent' : 'neutral'}>{u.role}</Badge>
               </li>
             ))}
@@ -72,9 +74,7 @@ export default function MissionTeam({ missionId }: { missionId: number }) {
         )}
       </div>
 
-      {editing && (
-        <TeamModal missionId={missionId} onClose={() => setEditing(false)} />
-      )}
+      {editing && <TeamModal missionId={missionId} onClose={() => setEditing(false)} />}
     </Card>
   )
 }
@@ -111,9 +111,9 @@ function TeamModal({ missionId, onClose }: { missionId: number; onClose: () => v
   return (
     <Modal open title="Who can open this mission" onClose={onClose} size="md">
       <p className="mb-3 text-xs text-muted">
-        Members see the mission in their list and can open it. An operator who is
-        not a member cannot reach it at all. Administrators always have access,
-        whether or not they are ticked here.
+        Members see the mission in their list and can open it. An operator who is not a
+        member cannot reach it at all. Administrators always have access, whether or not
+        they are ticked here.
       </p>
 
       {users.isLoading ? (

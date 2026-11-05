@@ -11,10 +11,10 @@ import (
 	"github.com/GoToolSharing/nety/internal/identity/smb"
 )
 
-// Minimal SMB1 (CIFS) client used by the smbv1 / signing / MS17-010 checks.
-// It only implements NEGOTIATE (NT LM 0.12), anonymous SESSION_SETUP_ANDX
-// (non extended security), TREE_CONNECT_ANDX and TRANSACTION
-// (PeekNamedPipe), which is exactly what nmap's safe scripts use.
+// Minimal SMB1 (CIFS) client used by the smbv1 / signing / MS17-010 checks. It only
+// implements NEGOTIATE (NT LM 0.12), anonymous SESSION_SETUP_ANDX (non extended
+// security), TREE_CONNECT_ANDX and TRANSACTION (PeekNamedPipe), which is exactly what
+// nmap's safe scripts use.
 
 const (
 	smb1CmdNegotiate    byte = 0x72
@@ -151,8 +151,8 @@ func smb1ParseNegotiate(b []byte) (*smb1NegInfo, error) {
 	return ni, nil
 }
 
-// smb1BuildSessionSetupAnon builds an anonymous SESSION_SETUP_ANDX
-// (non extended security, empty account and passwords).
+// smb1BuildSessionSetupAnon builds an anonymous SESSION_SETUP_ANDX (non extended
+// security, empty account and passwords).
 func smb1BuildSessionSetupAnon(mid uint16) []byte {
 	w := make([]byte, 26)
 	w[0] = 0xff // no AndX
@@ -175,8 +175,8 @@ func smb1BuildTreeConnect(ip, share string, uid, mid uint16) []byte {
 	return smb1Message(smb1Header(smb1CmdTreeConnect, 0, uid, mid), w, data)
 }
 
-// smb1BuildPeekNamedPipe builds the TRANSACTION PeekNamedPipe request on
-// FID 0 used by the MS17-010 safe detection (same bytes as nmap).
+// smb1BuildPeekNamedPipe builds the TRANSACTION PeekNamedPipe request on FID 0 used by
+// the MS17-010 safe detection (same bytes as nmap).
 func smb1BuildPeekNamedPipe(tid, uid, mid uint16) []byte {
 	w := make([]byte, 32)
 	binary.LittleEndian.PutUint16(w[4:], 0xffff)  // max parameter count

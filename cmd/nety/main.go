@@ -1,5 +1,5 @@
-// Command nety is the NETY server: an internal-network mapping and VLAN
-// segmentation testing platform.
+// Command nety is the NETY server: an internal-network mapping and VLAN segmentation
+// testing platform.
 //
 //	nety serve                 start the web platform
 //	nety user add <name>       create an account
@@ -83,8 +83,7 @@ environment variable (see docs/).
 `)
 }
 
-// ---------------------------------------------------------------------------
-// flags
+// --------------------------------------------------------------------------- flags
 // ---------------------------------------------------------------------------
 
 func bindFlags(fs *flag.FlagSet, cfg *config.Config) {
@@ -155,8 +154,7 @@ func newLogger(cfg config.Config) (*slog.Logger, func(), error) {
 	return log, closer, nil
 }
 
-// ---------------------------------------------------------------------------
-// serve
+// --------------------------------------------------------------------------- serve
 // ---------------------------------------------------------------------------
 
 func cmdServe(args []string) error {
@@ -189,8 +187,8 @@ func cmdServe(args []string) error {
 		return err
 	}
 
-	// The fingerprinter uses nmap's probe database when the operator has it
-	// installed; detection degrades gracefully without it.
+	// The fingerprinter uses nmap's probe database when the operator has it installed;
+	// detection degrades gracefully without it.
 	if cfg.NmapProbesPath != "" {
 		fingerprint.SetProbesPath(cfg.NmapProbesPath)
 		log.Info("using nmap service probes", "path", cfg.NmapProbesPath)
@@ -215,8 +213,8 @@ func cmdServe(args []string) error {
 	}, log)
 	defer runner.Close()
 
-	// A scan that was running when the process died is returned to the queue
-	// and marked resumable rather than silently lost.
+	// A scan that was running when the process died is returned to the queue and marked
+	// resumable rather than silently lost.
 	if err := runner.Recover(context.Background()); err != nil {
 		log.Error("cannot recover interrupted scans", "error", err)
 	}
@@ -249,9 +247,9 @@ func cmdServe(args []string) error {
 	}
 	log.Info("pausing running scans before exit")
 	runner.Close()
-	// Process-wide safety net: the segmentation engine already reverts its own
-	// changes per test, but a crash-stop must never leave a sub-interface or a
-	// route behind on the operator's machine.
+	// Process-wide safety net: the segmentation engine already reverts its own changes
+	// per test, but a crash-stop must never leave a sub-interface or a route behind on
+	// the operator's machine.
 	if err := netif.RestoreAll(); err != nil {
 		log.Error("could not revert every network change; check your interfaces and routes", "error", err)
 	}
@@ -259,8 +257,8 @@ func cmdServe(args []string) error {
 	return nil
 }
 
-// buildEngines wires the scanning implementations. Engines unavailable on this
-// platform are left nil; the runner skips their phases and the API reports it.
+// buildEngines wires the scanning implementations. Engines unavailable on this platform
+// are left nil; the runner skips their phases and the API reports it.
 func buildEngines(log *slog.Logger) jobs.Engines {
 	return jobs.Engines{
 		Discoverer:    discovery.New(log),
@@ -292,8 +290,8 @@ func housekeeping(ctx context.Context, authSvc *auth.Service, log *slog.Logger) 
 	}
 }
 
-// bootstrapAdmin creates the first account on an empty database and prints the
-// generated password once, so the operator can log in immediately.
+// bootstrapAdmin creates the first account on an empty database and prints the generated
+// password once, so the operator can log in immediately.
 func bootstrapAdmin(ctx context.Context, st *store.Store, authSvc *auth.Service, cfg config.Config, log *slog.Logger) error {
 	n, err := st.CountUsers(ctx)
 	if err != nil {
@@ -339,9 +337,8 @@ func bootstrapAdmin(ctx context.Context, st *store.Store, authSvc *auth.Service,
 	return nil
 }
 
-// ---------------------------------------------------------------------------
-// user management
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- user
+// management ---------------------------------------------------------------------------
 
 func cmdUser(args []string) error {
 	if len(args) == 0 {

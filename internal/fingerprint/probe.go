@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// peekResult is the outcome of the NULL probe: connect and listen for a
-// banner the service volunteers on its own.
+// peekResult is the outcome of the NULL probe: connect and listen for a banner the
+// service volunteers on its own.
 type peekResult struct {
 	data   []byte // raw bytes the service sent unprompted
 	closed bool   // the peer closed the connection
@@ -35,8 +35,8 @@ func capDuration(d, max time.Duration) time.Duration {
 	return d
 }
 
-// peek opens a connection and reads whatever the service sends on its own.
-// A service that stays silent yields an empty, error-free result.
+// peek opens a connection and reads whatever the service sends on its own. A service that
+// stays silent yields an empty, error-free result.
 func (d *dialer) peek(ctx context.Context) peekResult {
 	c, err := d.dial(ctx)
 	if err != nil {
@@ -47,16 +47,15 @@ func (d *dialer) peek(ctx context.Context) peekResult {
 	return peekResult{data: data, closed: closed, err: rerr, dialed: true}
 }
 
-// peekConn reads an unprompted banner from an already established connection
-// (used inside a TLS tunnel).
+// peekConn reads an unprompted banner from an already established connection (used inside
+// a TLS tunnel).
 func (d *dialer) peekConn(c net.Conn) []byte {
 	data, _, _ := readResponse(c, d.bannerWait(), 300*time.Millisecond, nil)
 	return data
 }
 
-// sendProbe opens a connection (optionally TLS), writes payload and reads the
-// answer. An empty payload makes it a NULL probe. wait bounds the whole
-// exchange.
+// sendProbe opens a connection (optionally TLS), writes payload and reads the answer. An
+// empty payload makes it a NULL probe. wait bounds the whole exchange.
 func (d *dialer) sendProbe(ctx context.Context, payload []byte, useTLS bool, wait time.Duration) ([]byte, error) {
 	if wait <= 0 {
 		wait = d.bannerWait()
@@ -77,9 +76,9 @@ func (d *dialer) sendProbe(ctx context.Context, payload []byte, useTLS bool, wai
 	}
 	defer func() { _ = c.Close() }()
 
-	// A UDP probe must emit a datagram even when its payload is empty, or the
-	// peer never hears from us at all; over TCP an empty payload is the NULL
-	// probe and nothing should be written.
+	// A UDP probe must emit a datagram even when its payload is empty, or the peer never
+	// hears from us at all; over TCP an empty payload is the NULL probe and nothing
+	// should be written.
 	if len(payload) > 0 || d.proto == "udp" {
 		if err := c.SetWriteDeadline(time.Now().Add(wait)); err != nil {
 			return nil, err

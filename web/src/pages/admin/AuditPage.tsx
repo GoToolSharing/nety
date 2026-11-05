@@ -3,7 +3,12 @@ import { useAudit } from '@/lib/queries'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, PageHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { EmptyState, ErrorState, InlineAlert, TableSkeleton } from '@/components/ui/Feedback'
+import {
+  EmptyState,
+  ErrorState,
+  InlineAlert,
+  TableSkeleton,
+} from '@/components/ui/Feedback'
 import { Badge } from '@/components/ui/Badge'
 import { Mono, RelativeTime, SearchInput } from '@/components/common'
 import { formatNumber } from '@/lib/format'
@@ -50,7 +55,11 @@ export default function AuditPage() {
         title="Audit log"
         description="Who did what on this instance: sign-ins, mission and user changes, scans started, stopped and exported."
         actions={
-          <Button icon={<RefreshIcon />} onClick={() => void audit.refetch()} loading={audit.isFetching}>
+          <Button
+            icon={<RefreshIcon />}
+            onClick={() => void audit.refetch()}
+            loading={audit.isFetching}
+          >
             Refresh
           </Button>
         }
@@ -78,14 +87,16 @@ export default function AuditPage() {
           </select>
         </label>
         {!unavailable && (
-          <span className="tabular text-xs text-faint">{formatNumber(rows.length)} entries</span>
+          <span className="tabular text-xs text-faint">
+            {formatNumber(rows.length)} entries
+          </span>
         )}
       </div>
 
       {unavailable && (
         <InlineAlert tone="info" className="mt-4" title="Audit endpoint not available">
-          This NETY server did not answer <Mono>GET /api/audit</Mono>. The audit trail may be
-          disabled, or this build predates it.
+          This NETY server did not answer <Mono>GET /api/audit</Mono>. The audit trail may
+          be disabled, or this build predates it.
         </InlineAlert>
       )}
 
@@ -139,7 +150,9 @@ export default function AuditPage() {
                     <td className="max-w-[420px] truncate text-muted" title={e.detail}>
                       {e.detail || '-'}
                     </td>
-                    <td className="text-muted">{e.remote ? <Mono>{e.remote}</Mono> : '-'}</td>
+                    <td className="text-muted">
+                      {e.remote ? <Mono>{e.remote}</Mono> : '-'}
+                    </td>
                   </tr>
                 ))}
               </tbody>

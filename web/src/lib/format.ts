@@ -77,16 +77,19 @@ export function formatClock(value: string | Date | null | undefined): string {
   return timeFmt.format(d)
 }
 
-const RELATIVE_STEPS: [limit: number, divisor: number, unit: Intl.RelativeTimeFormatUnit][] =
-  [
-    [60, 1, 'second'],
-    [3600, 60, 'minute'],
-    [86400, 3600, 'hour'],
-    [604800, 86400, 'day'],
-    [2629800, 604800, 'week'],
-    [31557600, 2629800, 'month'],
-    [Infinity, 31557600, 'year'],
-  ]
+const RELATIVE_STEPS: [
+  limit: number,
+  divisor: number,
+  unit: Intl.RelativeTimeFormatUnit,
+][] = [
+  [60, 1, 'second'],
+  [3600, 60, 'minute'],
+  [86400, 3600, 'hour'],
+  [604800, 86400, 'day'],
+  [2629800, 604800, 'week'],
+  [31557600, 2629800, 'month'],
+  [Infinity, 31557600, 'year'],
+]
 
 const relFmt = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
 
@@ -118,7 +121,7 @@ export function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-/** "src-port-53" -> "Src port 53" - readable label for an id-ish string. */
+/** "src-port-53" -> "Src port 53": readable label for an id-ish string. */
 export function humanizeId(s: string): string {
   if (!s) return ''
   return titleCase(s.replace(/[-_]+/g, ' '))
@@ -233,7 +236,9 @@ export function addressHistory<T extends SeenAddress>(
     return {
       ...ip,
       current,
-      label: current ? `since ${formatDay(ip.first_seen)}` : `until ${formatDay(ip.last_seen)}`,
+      label: current
+        ? `since ${formatDay(ip.first_seen)}`
+        : `until ${formatDay(ip.last_seen)}`,
     }
   })
   return entries.sort((a, b) => {

@@ -28,7 +28,8 @@ function progressTitle(s: Scan): string {
   const pct = `${formatPercent(s.progress)} done`
   if (s.status !== 'running' && s.status !== 'paused') return pct
   const parts = [s.phase || s.status]
-  if (s.status === 'running' && s.eta_seconds) parts.push(`ETA ${formatDuration(s.eta_seconds)}`)
+  if (s.status === 'running' && s.eta_seconds)
+    parts.push(`ETA ${formatDuration(s.eta_seconds)}`)
   return `${pct} · ${parts.join(' · ')}`
 }
 
@@ -57,7 +58,8 @@ export default function ScansPage() {
     const c: Record<string, number> = { all: list.length, active: 0 }
     for (const s of list) {
       c[s.status] = (c[s.status] ?? 0) + 1
-      if (s.status === 'running' || s.status === 'queued' || s.status === 'paused') c.active++
+      if (s.status === 'running' || s.status === 'queued' || s.status === 'paused')
+        c.active++
     }
     return c
   }, [list])
@@ -87,7 +89,7 @@ export default function ScansPage() {
     <PageContainer>
       <PageHeader
         title="Scans"
-        description="Every scan is resumable: pausing keeps the work units, and the server picks up exactly where it stopped - even after a crash."
+        description="Every scan is resumable: pausing keeps the work units, and the server picks up exactly where it stopped, even after a crash."
         actions={
           canWrite && (
             <LinkButton to="../scans/new" variant="primary" icon={<PlusIcon />}>
@@ -235,8 +237,12 @@ export default function ScansPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="tabular text-center">{formatNumber(s.stats?.hosts_up ?? 0)}</td>
-                    <td className="tabular text-center">{formatNumber(s.stats?.services ?? 0)}</td>
+                    <td className="tabular text-center">
+                      {formatNumber(s.stats?.hosts_up ?? 0)}
+                    </td>
+                    <td className="tabular text-center">
+                      {formatNumber(s.stats?.services ?? 0)}
+                    </td>
                     <td className="tabular text-center">
                       {formatNumber(s.stats?.findings ?? 0)}
                     </td>
@@ -305,7 +311,7 @@ export default function ScansPage() {
             <>
               {' '}
               A paused scan offers <strong className="text-muted">Resume</strong>, never a
-              restart - it replays only the pending work units.
+              restart: it replays only the pending work units.
             </>
           )}
         </p>

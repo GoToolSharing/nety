@@ -55,8 +55,8 @@ func vncSecName(b byte) string {
 	return fmt.Sprintf("type %d", b)
 }
 
-// vncHandshake reads the server version and security types. It never selects
-// a security type.
+// vncHandshake reads the server version and security types. It never selects a security
+// type.
 func vncHandshake(c net.Conn) (version string, types []byte, reason string, err error) {
 	ver := make([]byte, 12)
 	if _, err = io.ReadFull(c, ver); err != nil {

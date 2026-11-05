@@ -149,7 +149,7 @@ export interface NetworkInput {
   dns_servers?: string[]
 }
 
-/** engine.InterfaceInfo - GET /api/interfaces */
+/** engine.InterfaceInfo: GET /api/interfaces */
 export interface InterfaceInfo {
   name: string
   mac: string
@@ -238,7 +238,7 @@ export type WorkPhase =
   | 'checks'
   | 'segmentation'
 
-/** model.AllPhases - canonical order. */
+/** model.AllPhases: canonical order. */
 export const ALL_PHASES: WorkPhase[] = [
   'l2',
   'discovery',
@@ -307,7 +307,7 @@ export interface ScanProfileInfo {
   options?: Partial<ScanOptions>
 }
 
-/** engine.TechniqueInfo - GET /api/techniques */
+/** engine.TechniqueInfo: GET /api/techniques */
 export interface TechniqueInfo {
   id: string
   title: string
@@ -317,7 +317,7 @@ export interface TechniqueInfo {
   default: boolean
 }
 
-/** engine.CheckInfo - GET /api/checks */
+/** engine.CheckInfo: GET /api/checks */
 export interface CheckInfo {
   id: string
   title: string
@@ -327,7 +327,7 @@ export interface CheckInfo {
   description: string
 }
 
-/** GET /api/scans/{id}/logs - a log line with its cursor id. */
+/** GET /api/scans/{id}/logs: a log line with its cursor id. */
 export interface ScanLogLine {
   id: number
   scan_id?: number
@@ -430,7 +430,7 @@ export interface MissionMember {
   disabled: boolean
 }
 
-/** model.TriageStatus - where the operator is with a service or a finding. */
+/** model.TriageStatus: where the operator is with a service or a finding. */
 export type TriageStatus =
   | 'todo'
   | 'in_progress'
@@ -532,7 +532,7 @@ export interface Service {
   last_scan_id: number
 }
 
-/** GET /api/hosts/{id} - host plus its services, asset and findings. */
+/** GET /api/hosts/{id}: host plus its services, asset and findings. */
 export interface HostDetail {
   host: Host
   services: Service[] | null
@@ -654,7 +654,7 @@ export interface AssetPatch {
 
 export type Severity = 'info' | 'low' | 'medium' | 'high' | 'critical'
 
-/** Most severe first - the order findings are presented in. */
+/** Most severe first: the order findings are presented in. */
 export const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low', 'info']
 
 export const SEVERITY_RANK: Record<Severity, number> = {
@@ -710,7 +710,7 @@ export const TECHNIQUES = {
   doubleTag: 'double-tag',
 } as const
 
-/** Techniques that are not plain routing - a hit through one of these is a
+/** Techniques that are not plain routing: a hit through one of these is a
  * segmentation bypass, not normal connectivity. */
 export const BYPASS_TECHNIQUES = new Set<string>([
   'src-port-53',
@@ -777,7 +777,7 @@ export interface Matrix {
 // Exports
 // ---------------------------------------------------------------------------
 
-/** engine.ExportFormat - GET /api/export-formats */
+/** engine.ExportFormat: GET /api/export-formats */
 export interface ExportFormat {
   id: string
   title: string
@@ -789,7 +789,7 @@ export interface ExportFormat {
 // Status & audit
 // ---------------------------------------------------------------------------
 
-/** GET /api/status - the fields past `platform` need a session. */
+/** GET /api/status: the fields past `platform` need a session. */
 export interface ServerStatus {
   version: string
   commit: string
@@ -805,7 +805,7 @@ export interface ServerStatus {
   database?: Record<string, number>
 }
 
-/** store.AuditEntry - GET /api/audit (admin only). */
+/** store.AuditEntry: GET /api/audit (admin only). */
 export interface AuditEntry {
   id: number
   time: string

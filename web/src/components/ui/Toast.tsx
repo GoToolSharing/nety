@@ -89,7 +89,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <span
               className={cn(
                 'mt-0.5 shrink-0',
-                t.tone === 'error' ? 'text-crit' : t.tone === 'success' ? 'text-ok' : 'text-info',
+                t.tone === 'error'
+                  ? 'text-crit'
+                  : t.tone === 'success'
+                    ? 'text-ok'
+                    : 'text-info',
               )}
             >
               {t.tone === 'error' ? (
@@ -102,7 +106,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             </span>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-fg">{t.title}</div>
-              {t.detail && <div className="mt-0.5 break-words text-xs text-muted">{t.detail}</div>}
+              {t.detail && (
+                <div className="mt-0.5 break-words text-xs text-muted">{t.detail}</div>
+              )}
             </div>
             <button
               type="button"

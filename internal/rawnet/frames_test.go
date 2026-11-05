@@ -7,9 +7,9 @@ import (
 	"testing"
 )
 
-// TestZeroValueFrameBuilderDoesNotPanic guards the packet sending path: a
-// FrameBuilder is normally built by NewFrameBuilder, but a zero value reached
-// serialize with a nil buffer and brought the whole scan down with it.
+// TestZeroValueFrameBuilderDoesNotPanic guards the packet sending path: a FrameBuilder is
+// normally built by NewFrameBuilder, but a zero value reached serialize with a nil buffer
+// and brought the whole scan down with it.
 func TestZeroValueFrameBuilderDoesNotPanic(t *testing.T) {
 	var b FrameBuilder
 	src, _ := net.ParseMAC("aa:bb:cc:dd:ee:01")

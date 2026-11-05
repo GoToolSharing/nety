@@ -16,15 +16,14 @@ import (
 	"github.com/GoToolSharing/nety/internal/rawnet"
 )
 
-// checkTaggedFrameAccepted proves the 802.1Q frames NETY builds itself are
-// correct, by putting one on the wire and seeing a real 802.1Q decoder answer.
+// checkTaggedFrameAccepted proves the 802.1Q frames NETY builds itself are correct, by
+// putting one on the wire and seeing a real 802.1Q decoder answer.
 //
-// Sniffing the parent to read the tag back does not work: Linux keeps the VLAN
-// id out of the frame bytes (it travels in skb->vlan_tci and reaches AF_PACKET
-// only as auxiliary data), so a capture shows untagged frames whatever we do.
-// Sending is the better test anyway - it exercises the frame builder the
-// double-tag technique uses, and the peer's VLAN sub-interface only replies if
-// the tag we wrote is the one it is configured for.
+// Sniffing the parent to read the tag back does not work: Linux keeps the VLAN id out of
+// the frame bytes (it travels in skb->vlan_tci and reaches AF_PACKET only as auxiliary
+// data), so a capture shows untagged frames whatever we do. Sending is the better test
+// anyway: it exercises the frame builder the double-tag technique uses, and the peer's
+// VLAN sub-interface only replies if the tag we wrote is the one it is configured for.
 func checkTaggedFrameAccepted(parent string, vlanID int, srcIP, dstIP netip.Addr) error {
 	srcMAC, err := netif.InterfaceMAC(parent)
 	if err != nil {
@@ -82,8 +81,8 @@ func checkTaggedFrameAccepted(parent string, vlanID int, srcIP, dstIP netip.Addr
 	}
 }
 
-// parseARPReply pulls the operation and sender address out of an ARP frame,
-// tolerating an 802.1Q header and stopping at the first malformed field.
+// parseARPReply pulls the operation and sender address out of an ARP frame, tolerating an
+// 802.1Q header and stopping at the first malformed field.
 func parseARPReply(f []byte) (op uint16, sender netip.Addr, ok bool) {
 	if len(f) < 14 {
 		return 0, netip.Addr{}, false
@@ -112,11 +111,11 @@ func parseARPReply(f []byte) (op uint16, sender netip.Addr, ok bool) {
 	return op, a, true
 }
 
-// checkDTPFrame decodes the DTP advertisement NETY would put on the wire and
-// asserts it byte for byte against the protocol.
+// checkDTPFrame decodes the DTP advertisement NETY would put on the wire and asserts it
+// byte for byte against the protocol.
 //
-// No switch here will answer it, but a malformed frame would be silently
-// ignored by one that would - so the frame itself is worth verifying.
+// No switch here will answer it, but a malformed frame would be silently ignored by one
+// that would, so the frame itself is worth verifying.
 func checkDTPFrame() error {
 	src, err := net.ParseMAC("aa:bb:cc:dd:ee:ff")
 	if err != nil {

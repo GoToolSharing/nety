@@ -8,7 +8,7 @@ export function useMissionId(): number {
   return Number.isFinite(n) ? n : 0
 }
 
-/** Debounced mirror of a value - used for server-side search boxes. */
+/** Debounced mirror of a value: used for server-side search boxes. */
 export function useDebounced<T>(value: T, delay = 300): T {
   const [debounced, setDebounced] = useState(value)
   useEffect(() => {

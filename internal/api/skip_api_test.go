@@ -7,13 +7,13 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// Skipping a host, or a machine, is how an operator parks something that is
-// out of scope: the client's own workstation, their own laptop, a device the
-// client said not to touch. Everything that belongs to it has to leave the
-// working views, and come back untouched when it is put back in scope.
+// Skipping a host, or a machine, is how an operator parks something that is out of scope:
+// the client's own workstation, their own laptop, a device the client said not to touch.
+// Everything that belongs to it has to leave the working views, and come back untouched
+// when it is put back in scope.
 
-// seedParkedHost creates a host with one service and one finding on it, which
-// is the shape every test here works on.
+// seedParkedHost creates a host with one service and one finding on it, which is the
+// shape every test here works on.
 func seedParkedHost(t *testing.T, e *testEnv, missionID, networkID int64, ip string) (model.Host, model.Service, model.Finding) {
 	t.Helper()
 	ctx := t.Context()
@@ -49,8 +49,8 @@ func TestHostTriageEndpoints(t *testing.T) {
 	n := alice.createNetwork(m.ID, "VLAN10")
 	h, _, _ := seedParkedHost(t, e, m.ID, n.ID, "10.0.0.5")
 
-	// A fresh host is to do, and the summary says so beside the services and
-	// the findings.
+	// A fresh host is to do, and the summary says so beside the services and the
+	// findings.
 	var summary struct {
 		Hosts struct {
 			Counts   map[string]int `json:"counts"`
@@ -118,8 +118,8 @@ func TestHostTriageEndpoints(t *testing.T) {
 	}
 }
 
-// TestSkippingAHostHidesItsRows is the behaviour the operator asked for, read
-// through the API exactly as the browser reads it.
+// TestSkippingAHostHidesItsRows is the behaviour the operator asked for, read through the
+// API exactly as the browser reads it.
 func TestSkippingAHostHidesItsRows(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("alice", model.RoleOperator)
@@ -159,8 +159,8 @@ func TestSkippingAHostHidesItsRows(t *testing.T) {
 		t.Fatalf("the skipped host's findings should be gone: %+v", findings)
 	}
 
-	// include_skipped brings them back, with the operator's own work on them
-	// exactly as it was.
+	// include_skipped brings them back, with the operator's own work on them exactly as
+	// it was.
 	alice.do("GET", "/api/missions/"+itoa(m.ID)+"/services?include_skipped=true", nil, &services)
 	if len(services) != 2 {
 		t.Fatalf("include_skipped should show both hosts, got %d", len(services))
@@ -179,8 +179,8 @@ func TestSkippingAHostHidesItsRows(t *testing.T) {
 		t.Fatalf("include_skipped should show both hosts' findings, got %d", len(findings))
 	}
 
-	// The host is still listed, which is where it gets put back in scope, and
-	// its own screen still has everything.
+	// The host is still listed, which is where it gets put back in scope, and its own
+	// screen still has everything.
 	var hosts []model.Host
 	alice.do("GET", "/api/missions/"+itoa(m.ID)+"/hosts", nil, &hosts)
 	if len(hosts) != 2 {
@@ -198,8 +198,8 @@ func TestSkippingAHostHidesItsRows(t *testing.T) {
 		t.Fatalf("the host's own screen must show its rows: %+v", detail)
 	}
 
-	// The counts the UI puts above those tables agree with them, and say what
-	// was left out.
+	// The counts the UI puts above those tables agree with them, and say what was left
+	// out.
 	var summary struct {
 		Total    int `json:"total"`
 		Findings struct {
@@ -237,8 +237,8 @@ func TestSkippingAHostHidesItsRows(t *testing.T) {
 	}
 }
 
-// TestSkippingAMachineCoversEveryAddress: the status is set on the machine and
-// every address it answers on follows.
+// TestSkippingAMachineCoversEveryAddress: the status is set on the machine and every
+// address it answers on follows.
 func TestSkippingAMachineCoversEveryAddress(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("alice", model.RoleOperator)
@@ -311,8 +311,8 @@ func TestSkippingAMachineCoversEveryAddress(t *testing.T) {
 	}
 }
 
-// A viewer may read the triage but must not change it, and a non-member must
-// not see the host or the machine at all.
+// A viewer may read the triage but must not change it, and a non-member must not see the
+// host or the machine at all.
 func TestHostAndAssetTriagePermissions(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("alice", model.RoleOperator)

@@ -24,9 +24,9 @@ func init() {
 	})
 }
 
-// printerVendorMarkers are the strings device web servers put in their Server
-// header, their page titles or their fingerprint. A device has to match one
-// of these before any page is requested.
+// printerVendorMarkers are the strings device web servers put in their Server header,
+// their page titles or their fingerprint. A device has to match one of these before any
+// page is requested.
 var printerVendorMarkers = []string{
 	"hp http server", "hp officejet", "hp laserjet", "hp color laserjet",
 	"xerox", "workcentre", "versalink", "altalink",
@@ -36,8 +36,8 @@ var printerVendorMarkers = []string{
 	"canon", "imagerunner", "epson", "jetdirect", "printer", "embedded web server",
 }
 
-// printerAdminPages are the administration entry points per vendor, with the
-// content that proves the page really is the device's own.
+// printerAdminPages are the administration entry points per vendor, with the content that
+// proves the page really is the device's own.
 var printerAdminPages = []struct {
 	path    string
 	markers []string
@@ -54,9 +54,8 @@ var printerAdminPages = []struct {
 	{"/wcd/system_counter.xml", []string{"system_counter", "KONICA"}},
 }
 
-// printerLoginMarkers are the signs that the page served is in fact a login
-// prompt. Several devices answer 200 with a sign-in form, which is the
-// opposite of the finding.
+// printerLoginMarkers are the signs that the page served is in fact a login prompt.
+// Several devices answer 200 with a sign-in form, which is the opposite of the finding.
 var printerLoginMarkers = []string{
 	"type=\"password\"", "type='password'", "signin", "sign in", "login",
 	"ログイン", "password required",
@@ -73,8 +72,8 @@ func printerApplies(t *Target) bool {
 			return true
 		}
 	}
-	// The raw print port is the other reliable sign that the host is a
-	// printer, even when its web server says nothing useful about itself.
+	// The raw print port is the other reliable sign that the host is a printer, even when
+	// its web server says nothing useful about itself.
 	return t.HasPort(9100, model.TCP) && (webIsHTTP(s) || webPortIs(s, 80, 443))
 }
 
@@ -91,8 +90,8 @@ func runPrinterUnauthAdmin(ctx context.Context, t *Target) []model.Finding {
 			u := webURL(t, sc, p.path)
 			r, err := webDo(ctx, c, http.MethodGet, u, nil, nil)
 			if err != nil {
-				// A device that refuses the whole scheme will refuse every
-				// path on it; move on rather than hammering it.
+				// A device that refuses the whole scheme will refuse every path on it;
+				// move on rather than hammering it.
 				break
 			}
 			if r.Status != http.StatusOK || !printerBodyMatches(r.Body, p.markers) {

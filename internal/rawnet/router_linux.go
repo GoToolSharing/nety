@@ -14,15 +14,14 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Router resolves Paths for scanners. The main routing table is loaded once
-// over netlink and matched in-process (longest prefix, then metric) so that
-// lookups for millions of destinations cost no syscall; the source address
-// of each route is learnt once with an RTM_GETROUTE for the first destination
-// using it. Destinations not covered by the main table (policy routing) fall
-// back to RTM_GETROUTE.
+// Router resolves Paths for scanners. The main routing table is loaded once over netlink
+// and matched in-process (longest prefix, then metric) so that lookups for millions of
+// destinations cost no syscall; the source address of each route is learnt once with an
+// RTM_GETROUTE for the first destination using it. Destinations not covered by the main
+// table (policy routing) fall back to RTM_GETROUTE.
 //
-// When an interface is forced, only routes through it are considered and
-// destinations inside its connected prefixes are treated as on-link.
+// When an interface is forced, only routes through it are considered and destinations
+// inside its connected prefixes are treated as on-link.
 type Router struct {
 	forced *net.Interface
 	routes []fibEntry // immutable after NewRouter
@@ -40,8 +39,8 @@ type fibEntry struct {
 	priority int
 }
 
-// NewRouter loads the routing table. iface may be "" (use the system's
-// choice) or an interface name to force egress.
+// NewRouter loads the routing table. iface may be "" (use the system's choice) or an
+// interface name to force egress.
 func NewRouter(iface string) (*Router, error) {
 	r := &Router{cache: map[int]Path{}, addrs: map[int][]netip.Prefix{}}
 	if iface != "" {
@@ -131,8 +130,8 @@ func (r *Router) Lookup(dst netip.Addr) (Path, error) {
 		return p, nil
 	}
 	if r.forced != nil {
-		// No route via the forced interface: accept destinations inside its
-		// connected prefixes, otherwise it is unreachable through it.
+		// No route via the forced interface: accept destinations inside its connected
+		// prefixes, otherwise it is unreachable through it.
 		for _, pf := range r.ifacePrefixes(r.forced.Index) {
 			if pf.Contains(dst) {
 				return Path{Ifi: r.forced, Src: pf.Addr()}, nil
@@ -192,8 +191,8 @@ func (r *Router) kernelPath(dst netip.Addr) (Path, error) {
 	return p, nil
 }
 
-// pickSource chooses an address of the interface in dst's family, preferring
-// one whose prefix contains dst or the gateway, and global over link-local.
+// pickSource chooses an address of the interface in dst's family, preferring one whose
+// prefix contains dst or the gateway, and global over link-local.
 func (r *Router) pickSource(link int, dst, gw netip.Addr) netip.Addr {
 	var best netip.Addr
 	for _, pf := range r.ifacePrefixes(link) {
@@ -234,8 +233,7 @@ func (r *Router) ifacePrefixes(link int) []netip.Prefix {
 	return ps
 }
 
-// InterfacePrefixes returns the addresses (with prefix length) configured on
-// ifi.
+// InterfacePrefixes returns the addresses (with prefix length) configured on ifi.
 func (r *Router) InterfacePrefixes(ifi *net.Interface) []netip.Prefix {
 	return slices.Clone(r.ifacePrefixes(ifi.Index))
 }

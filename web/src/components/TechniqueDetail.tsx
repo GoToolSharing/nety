@@ -18,18 +18,27 @@ export function TechniqueFlags({ t }: { t: TechniqueGuide }) {
         {t.default ? 'on by default' : 'opt in'}
       </Badge>
       {t.bypass && (
-        <Badge tone="warn" title="A hit through this technique is a bypass, not plain routing">
+        <Badge
+          tone="warn"
+          title="A hit through this technique is a bypass, not plain routing"
+        >
           <BoltIcon width={10} height={10} />
           bypass
         </Badge>
       )}
       {t.one_way && (
-        <Badge tone="info" title="Traffic only travels one way, so delivery cannot be confirmed">
+        <Badge
+          tone="info"
+          title="Traffic only travels one way, so delivery cannot be confirmed"
+        >
           one way
         </Badge>
       )}
       {t.l2_active && (
-        <Badge tone="crit" title="Puts frames on the wire that change the switch port state">
+        <Badge
+          tone="crit"
+          title="Puts frames on the wire that change the switch port state"
+        >
           layer 2, active
         </Badge>
       )}

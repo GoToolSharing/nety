@@ -7,8 +7,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// derived holds host-level facts computed from identity evidence and
-// services. Empty fields mean "no information".
+// derived holds host-level facts computed from identity evidence and services. Empty
+// fields mean "no information".
 type derived struct {
 	FQDN      string
 	Hostname  string
@@ -18,9 +18,8 @@ type derived struct {
 	Vendor    string
 }
 
-// sortedEvidence returns the evidence of the given kind with a non-empty
-// value, best first: highest confidence, then value, then source. The order
-// is fully deterministic.
+// sortedEvidence returns the evidence of the given kind with a non-empty value, best
+// first: highest confidence, then value, then source. The order is fully deterministic.
 func sortedEvidence(ev []model.IdentityEvidence, kind model.EvidenceKind) []model.IdentityEvidence {
 	var out []model.IdentityEvidence
 	for _, e := range ev {
@@ -87,8 +86,8 @@ func isIPLiteral(s string) bool {
 func deriveFields(services []model.Service, ev []model.IdentityEvidence) derived {
 	var d derived
 
-	// FQDN: explicit DNS computer name first, then reverse DNS / mDNS names
-	// that look fully qualified (but never ".local" / ".in-addr.arpa").
+	// FQDN: explicit DNS computer name first, then reverse DNS / mDNS names that look
+	// fully qualified (but never ".local" / ".in-addr.arpa").
 	d.FQDN = strings.ToLower(bestValue(ev, model.EvFQDN))
 	if d.FQDN != "" && !strings.Contains(d.FQDN, ".") {
 		d.FQDN = ""
@@ -300,8 +299,8 @@ func sshDistro(banner string) string {
 	}
 	for _, d := range sshDistros {
 		if d.needle == "deb" {
-			// "OpenSSH_7.4p1 Debian-10+deb9u7" handled by "debian"; plain
-			// "+deb10u2" suffix also indicates Debian.
+			// "OpenSSH_7.4p1 Debian-10+deb9u7" handled by "debian"; plain "+deb10u2"
+			// suffix also indicates Debian.
 			if strings.Contains(b, "+deb") {
 				return d.os
 			}
@@ -314,9 +313,8 @@ func sshDistro(banner string) string {
 	return ""
 }
 
-// Enrich derives Host-level fields from evidence and services. Values derived
-// from evidence override existing ones; when nothing is derived, existing
-// values are kept.
+// Enrich derives Host-level fields from evidence and services. Values derived from
+// evidence override existing ones; when nothing is derived, existing values are kept.
 func (correlator) Enrich(host model.Host, services []model.Service, ev []model.IdentityEvidence) model.Host {
 	d := deriveFields(services, ev)
 	if d.Hostname != "" {

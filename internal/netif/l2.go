@@ -17,10 +17,10 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// This file decodes the switch-port control plane from raw Ethernet frames.
-// It is deliberately platform independent: the AF_PACKET plumbing lives in
-// sniff_linux.go and only hands complete frames to L2Collector.Consume, so
-// every decoder below is unit-testable from byte fixtures on any OS.
+// This file decodes the switch-port control plane from raw Ethernet frames. It is
+// deliberately platform independent: the AF_PACKET plumbing lives in sniff_linux.go and
+// only hands complete frames to L2Collector.Consume, so every decoder below is
+// unit-testable from byte fixtures on any OS.
 
 // Well-known destination MACs.
 var (
@@ -46,9 +46,8 @@ const (
 
 var ciscoOUI = [3]byte{0x00, 0x00, 0x0c}
 
-// ---------------------------------------------------------------------------
-// Frame dissection
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Frame
+// dissection ---------------------------------------------------------------------------
 
 // L2Frame is the part of an Ethernet frame the collector needs.
 type L2Frame struct {
@@ -65,8 +64,8 @@ type L2Frame struct {
 
 var errShortFrame = errors.New("netif: short frame")
 
-// DissectEthernet walks the Ethernet header, any stack of VLAN tags and the
-// LLC/SNAP header. It never allocates a copy of the payload.
+// DissectEthernet walks the Ethernet header, any stack of VLAN tags and the LLC/SNAP
+// header. It never allocates a copy of the payload.
 func DissectEthernet(b []byte) (L2Frame, error) {
 	var f L2Frame
 	if len(b) < 14 {
@@ -100,8 +99,8 @@ func DissectEthernet(b []byte) (L2Frame, error) {
 		f.Payload = b[i:]
 		return f, nil
 	}
-	// 802.3 length field: an LLC header follows. Trim padding to the stated
-	// length when the frame carries any.
+	// 802.3 length field: an LLC header follows. Trim padding to the stated length when
+	// the frame carries any.
 	end := len(b)
 	if i+int(et) <= len(b) {
 		end = i + int(et)
@@ -145,8 +144,7 @@ func (f L2Frame) IsSTP() bool {
 }
 func (f L2Frame) IsLLDP() bool { return f.EtherType == etherTypeLLDP }
 
-// ---------------------------------------------------------------------------
-// DTP
+// --------------------------------------------------------------------------- DTP
 // ---------------------------------------------------------------------------
 
 // DTP TLV types.
@@ -157,17 +155,17 @@ const (
 	dtpTLVNeighbor = 0x0004
 )
 
-// DTPInfo is a decoded Dynamic Trunking Protocol advertisement. DTP is
-// undocumented; the status octet is interpreted as
+// DTPInfo is a decoded Dynamic Trunking Protocol advertisement. DTP is undocumented; the
+// status octet is interpreted as
 //
 //	bit 7 (0x80) : the port is currently trunking
 //	bits 0..2    : the administrative mode
 //	               1 = on (static trunk), 2 = access (no negotiation),
 //	               3 = desirable, 4 = auto
 //
-// which matches what Cisco switches emit and what Scapy's contrib/dtp.py
-// sends to request a trunk (status 0x03, type 0xa5). Raw holds the octet so an
-// operator can second-guess the mapping.
+// which matches what Cisco switches emit and what Scapy's contrib/dtp.py sends to request
+// a trunk (status 0x03, type 0xa5). Raw holds the octet so an operator can second-guess
+// the mapping.
 type DTPInfo struct {
 	Version  uint8
 	Domain   string
@@ -195,8 +193,8 @@ const (
 	DTPTypeDot1Q  uint8 = 0xa5
 )
 
-// OffersTrunk reports whether the port is willing to form a trunk, i.e. the
-// switch port is in on/desirable/auto rather than hard-coded access.
+// OffersTrunk reports whether the port is willing to form a trunk, i.e. the switch port
+// is in on/desirable/auto rather than hard-coded access.
 func (d DTPInfo) OffersTrunk() bool {
 	switch d.Status & 0x07 {
 	case DTPStatusOn, DTPStatusDesirable, DTPStatusAuto:
@@ -271,9 +269,9 @@ func dtpTypeName(t uint8) string {
 	return fmt.Sprintf("unknown(0x%02x)", t)
 }
 
-// BuildDTPFrame builds a DTP advertisement with the given administrative
-// status, as sent by the dtp-trunk technique (status DTPStatusDesirable) and
-// by its cleanup (status DTPStatusAccess).
+// BuildDTPFrame builds a DTP advertisement with the given administrative status, as sent
+// by the dtp-trunk technique (status DTPStatusDesirable) and by its cleanup (status
+// DTPStatusAccess).
 func BuildDTPFrame(src net.HardwareAddr, domain string, status, encap uint8) []byte {
 	// Domain TLV is padded to 32 bytes + 4 header bytes, like IOS.
 	dom := make([]byte, 32)
@@ -314,12 +312,10 @@ func appendDTPTLV(dst []byte, typ uint16, val []byte) []byte {
 	return append(dst, val...)
 }
 
-// ---------------------------------------------------------------------------
-// Collector
+// --------------------------------------------------------------------------- Collector
 // ---------------------------------------------------------------------------
 
-// L2Collector accumulates model.L2Info from raw frames. It is safe for
-// concurrent use.
+// L2Collector accumulates model.L2Info from raw frames. It is safe for concurrent use.
 type L2Collector struct {
 	mu        sync.Mutex
 	neighbors map[string]model.L2Neighbor
@@ -333,8 +329,8 @@ type L2Collector struct {
 	stpCost   uint32
 	stpHave   bool
 	frames    int
-	// DTP holds the last decoded DTP advertisement, used by the dtp-trunk
-	// technique to know the VTP domain to answer with.
+	// DTP holds the last decoded DTP advertisement, used by the dtp-trunk technique to
+	// know the VTP domain to answer with.
 	DTP DTPInfo
 }
 
@@ -395,8 +391,8 @@ func (c *L2Collector) consumeSTP(payload []byte) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	// Keep the advertisement with the lowest root path cost: it comes from the
-	// port closest to the root bridge.
+	// Keep the advertisement with the lowest root path cost: it comes from the port
+	// closest to the root bridge.
 	if !c.stpHave || stp.Cost < c.stpCost {
 		c.stpHave = true
 		c.stpCost = stp.Cost
@@ -456,16 +452,16 @@ func mergeNeighbor(old, new model.L2Neighbor) model.L2Neighbor {
 	return out
 }
 
-// LastDTP returns the most recent DTP advertisement decoded. The dtp-trunk
-// technique uses the VTP domain and encapsulation it announces.
+// LastDTP returns the most recent DTP advertisement decoded. The dtp-trunk technique uses
+// the VTP domain and encapsulation it announces.
 func (c *L2Collector) LastDTP() DTPInfo {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.DTP
 }
 
-// Info returns the aggregated result. capturedAt is stamped only when at least
-// one control frame was decoded.
+// Info returns the aggregated result. capturedAt is stamped only when at least one
+// control frame was decoded.
 func (c *L2Collector) Info(capturedAt time.Time) model.L2Info {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -490,8 +486,7 @@ func (c *L2Collector) Info(capturedAt time.Time) model.L2Info {
 	return info
 }
 
-// ---------------------------------------------------------------------------
-// CDP
+// --------------------------------------------------------------------------- CDP
 // ---------------------------------------------------------------------------
 
 func decodeCDP(payload []byte) (model.L2Neighbor, bool) {
@@ -571,8 +566,7 @@ func firstLine(s string) string {
 	return strings.TrimSpace(strings.TrimSuffix(s, ","))
 }
 
-// ---------------------------------------------------------------------------
-// LLDP
+// --------------------------------------------------------------------------- LLDP
 // ---------------------------------------------------------------------------
 
 func decodeLLDP(payload []byte) (model.L2Neighbor, bool) {

@@ -21,13 +21,13 @@ func (stubInspector) SniffL2(context.Context, string, time.Duration) (model.L2In
 	return model.L2Info{}, nil
 }
 
-// TestPlanningFinishesAfterACrashMidPlan reproduces a scan that came back from
-// a crash and then reported itself completed having scanned nothing.
+// TestPlanningFinishesAfterACrashMidPlan reproduces a scan that came back from a crash
+// and then reported itself completed having scanned nothing.
 //
-// Planning used to be all-or-nothing: it bailed out as soon as the scan had
-// any phase at all. A process killed after writing the L2 unit but before the
-// discovery ones left a scan whose plan was missing its main phase. Resuming
-// ran the L2 recon, found no discovery work, and called that a success.
+// Planning used to be all-or-nothing: it bailed out as soon as the scan had any phase at
+// all. A process killed after writing the L2 unit but before the discovery ones left a
+// scan whose plan was missing its main phase. Resuming ran the L2 recon, found no
+// discovery work, and called that a success.
 func TestPlanningFinishesAfterACrashMidPlan(t *testing.T) {
 	h := newHarness(t, Engines{
 		NetInspector: stubInspector{},
@@ -39,8 +39,8 @@ func TestPlanningFinishesAfterACrashMidPlan(t *testing.T) {
 	opts.ServiceDetection, opts.Checks = false, false
 	sc := h.newScan(t, opts)
 
-	// The state a crash during planning leaves behind: the L2 unit is on disk,
-	// nothing else is.
+	// The state a crash during planning leaves behind: the L2 unit is on disk, nothing
+	// else is.
 	l2, err := json.Marshal(l2Payload{Interface: "eth0", Seconds: 1})
 	if err != nil {
 		t.Fatal(err)
@@ -121,8 +121,8 @@ func TestPlanIsIdempotentPerPhase(t *testing.T) {
 	}
 }
 
-// A scan that completed without doing its work, because a crash cut the plan
-// short, must be recoverable with Resume rather than having to be recreated.
+// A scan that completed without doing its work, because a crash cut the plan short, must
+// be recoverable with Resume rather than having to be recreated.
 func TestCompletedButUnplannedScanCanBeResumed(t *testing.T) {
 	h := newHarness(t, Engines{
 		NetInspector: stubInspector{},
@@ -134,8 +134,8 @@ func TestCompletedButUnplannedScanCanBeResumed(t *testing.T) {
 	opts.ServiceDetection, opts.Checks = false, false
 	sc := h.newScan(t, opts)
 
-	// A plan that only ever got as far as the L2 unit, then ran and
-	// "completed" with nothing to do.
+	// A plan that only ever got as far as the L2 unit, then ran and "completed" with
+	// nothing to do.
 	l2, _ := json.Marshal(l2Payload{Interface: "eth0", Seconds: 1})
 	if _, err := h.st.AddWork(ctx, sc.ID, model.PhaseL2, []json.RawMessage{l2}); err != nil {
 		t.Fatal(err)
@@ -167,9 +167,9 @@ func TestCompletedButUnplannedScanCanBeResumed(t *testing.T) {
 	}
 }
 
-// A host the operator marked skipped is out of scope. Its services are already
-// left out by the service listing, so leaving it in the host-level ICMP row
-// would put the machine back in the matrix through the back door.
+// A host the operator marked skipped is out of scope. Its services are already left out
+// by the service listing, so leaving it in the host-level ICMP row would put the machine
+// back in the matrix through the back door.
 func TestSegmentationLeavesSkippedHostsOut(t *testing.T) {
 	h := newHarness(t, Engines{NetInspector: stubInspector{}})
 	ctx := context.Background()
@@ -233,9 +233,9 @@ func TestSegmentationLeavesSkippedHostsOut(t *testing.T) {
 	}
 }
 
-// The operator ran a discovery with the checks switched off, then decided to
-// test what it found. A checks scan works from the inventory: no discovery,
-// no port scan, and nothing duplicated when it is run twice.
+// The operator ran a discovery with the checks switched off, then decided to test what it
+// found. A checks scan works from the inventory: no discovery, no port scan, and nothing
+// duplicated when it is run twice.
 func TestChecksScanWorksFromTheInventory(t *testing.T) {
 	h := newHarness(t, Engines{
 		NetInspector:  stubInspector{},

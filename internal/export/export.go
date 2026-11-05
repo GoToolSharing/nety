@@ -1,6 +1,6 @@
-// Package export renders a mission in the formats a pentester needs: machine
-// readable ones to feed other tools (JSON, CSV, Nmap XML, gnmap, a bare target
-// list) and human readable ones for the deliverable (Markdown, HTML, XLSX).
+// Package export renders a mission in the formats a pentester needs: machine readable
+// ones to feed other tools (JSON, CSV, Nmap XML, gnmap, a bare target list) and human
+// readable ones for the deliverable (Markdown, HTML, XLSX).
 package export
 
 import (
@@ -143,9 +143,8 @@ func slug(s string) string {
 	return strings.Trim(b.String(), "-")
 }
 
-// ---------------------------------------------------------------------------
-// shared helpers
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- shared
+// helpers ---------------------------------------------------------------------------
 
 func filterByNetwork(d model.MissionData, networkID int64) model.MissionData {
 	out := d
@@ -160,9 +159,8 @@ func filterByNetwork(d model.MissionData, networkID int64) model.MissionData {
 		return c.SourceNetworkID == networkID || c.TargetNetworkID == networkID
 	})
 	out.Scans = filter(d.Scans, func(s model.Scan) bool { return s.NetworkID == networkID })
-	// The diff is about one network already. Keep it only when it is the one
-	// being exported, so a per-network file never carries another VLAN's
-	// changes.
+	// The diff is about one network already. Keep it only when it is the one being
+	// exported, so a per-network file never carries another VLAN's changes.
 	if out.Diff != nil && out.Diff.NetworkID != networkID {
 		out.Diff = nil
 	}
@@ -251,8 +249,8 @@ func sevWeight(s model.Severity) int {
 	}
 }
 
-// ipLess orders IPv4 numerically and keeps IPv6 lexicographic, which is good
-// enough for a report and never panics on a malformed value.
+// ipLess orders IPv4 numerically and keeps IPv6 lexicographic, which is good enough for a
+// report and never panics on a malformed value.
 func ipLess(a, b string) bool {
 	pa, oka := ipKey(a)
 	pb, okb := ipKey(b)
@@ -346,8 +344,8 @@ func writeJSON(w io.Writer, d model.MissionData) error {
 	return nil
 }
 
-// csvWriter wraps encoding/csv with a UTF-8 BOM so Excel opens accented
-// client names correctly.
+// csvWriter wraps encoding/csv with a UTF-8 BOM so Excel opens accented client names
+// correctly.
 func csvWriter(w io.Writer) (*csv.Writer, error) {
 	if _, err := w.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {
 		return nil, err
@@ -355,10 +353,9 @@ func csvWriter(w io.Writer) (*csv.Writer, error) {
 	return csv.NewWriter(w), nil
 }
 
-// scopeLine is the sentence every export carries about how much of the
-// mission it holds. An export that leaves rows out must say so itself: the
-// file outlives the screen it was produced from, and nobody reading it later
-// knows which boxes were ticked.
+// scopeLine is the sentence every export carries about how much of the mission it holds.
+// An export that leaves rows out must say so itself: the file outlives the screen it was
+// produced from, and nobody reading it later knows which boxes were ticked.
 func scopeLine(d model.MissionData) string {
 	if !d.Omitted.Any() {
 		if d.Omitted == nil {

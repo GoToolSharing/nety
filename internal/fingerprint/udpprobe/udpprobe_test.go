@@ -571,8 +571,8 @@ func TestDecodeAny(t *testing.T) {
 		{"ipmi", 623, mustHex(t, fxIPMI), "ipmi"},
 		{"sip", 5060, []byte(fxSIP), "sip"},
 		{"rpc", 111, mustHex(t, fxRPC), "rpcbind"},
-		// Services answering on a port we did not expect: the full sweep must
-		// still find them.
+		// Services answering on a port we did not expect: the full sweep must still find
+		// them.
 		{"ssdp-odd-port", 37777, []byte(fxSSDP), "upnp"},
 		{"netbios-on-53", 53, mustHex(t, fxNBNS), "netbios-ns"},
 		{"ipmi-on-unknown", 1234, mustHex(t, fxIPMI), "ipmi"},
@@ -636,8 +636,8 @@ func allFixtures(t testing.TB) map[string][]byte {
 
 var probePorts = []uint16{53, 111, 123, 137, 161, 500, 623, 1900, 5060, 5353, 11211, 9999}
 
-// TestTruncatedResponsesDoNotPanic truncates every fixture byte by byte, from
-// both ends, and feeds each prefix/suffix to every decoder.
+// TestTruncatedResponsesDoNotPanic truncates every fixture byte by byte, from both ends,
+// and feeds each prefix/suffix to every decoder.
 func TestTruncatedResponsesDoNotPanic(t *testing.T) {
 	names := Names()
 	for probe, full := range allFixtures(t) {
@@ -705,8 +705,8 @@ func TestRandomResponsesDoNotPanic(t *testing.T) {
 }
 
 // TestStructuredRandomDoesNotPanic keeps the leading bytes of a fixture (so the
-// magic/transaction id matches) and randomises the tail - the nastiest input
-// for a length-driven parser.
+// magic/transaction id matches) and randomises the tail, the nastiest input for a
+// length-driven parser.
 func TestStructuredRandomDoesNotPanic(t *testing.T) {
 	rng := rand.New(rand.NewSource(42))
 	names := Names()

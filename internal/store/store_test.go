@@ -83,8 +83,8 @@ func TestHostAndServiceMerge(t *testing.T) {
 		t.Fatalf("upsert host: %v", err)
 	}
 
-	// Second pass: identity collection adds a hostname but no MAC. The MAC
-	// must survive and the discovery methods must be unioned.
+	// Second pass: identity collection adds a hostname but no MAC. The MAC must survive
+	// and the discovery methods must be unioned.
 	h2, err := s.UpsertHost(ctx, model.Host{
 		MissionID: m.ID, NetworkID: 1, IP: "10.0.0.5",
 		Hostname: "srv01", Domain: "corp.local", DiscoveredBy: []string{"tcp-syn:445"},
@@ -147,8 +147,8 @@ func TestHostAndServiceMerge(t *testing.T) {
 	}
 }
 
-// TestWorkUnitLifecycle covers requirement R2: a scan is a queue of persisted
-// work units, so pausing, crashing and resuming never loses or repeats work.
+// TestWorkUnitLifecycle covers requirement R2: a scan is a queue of persisted work units,
+// so pausing, crashing and resuming never loses or repeats work.
 func TestWorkUnitLifecycle(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -180,8 +180,8 @@ func TestWorkUnitLifecycle(t *testing.T) {
 		t.Fatalf("complete: %v", err)
 	}
 
-	// Simulate a pause (or a crash): the two still-leased units go back to the
-	// pending queue so no work is lost.
+	// Simulate a pause (or a crash): the two still-leased units go back to the pending
+	// queue so no work is lost.
 	released, err := s.ReleaseRunningWork(ctx, sc.ID)
 	if err != nil || released != 2 {
 		t.Fatalf("release: %d err=%v", released, err)

@@ -307,8 +307,8 @@ func TestIPOrdering(t *testing.T) {
 	}
 }
 
-// diffSample is a mission whose last scan found a new host, closed a port,
-// moved a machine to another address and cleared a finding.
+// diffSample is a mission whose last scan found a new host, closed a port, moved a
+// machine to another address and cleared a finding.
 func diffSample() model.MissionData {
 	d := sampleData()
 	finished := time.Date(2026, 11, 4, 9, 0, 0, 0, time.UTC)
@@ -351,8 +351,7 @@ func TestCSVDiffListsWhatChanged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("csv parse: %v", err)
 	}
-	// Header, two hosts (the unchanged one is left out), two services and one
-	// finding.
+	// Header, two hosts (the unchanged one is left out), two services and one finding.
 	if len(rows) != 6 {
 		t.Fatalf("expected 6 rows, got %d: %v", len(rows), rows)
 	}
@@ -375,8 +374,8 @@ func TestCSVDiffListsWhatChanged(t *testing.T) {
 	}
 }
 
-// TestNetworkFilterDropsAnotherNetworksDiff keeps a per-network export from
-// carrying the changes of a VLAN it is not about.
+// TestNetworkFilterDropsAnotherNetworksDiff keeps a per-network export from carrying the
+// changes of a VLAN it is not about.
 func TestNetworkFilterDropsAnotherNetworksDiff(t *testing.T) {
 	var buf bytes.Buffer
 	if err := New().Export(&buf, "csv-diff", diffSample(), 1); err != nil {

@@ -30,8 +30,8 @@ type kexInit struct {
 	FirstKexFollows bool
 }
 
-// readSSHIdent reads the server identification string, skipping the
-// optional pre-banner lines allowed by RFC 4253 §4.2.
+// readSSHIdent reads the server identification string, skipping the optional pre-banner
+// lines allowed by RFC 4253 §4.2.
 func readSSHIdent(r *bufio.Reader) (ident string, pre []string, err error) {
 	for range maxSSHIdentLines {
 		line, err := readLimitedLine(r, 1024)
@@ -64,8 +64,7 @@ func readLimitedLine(r *bufio.Reader, limit int) (string, error) {
 	return sb.String(), nil
 }
 
-// readSSHPlainPacket reads one unencrypted binary packet and returns its
-// payload.
+// readSSHPlainPacket reads one unencrypted binary packet and returns its payload.
 func readSSHPlainPacket(r io.Reader) ([]byte, error) {
 	var hdr [4]byte
 	if _, err := io.ReadFull(r, hdr[:]); err != nil {

@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// Minimal, bounded BER/DER codec. Only what SNMP needs: definite lengths,
-// single-byte tags, no indefinite form. Every parse step is bounds-checked and
-// no allocation is driven by a peer-supplied length.
+// Minimal, bounded BER/DER codec. Only what SNMP needs: definite lengths, single-byte
+// tags, no indefinite form. Every parse step is bounds-checked and no allocation is
+// driven by a peer-supplied length.
 
 const (
 	tagInteger   byte = 0x02
@@ -84,8 +84,8 @@ func berInt(content []byte) (int64, bool) {
 	return v, true
 }
 
-// berUint decodes an unsigned integer body (Counter32/Gauge32/TimeTicks), which
-// may carry a leading zero padding byte.
+// berUint decodes an unsigned integer body (Counter32/Gauge32/TimeTicks), which may carry
+// a leading zero padding byte.
 func berUint(content []byte) (uint64, bool) {
 	if len(content) == 0 || len(content) > 9 {
 		return 0, false

@@ -32,8 +32,8 @@ var allCipherSuites = sync.OnceValue(func() []uint16 {
 	return ids
 })
 
-// clientTLSConfig is a maximally permissive client config: the goal is to
-// observe the server, not to authenticate it.
+// clientTLSConfig is a maximally permissive client config: the goal is to observe the
+// server, not to authenticate it.
 func clientTLSConfig(serverName string, alpn []string) *tls.Config {
 	cfg := &tls.Config{
 		InsecureSkipVerify: true, //nolint:gosec // fingerprinting, no trust decision
@@ -47,22 +47,22 @@ func clientTLSConfig(serverName string, alpn []string) *tls.Config {
 	return cfg
 }
 
-// tlsLadder is walked from the highest version down: the first handshake that
-// succeeds tells us the highest version the server accepts. Most servers
-// negotiate their best version from the first (TLS 1.3 capable) ClientHello;
-// the lower rungs exist for version-intolerant middleboxes and legacy stacks.
+// tlsLadder is walked from the highest version down: the first handshake that succeeds
+// tells us the highest version the server accepts. Most servers negotiate their best
+// version from the first (TLS 1.3 capable) ClientHello; the lower rungs exist for
+// version-intolerant middleboxes and legacy stacks.
 var tlsLadder = []uint16{
 	tls.VersionTLS13, tls.VersionTLS12, tls.VersionTLS11, tls.VersionTLS10,
 }
 
-// probeTLS tries to establish a TLS session on the target port. On success it
-// returns the observed parameters together with the LIVE connection: the
-// caller owns it and must close it. The connection is bound to ctx.
+// probeTLS tries to establish a TLS session on the target port. On success it returns the
+// observed parameters together with the LIVE connection: the caller owns it and must
+// close it. The connection is bound to ctx.
 func (d *dialer) probeTLS(ctx context.Context, alpn []string) (*model.TLSInfo, *tls.Conn, error) {
 	var firstErr error
-	// A peer that simply drops the connection may be version-intolerant, but
-	// it is far more often not a TLS service at all: allow a single retry on
-	// that evidence, and the full ladder only for an explicit TLS alert.
+	// A peer that simply drops the connection may be version-intolerant, but it is far
+	// more often not a TLS service at all: allow a single retry on that evidence, and the
+	// full ladder only for an explicit TLS alert.
 	softRetries := 1
 	for _, max := range tlsLadder {
 		if err := ctx.Err(); err != nil {
@@ -105,9 +105,9 @@ func (d *dialer) probeTLS(ctx context.Context, alpn []string) (*model.TLSInfo, *
 	return nil, nil, firstErr
 }
 
-// retryLowerTLS reports whether err is consistent with a server that speaks
-// TLS but refused the version we offered. A plaintext service, a refused
-// connection or a silent peer are definitive: there is nothing lower to try.
+// retryLowerTLS reports whether err is consistent with a server that speaks TLS but
+// refused the version we offered. A plaintext service, a refused connection or a silent
+// peer are definitive: there is nothing lower to try.
 func retryLowerTLS(err error) bool {
 	if err == nil {
 		return false
@@ -135,8 +135,8 @@ func retryLowerTLS(err error) bool {
 		}
 		return false
 	}
-	// A reset or an EOF mid-handshake is the classic symptom of version
-	// intolerance, so one more rung down is worth a try.
+	// A reset or an EOF mid-handshake is the classic symptom of version intolerance, so
+	// one more rung down is worth a try.
 	return errors.Is(err, io.EOF) || isConnReset(err) || strings.Contains(err.Error(), "tls:")
 }
 
@@ -198,8 +198,8 @@ func isSelfSigned(c *x509.Certificate) bool {
 	if c.CheckSignature(c.SignatureAlgorithm, c.RawTBSCertificate, c.Signature) == nil {
 		return true
 	}
-	// Signature could not be verified (e.g. legacy MD5/SHA-1 algorithms are
-	// refused by crypto/x509): fall back on key identifiers.
+	// Signature could not be verified (e.g. legacy MD5/SHA-1 algorithms are refused by
+	// crypto/x509): fall back on key identifiers.
 	return len(c.AuthorityKeyId) == 0 || bytes.Equal(c.AuthorityKeyId, c.SubjectKeyId)
 }
 
@@ -236,8 +236,8 @@ func tlsVersionName(v uint16) string {
 	}
 }
 
-// isTLSAlert reports whether err carries an alert sent by the peer, i.e. the
-// peer really did speak TLS and refused what we offered.
+// isTLSAlert reports whether err carries an alert sent by the peer, i.e. the peer really
+// did speak TLS and refused what we offered.
 func isTLSAlert(err error) bool {
 	var a tls.AlertError
 	return errors.As(err, &a)

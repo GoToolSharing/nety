@@ -29,8 +29,8 @@ const (
 	maxConnectPerSec = 2000
 )
 
-// discoverUnprivileged runs ICMP echo (ping sockets), TCP connect ping and
-// UDP probes concurrently, all feeding the collector.
+// discoverUnprivileged runs ICMP echo (ping sockets), TCP connect ping and UDP probes
+// concurrently, all feeding the collector.
 func (d *Discoverer) discoverUnprivileged(ctx context.Context, cfg *config, col *collector, log *slog.Logger) error {
 	n := cfg.space.Len()
 	cookie := rawnet.NewCookie()
@@ -84,8 +84,8 @@ func (d *Discoverer) discoverUnprivileged(ctx context.Context, cfg *config, col 
 	}
 	wg.Wait()
 	close(errs)
-	// Partial failures (e.g. ping sockets not allowed) are not fatal as long
-	// as one family ran; report the error only if all of them failed.
+	// Partial failures (e.g. ping sockets not allowed) are not fatal as long as one
+	// family ran; report the error only if all of them failed.
 	var all []error
 	for e := range errs {
 		all = append(all, e)
@@ -96,11 +96,10 @@ func (d *Discoverer) discoverUnprivileged(ctx context.Context, cfg *config, col 
 	return nil
 }
 
-// pingSweep sends ICMP echo requests over unprivileged ping sockets
-// ("udp4"/"udp6" ICMP endpoints; Linux needs net.ipv4.ping_group_range to
-// include the process group, macOS always allows them). The kernel may
-// rewrite the echo identifier, so replies are validated by a keyed cookie
-// carried in the payload.
+// pingSweep sends ICMP echo requests over unprivileged ping sockets ("udp4"/"udp6" ICMP
+// endpoints; Linux needs net.ipv4.ping_group_range to include the process group, macOS
+// always allows them). The kernel may rewrite the echo identifier, so replies are
+// validated by a keyed cookie carried in the payload.
 func (d *Discoverer) pingSweep(ctx context.Context, cfg *config, col *collector, cookie rawnet.Cookie, seed uint64, lim *rawnet.Limiter, prog *progressCounter) error {
 	n := cfg.space.Len()
 	var c4, c6 *icmp.PacketConn
@@ -241,9 +240,9 @@ send:
 	return sendErr
 }
 
-// connectSweep is the TCP connect ping: for each host (random order, bounded
-// concurrency) all TCP ports are dialled in parallel; the first accepted or
-// refused connection proves the host is up and cancels the remaining dials.
+// connectSweep is the TCP connect ping: for each host (random order, bounded concurrency)
+// all TCP ports are dialled in parallel; the first accepted or refused connection proves
+// the host is up and cancels the remaining dials.
 func (d *Discoverer) connectSweep(ctx context.Context, cfg *config, col *collector, seed uint64, lim *rawnet.Limiter, prog *progressCounter) error {
 	n := cfg.space.Len()
 	ports := cfg.tcpPorts
@@ -316,9 +315,9 @@ func probeHostTCP(ctx context.Context, ip netip.Addr, ports []uint16, timeout ti
 	wg.Wait()
 }
 
-// udpSweep sends the protocol payloads of package portscan to every host's
-// UDP ports from unconnected sockets; any datagram coming back from a
-// probed (host, port) proves the host is up.
+// udpSweep sends the protocol payloads of package portscan to every host's UDP ports from
+// unconnected sockets; any datagram coming back from a probed (host, port) proves the
+// host is up.
 func (d *Discoverer) udpSweep(ctx context.Context, cfg *config, col *collector, seed uint64, lim *rawnet.Limiter, prog *progressCounter) error {
 	n := cfg.space.Len()
 	c4, err4 := net.ListenUDP("udp4", &net.UDPAddr{})

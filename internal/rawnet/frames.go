@@ -24,16 +24,16 @@ const (
 // BroadcastMAC is ff:ff:ff:ff:ff:ff.
 var BroadcastMAC = net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 
-// L2 holds the Ethernet addressing of a frame. A non-zero VLAN inserts an
-// 802.1Q tag (used by the segmentation engine to emit tagged frames on a
-// trunk port); Priority is the PCP field of that tag.
+// L2 holds the Ethernet addressing of a frame. A non-zero VLAN inserts an 802.1Q tag
+// (used by the segmentation engine to emit tagged frames on a trunk port); Priority is
+// the PCP field of that tag.
 type L2 struct {
 	SrcMAC   net.HardwareAddr
 	DstMAC   net.HardwareAddr
 	VLAN     uint16
 	Priority uint8
-	// OuterVLAN, when non-zero together with VLAN, produces a double-tagged
-	// (QinQ) frame: OuterVLAN is the outer tag, VLAN the inner one.
+	// OuterVLAN, when non-zero together with VLAN, produces a double-tagged (QinQ) frame:
+	// OuterVLAN is the outer tag, VLAN the inner one.
 	OuterVLAN uint16
 }
 
@@ -49,8 +49,8 @@ const (
 	icmpv6NeighborAdvert  uint8 = 136
 )
 
-// SolicitedNodeAddr returns the solicited-node multicast address
-// ff02::1:ffXX:XXXX of an IPv6 address.
+// SolicitedNodeAddr returns the solicited-node multicast address ff02::1:ffXX:XXXX of an
+// IPv6 address.
 func SolicitedNodeAddr(ip netip.Addr) netip.Addr {
 	b := ip.As16()
 	var out [16]byte
@@ -61,8 +61,8 @@ func SolicitedNodeAddr(ip netip.Addr) netip.Addr {
 	return netip.AddrFrom16(out)
 }
 
-// SolicitedNodeMAC returns the Ethernet multicast address 33:33:ff:XX:XX:XX
-// that carries frames for ip's solicited-node group.
+// SolicitedNodeMAC returns the Ethernet multicast address 33:33:ff:XX:XX:XX that carries
+// frames for ip's solicited-node group.
 func SolicitedNodeMAC(ip netip.Addr) net.HardwareAddr {
 	b := ip.As16()
 	return net.HardwareAddr{0x33, 0x33, 0xff, b[13], b[14], b[15]}
@@ -80,15 +80,15 @@ type TCPParams struct {
 	Seq, Ack         uint32
 	Flags            uint8
 	Window           uint16
-	// Options adds a Linux-like SYN option set (MSS, SACK-permitted,
-	// timestamps with TSval, window scale). Ignored unless Flags has SYN.
+	// Options adds a Linux-like SYN option set (MSS, SACK-permitted, timestamps with
+	// TSval, window scale). Ignored unless Flags has SYN.
 	SynOptions bool
 	TSval      uint32
 }
 
-// FrameBuilder serializes frames with gopacket/layers into a reusable
-// buffer. The returned slice is only valid until the next call. A
-// FrameBuilder is not safe for concurrent use: use one per goroutine.
+// FrameBuilder serializes frames with gopacket/layers into a reusable buffer. The
+// returned slice is only valid until the next call. A FrameBuilder is not safe for
+// concurrent use: use one per goroutine.
 type FrameBuilder struct {
 	buf  gopacket.SerializeBuffer
 	opts gopacket.SerializeOptions
@@ -113,8 +113,8 @@ func (b *FrameBuilder) init() {
 	}
 }
 
-// l2Layers builds the Ethernet header (plus 802.1Q / QinQ tags) carrying
-// payload type et, and returns the layer chain to prepend.
+// l2Layers builds the Ethernet header (plus 802.1Q / QinQ tags) carrying payload type et,
+// and returns the layer chain to prepend.
 func (b *FrameBuilder) l2Layers(l2 L2, et layers.EthernetType) []gopacket.SerializableLayer {
 	eth := &layers.Ethernet{SrcMAC: l2.SrcMAC, DstMAC: l2.DstMAC, EthernetType: et}
 	if l2.VLAN == 0 {
@@ -135,8 +135,8 @@ func (b *FrameBuilder) ARPRequest(srcMAC net.HardwareAddr, srcIP, dstIP netip.Ad
 	return b.ARPRequestL2(L2{SrcMAC: srcMAC, DstMAC: BroadcastMAC}, srcIP, dstIP)
 }
 
-// ARPRequestL2 builds an ARP request with explicit layer-2 addressing (so it
-// can be broadcast, unicast or 802.1Q tagged).
+// ARPRequestL2 builds an ARP request with explicit layer-2 addressing (so it can be
+// broadcast, unicast or 802.1Q tagged).
 func (b *FrameBuilder) ARPRequestL2(l2 L2, srcIP, dstIP netip.Addr) ([]byte, error) {
 	if !srcIP.Is4() || !dstIP.Is4() {
 		return nil, errors.New("rawnet: ARP needs IPv4 addresses")
@@ -160,8 +160,8 @@ func (b *FrameBuilder) ARPRequestL2(l2 L2, srcIP, dstIP netip.Addr) ([]byte, err
 	return b.serialize(append(b.l2Layers(l2, layers.EthernetTypeARP), arp)...)
 }
 
-// ipLayers returns the layer-2 chain, the IP layer (as a serializable layer
-// and as a network layer for transport checksums) for src -> dst.
+// ipLayers returns the layer-2 chain, the IP layer (as a serializable layer and as a
+// network layer for transport checksums) for src -> dst.
 func (b *FrameBuilder) ipLayers(l2 L2, src, dst netip.Addr, ttl uint8, proto layers.IPProtocol) ([]gopacket.SerializableLayer, gopacket.SerializableLayer, gopacket.NetworkLayer, error) {
 	if ttl == 0 {
 		ttl = 64
@@ -257,15 +257,14 @@ func (b *FrameBuilder) ICMPEcho(l2 L2, src, dst netip.Addr, ttl uint8, id, seq u
 	return b.serialize(append(eth, ip, icmp, echo, gopacket.Payload(payload))...)
 }
 
-// NeighborSolicitation builds an ICMPv6 neighbour solicitation for target,
-// addressed to its solicited-node multicast group, carrying the source
-// link-layer address option.
+// NeighborSolicitation builds an ICMPv6 neighbour solicitation for target, addressed to
+// its solicited-node multicast group, carrying the source link-layer address option.
 func (b *FrameBuilder) NeighborSolicitation(srcMAC net.HardwareAddr, src, target netip.Addr) ([]byte, error) {
 	return b.NeighborSolicitationL2(L2{SrcMAC: srcMAC, DstMAC: SolicitedNodeMAC(target)}, src, target)
 }
 
-// NeighborSolicitationL2 is NeighborSolicitation with explicit layer-2
-// addressing (so the frame can be unicast or 802.1Q tagged).
+// NeighborSolicitationL2 is NeighborSolicitation with explicit layer-2 addressing (so the
+// frame can be unicast or 802.1Q tagged).
 func (b *FrameBuilder) NeighborSolicitationL2(l2 L2, src, target netip.Addr) ([]byte, error) {
 	src, target = src.Unmap(), target.Unmap()
 	if !src.Is6() || !target.Is6() {
@@ -308,9 +307,9 @@ func (b *FrameBuilder) ICMPTimestamp(l2 L2, src, dst netip.Addr, ttl uint8, id, 
 }
 
 func (b *FrameBuilder) serialize(ls ...gopacket.SerializableLayer) ([]byte, error) {
-	// A FrameBuilder is normally made by NewFrameBuilder, but the zero value
-	// has a nil buffer and would panic here. Since this sits on the packet
-	// sending path, initialise lazily rather than crash the scan.
+	// A FrameBuilder is normally made by NewFrameBuilder, but the zero value has a nil
+	// buffer and would panic here. Since this sits on the packet sending path, initialise
+	// lazily rather than crash the scan.
 	b.init()
 	if err := b.buf.Clear(); err != nil {
 		return nil, err
@@ -330,16 +329,16 @@ func (b *FrameBuilder) serialize(ls ...gopacket.SerializableLayer) ([]byte, erro
 	return out, nil
 }
 
-// SolicitedNodeMulticast returns the solicited-node multicast address of an
-// IPv6 address and its Ethernet multicast MAC.
+// SolicitedNodeMulticast returns the solicited-node multicast address of an IPv6 address
+// and its Ethernet multicast MAC.
 func SolicitedNodeMulticast(target netip.Addr) (netip.Addr, net.HardwareAddr) {
 	t := target.As16()
 	ip := [16]byte{0xff, 0x02, 11: 0x01, 12: 0xff, 13: t[13], 14: t[14], 15: t[15]}
 	return netip.AddrFrom16(ip), net.HardwareAddr{0x33, 0x33, 0xff, t[13], t[14], t[15]}
 }
 
-// NeighborAdvertisement extracts (target, link-layer address) from a parsed
-// ICMPv6 Neighbor Advertisement. The MAC aliases p's buffer.
+// NeighborAdvertisement extracts (target, link-layer address) from a parsed ICMPv6
+// Neighbor Advertisement. The MAC aliases p's buffer.
 func NeighborAdvertisement(p *Packet) (netip.Addr, net.HardwareAddr, bool) {
 	if !p.IsIP || p.Proto != ProtoICMPv6 || p.ICMPType != 136 || len(p.Payload) < 16 {
 		return netip.Addr{}, nil, false

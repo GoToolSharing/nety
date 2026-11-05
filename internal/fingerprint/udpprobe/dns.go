@@ -6,14 +6,14 @@ import (
 	"github.com/miekg/dns"
 )
 
-// Fixed, synthetic transaction ids. They are verified by the matching decoder,
-// which is what justifies a confidence of 90 on a successful decode. They are
-// all distinct so a response to one probe cannot be mistaken for another.
+// Fixed, synthetic transaction ids. They are verified by the matching decoder, which is
+// what justifies a confidence of 90 on a successful decode. They are all distinct so a
+// response to one probe cannot be mistaken for another.
 const (
 	dnsVersionBindID uint16 = 0x4e01
 	dnsStatusID      uint16 = 0x4e02
-	// mDNS responders are allowed to answer with id 0 (RFC 6762 §18.1), so the
-	// query uses 0 and the decoder accepts 0 or the echoed value.
+	// mDNS responders are allowed to answer with id 0 (RFC 6762 §18.1), so the query uses
+	// 0 and the decoder accepts 0 or the echoed value.
 	mdnsID uint16 = 0x0000
 )
 
@@ -27,35 +27,34 @@ func packQuery(id uint16, rd bool, name string, qtype, qclass uint16) []byte {
 	m.Question = []dns.Question{{Name: name, Qtype: qtype, Qclass: qclass}}
 	b, err := m.Pack()
 	if err != nil {
-		// Cannot happen for the literal names below; fall back to an empty
-		// payload rather than panicking at package init.
+		// Cannot happen for the literal names below; fall back to an empty payload rather
+		// than panicking at package init.
 		return nil
 	}
 	return b
 }
 
-// dnsVersionBindPayload is a TXT query for version.bind. in class CHAOS with
-// RD=0 - the classic name-server version question.
+// dnsVersionBindPayload is a TXT query for version.bind. in class CHAOS with RD=0. The
+// classic name-server version question.
 func dnsVersionBindPayload() []byte {
 	return packQuery(dnsVersionBindID, false, "version.bind.", dns.TypeTXT, dns.ClassCHAOS)
 }
 
-// dnsStatusPayload is a plain IN query (SOA for the root) so a resolver that
-// blocks or refuses CHAOS still identifies itself, and so we learn whether
-// recursion is available.
+// dnsStatusPayload is a plain IN query (SOA for the root) so a resolver that blocks or
+// refuses CHAOS still identifies itself, and so we learn whether recursion is available.
 func dnsStatusPayload() []byte {
 	return packQuery(dnsStatusID, true, ".", dns.TypeSOA, dns.ClassINET)
 }
 
-// mdnsPayload is the multicast-DNS service enumeration query. The unicast
-// response bit (QU, 0x8000 in QCLASS) is set so a directed unicast query gets a
-// directed unicast answer.
+// mdnsPayload is the multicast-DNS service enumeration query. The unicast response bit
+// (QU, 0x8000 in QCLASS) is set so a directed unicast query gets a directed unicast
+// answer.
 func mdnsPayload() []byte {
 	return packQuery(mdnsID, false, "_services._dns-sd._udp.local.", dns.TypePTR, dns.ClassINET|0x8000)
 }
 
-// dnsHeaderView is a bounds-checked peek at the 12-byte DNS header, used when
-// full unpacking fails but the response still looks like DNS.
+// dnsHeaderView is a bounds-checked peek at the 12-byte DNS header, used when full
+// unpacking fails but the response still looks like DNS.
 type dnsHeaderView struct {
 	id     uint16
 	qr     bool
@@ -146,8 +145,8 @@ func decodeDNSVersionBind(resp []byte) *Result {
 		return r
 	}
 
-	// The server answered but gave us no version string: REFUSED, NOTIMP,
-	// SERVFAIL or an empty NOERROR. Still a name server, just less certain.
+	// The server answered but gave us no version string: REFUSED, NOTIMP, SERVFAIL or an
+	// empty NOERROR. Still a name server, just less certain.
 	switch h.rcode {
 	case dns.RcodeRefused, dns.RcodeNotImplemented, dns.RcodeServerFailure, dns.RcodeNameError:
 		r.Confidence = 75
@@ -261,8 +260,8 @@ func dnsFingerprint(v string, r *Result) {
 			r.addCPE("cpe:/a:isc:bind:" + r.Version)
 		}
 	default:
-		// A bare dotted version is overwhelmingly BIND: that is what
-		// `version.bind` historically returns, e.g. "9.16.1-Ubuntu".
+		// A bare dotted version is overwhelmingly BIND: that is what `version.bind`
+		// historically returns, e.g. "9.16.1-Ubuntu".
 		if ver := firstVersion(v); ver != "" && strings.HasPrefix(strings.TrimSpace(v), ver) {
 			r.Product = "ISC BIND"
 			r.Version = ver

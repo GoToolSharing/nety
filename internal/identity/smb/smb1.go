@@ -22,8 +22,8 @@ const (
 	smb1CapExtendedSecurity uint32 = 0x80000000
 )
 
-// SMB1Info is what an SMB1 NEGOTIATE + anonymous SESSION_SETUP_ANDX reveal
-// (the classic smb-os-discovery technique).
+// SMB1Info is what an SMB1 NEGOTIATE + anonymous SESSION_SETUP_ANDX reveal (the classic
+// smb-os-discovery technique).
 type SMB1Info struct {
 	Dialect          string
 	SecurityMode     uint8
@@ -64,8 +64,8 @@ func smb1Header(cmd byte, flags2 uint16) []byte {
 	return h
 }
 
-// BuildSMB1Negotiate builds an SMB1 NEGOTIATE request offering "NT LM 0.12"
-// without extended security (so the server returns its domain/server names).
+// BuildSMB1Negotiate builds an SMB1 NEGOTIATE request offering "NT LM 0.12" without
+// extended security (so the server returns its domain/server names).
 func BuildSMB1Negotiate() []byte {
 	b := smb1Header(smb1CmdNegotiate, smb1Flags2NTStatus|smb1Flags2LongNames)
 	dialects := []byte("\x02NT LM 0.12\x00")
@@ -74,8 +74,8 @@ func BuildSMB1Negotiate() []byte {
 	return append(b, dialects...)
 }
 
-// BuildSMB1SessionSetupAnon builds an anonymous SESSION_SETUP_ANDX (non
-// extended security, OEM strings).
+// BuildSMB1SessionSetupAnon builds an anonymous SESSION_SETUP_ANDX (non extended
+// security, OEM strings).
 func BuildSMB1SessionSetupAnon(uid uint16) []byte {
 	b := smb1Header(smb1CmdSessionSetup, smb1Flags2NTStatus|smb1Flags2LongNames)
 	binary.LittleEndian.PutUint16(b[28:], uid)
@@ -126,9 +126,9 @@ func parseSMB1(b []byte) (*smb1Resp, error) {
 	return r, nil
 }
 
-// readStr reads a NUL terminated string (OEM or UTF-16LE) from b at pos.
-// For unicode strings, pos is aligned on an even message offset when align
-// is true (base is the offset of b within the message).
+// readStr reads a NUL terminated string (OEM or UTF-16LE) from b at pos. For unicode
+// strings, pos is aligned on an even message offset when align is true (base is the
+// offset of b within the message).
 func readStr(b []byte, pos int, unicode bool, base int, align bool) (string, int) {
 	if pos >= len(b) || pos < 0 {
 		return "", len(b)
@@ -244,10 +244,9 @@ func ParseSMB1SessionSetup(b []byte, info *SMB1Info) error {
 	return nil
 }
 
-// SMB1Probe negotiates SMB1 and performs an anonymous session setup to read
-// the server's NativeOS / NativeLanMan / domain strings. An error is returned
-// only when SMB1 negotiation fails; a refused session setup leaves the
-// session fields empty.
+// SMB1Probe negotiates SMB1 and performs an anonymous session setup to read the server's
+// NativeOS / NativeLanMan / domain strings. An error is returned only when SMB1
+// negotiation fails; a refused session setup leaves the session fields empty.
 func SMB1Probe(ctx context.Context, ip string, port int, timeout time.Duration) (*SMB1Info, error) {
 	t, err := DialTransport(ctx, ip, port, timeout, "")
 	if err != nil {
@@ -266,8 +265,8 @@ func SMB1Probe(ctx context.Context, ip string, port int, timeout time.Duration) 
 		return nil, err
 	}
 	if info.ExtendedSecurity {
-		// The server insists on extended security: NTLM data is collected
-		// through SMB2 instead. Native strings are not available.
+		// The server insists on extended security: NTLM data is collected through SMB2
+		// instead. Native strings are not available.
 		return info, nil
 	}
 	resp, err = t.RoundTrip(BuildSMB1SessionSetupAnon(uid))

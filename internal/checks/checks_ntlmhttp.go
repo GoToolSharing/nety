@@ -42,15 +42,14 @@ func init() {
 	})
 }
 
-// ntlmProbePaths are the endpoints that commonly answer with NTLM on a
-// Windows estate. The list is short on purpose: the point is one CHALLENGE,
-// not a directory enumeration.
+// ntlmProbePaths are the endpoints that commonly answer with NTLM on a Windows estate.
+// The list is short on purpose: the point is one CHALLENGE, not a directory enumeration.
 var ntlmProbePaths = []string{"/", "/wsman", "/rpc/rpcproxy.dll", "/ews/Exchange.asmx", "/owa/", "/certsrv/"}
 
-// httpNTLMChallenge sends an NTLM NEGOTIATE (type 1) message to url and
-// decodes the CHALLENGE (type 2) the server answers with. No credential is
-// ever sent: the exchange stops before the AUTHENTICATE message, so no logon
-// is attempted and nothing is recorded as a failed sign-in.
+// httpNTLMChallenge sends an NTLM NEGOTIATE (type 1) message to url and decodes the
+// CHALLENGE (type 2) the server answers with. No credential is ever sent: the exchange
+// stops before the AUTHENTICATE message, so no logon is attempted and nothing is recorded
+// as a failed sign-in.
 func httpNTLMChallenge(ctx context.Context, c *http.Client, url string) (*ntlm.Challenge, error) {
 	r, err := webDo(ctx, c, http.MethodGet, url, nil, nil)
 	if err != nil {
@@ -79,8 +78,8 @@ func httpNTLMChallenge(ctx context.Context, c *http.Client, url string) (*ntlm.C
 }
 
 // ntlmOffered reports whether the response offers NTLM directly. Negotiate is
-// deliberately not treated as NTLM here: a Negotiate-only endpoint may be
-// Kerberos only, and guessing would put a wrong fact in a client report.
+// deliberately not treated as NTLM here: a Negotiate-only endpoint may be Kerberos only,
+// and guessing would put a wrong fact in a client report.
 func ntlmOffered(h http.Header) bool {
 	for _, v := range h.Values("WWW-Authenticate") {
 		for _, scheme := range strings.Split(v, ",") {
@@ -115,8 +114,8 @@ func ntlmChallengeEvidence(ch *ntlm.Challenge) string {
 	return strings.Join(lines, "\n")
 }
 
-// ntlmNamesKnown reports whether a CHALLENGE actually disclosed identity
-// information. A challenge with no AV pairs is not a finding.
+// ntlmNamesKnown reports whether a CHALLENGE actually disclosed identity information. A
+// challenge with no AV pairs is not a finding.
 func ntlmNamesKnown(ch *ntlm.Challenge) bool {
 	return ch != nil && (ch.NetBIOSDomain != "" || ch.NetBIOSComputer != "" || ch.DNSDomain != "" || ch.DNSComputer != "")
 }
@@ -147,9 +146,9 @@ func runNTLMInfo(ctx context.Context, t *Target) []model.Finding {
 
 func runWinRMExposed(ctx context.Context, t *Target) []model.Finding {
 	c := webClient(t)
-	// WinRM answers on /wsman only. A GET is refused (it wants POST), and the
-	// refusal is exactly what identifies the service: Microsoft's HTTP server
-	// stack with a WS-Management endpoint behind it.
+	// WinRM answers on /wsman only. A GET is refused (it wants POST), and the refusal is
+	// exactly what identifies the service: Microsoft's HTTP server stack with a
+	// WS-Management endpoint behind it.
 	r, sc, err := webGetFirst(ctx, t, c, "/wsman", nil)
 	if err != nil {
 		return nil

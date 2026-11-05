@@ -8,9 +8,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// completedScan creates a scan of one network and backdates it, so a test can
-// lay out two passes over the same VLAN at known moments instead of racing the
-// clock.
+// completedScan creates a scan of one network and backdates it, so a test can lay out two
+// passes over the same VLAN at known moments instead of racing the clock.
 func completedScan(t *testing.T, s *Store, missionID, networkID int64, finished time.Time) model.Scan {
 	t.Helper()
 	ctx := context.Background()
@@ -32,11 +31,10 @@ func completedScan(t *testing.T, s *Store, missionID, networkID int64, finished 
 	return out
 }
 
-// diffFixture lays out the situation the diff exists for: a VLAN scanned on
-// Monday and again on Wednesday, with a host that appeared, a host that went
-// away, a machine that kept its identity across a change of address, a port
-// that opened, a port that closed, a version that moved and a finding that is
-// no longer raised.
+// diffFixture lays out the situation the diff exists for: a VLAN scanned on Monday and
+// again on Wednesday, with a host that appeared, a host that went away, a machine that
+// kept its identity across a change of address, a port that opened, a port that closed, a
+// version that moved and a finding that is no longer raised.
 type diffFixture struct {
 	store     *Store
 	mission   model.Mission
@@ -108,8 +106,8 @@ func newDiffFixture(t *testing.T) diffFixture {
 
 	wednesday := completedScan(t, s, m.ID, netID, tB)
 
-	// Wednesday. The stable host answers again, 10.0.0.2 is silent, 10.0.0.3
-	// is new, and the workstation came back on a different lease.
+	// Wednesday. The stable host answers again, 10.0.0.2 is silent, 10.0.0.3 is new, and
+	// the workstation came back on a different lease.
 	stable = host("10.0.0.1", 0, wednesday, inB)
 	host("10.0.0.3", 0, wednesday, inB)
 	moved := host("10.0.0.11", laptop.ID, wednesday, inB)
@@ -213,8 +211,8 @@ func TestScanDiffHostsServicesAndFindings(t *testing.T) {
 		t.Errorf("unexpected finding counts: %+v", diff.Counts)
 	}
 
-	// The order of the two scans is the caller's convenience, not part of the
-	// answer: asking the other way round must give the same comparison.
+	// The order of the two scans is the caller's convenience, not part of the answer:
+	// asking the other way round must give the same comparison.
 	reversed, err := f.store.ScanDiff(ctx, f.wednesday, f.monday)
 	if err != nil {
 		t.Fatalf("reversed diff: %v", err)
@@ -225,8 +223,8 @@ func TestScanDiffHostsServicesAndFindings(t *testing.T) {
 	}
 }
 
-// TestScanDiffUnchangedScan is the case the UI has to say plainly rather than
-// show three empty tables.
+// TestScanDiffUnchangedScan is the case the UI has to say plainly rather than show three
+// empty tables.
 func TestScanDiffUnchangedScan(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -282,15 +280,15 @@ func TestScanDiffUnchangedScan(t *testing.T) {
 	if diff.Counts.HostsSame != 1 {
 		t.Errorf("the host was there both times, got %+v", diff.Counts)
 	}
-	// These two scans predate the change history, so the diff has to say it
-	// cannot vouch for a version change on an address that did not move.
+	// These two scans predate the change history, so the diff has to say it cannot vouch
+	// for a version change on an address that did not move.
 	if len(diff.Caveats) == 0 {
 		t.Error("expected the diff to say its history does not reach back this far")
 	}
 }
 
-// TestPreviousScanPicksTheLastOneOnThisNetwork covers the default the API
-// falls back on when the caller does not name a scan to compare against.
+// TestPreviousScanPicksTheLastOneOnThisNetwork covers the default the API falls back on
+// when the caller does not name a scan to compare against.
 func TestPreviousScanPicksTheLastOneOnThisNetwork(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)

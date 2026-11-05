@@ -65,8 +65,8 @@ func webHeader(s model.Service, key string) string {
 	return ""
 }
 
-// webFingerprintText concatenates the fingerprint facts used to recognise
-// products (title, server, technologies, product, banner), lowercased.
+// webFingerprintText concatenates the fingerprint facts used to recognise products
+// (title, server, technologies, product, banner), lowercased.
 func webFingerprintText(s model.Service) string {
 	parts := []string{s.Product, s.Name, s.ExtraInfo}
 	if s.HTTP != nil {
@@ -79,8 +79,8 @@ func webFingerprintText(s model.Service) string {
 	return strings.ToLower(strings.Join(parts, " | "))
 }
 
-// webClient returns an HTTP client that never follows redirects, skips
-// certificate validation and is bound by the target timeout.
+// webClient returns an HTTP client that never follows redirects, skips certificate
+// validation and is bound by the target timeout.
 func webClient(t *Target) *http.Client {
 	tr := &http.Transport{
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10}, //nolint:gosec // scanning
@@ -132,8 +132,8 @@ func webDo(ctx context.Context, c *http.Client, method, url string, body []byte,
 	return &webResp{Status: resp.StatusCode, Header: resp.Header, Body: b, URL: url}, nil
 }
 
-// webGetFirst tries GET path on each scheme and returns the first response
-// plus the scheme that answered.
+// webGetFirst tries GET path on each scheme and returns the first response plus the
+// scheme that answered.
 func webGetFirst(ctx context.Context, t *Target, c *http.Client, path string, hdr map[string]string) (*webResp, string, error) {
 	var lastErr error
 	for _, sc := range webSchemes(t.Service) {
@@ -339,8 +339,7 @@ func runKubelet(ctx context.Context, t *Target) []model.Finding {
 	return []model.Finding{f}
 }
 
-// ---------------------------------------------------------------------------
-// etcd-unauth
+// --------------------------------------------------------------------------- etcd-unauth
 // ---------------------------------------------------------------------------
 
 func init() {
@@ -488,9 +487,8 @@ func runJenkinsScript(ctx context.Context, t *Target) []model.Finding {
 	return []model.Finding{t.Finding(ev)}
 }
 
-// ---------------------------------------------------------------------------
-// shared helpers
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- shared
+// helpers ---------------------------------------------------------------------------
 
 type engineCheckInfo = engine.CheckInfo
 

@@ -11,18 +11,17 @@ import (
 	"github.com/GoToolSharing/nety/internal/engine"
 )
 
-// An operator plugs into a client's network with a cable on one job and
-// associates to its Wi-Fi on the next. Everything NETY does works the same
-// either way - discovery, port scanning, fingerprinting, and the routing-level
-// segmentation techniques all ride on IP - with one real exception: the
-// switch-port techniques (802.1Q sub-interfaces, DTP trunk negotiation, double
-// tagging) and the passive CDP/LLDP/DTP recon only exist on a wired port. An
-// access point does not forward tagged frames to a station and does not speak
+// An operator plugs into a client's network with a cable on one job and associates to its
+// Wi-Fi on the next. Everything NETY does works the same either way: discovery, port
+// scanning, fingerprinting, and the routing-level segmentation techniques all ride on IP
+// - with one real exception: the switch-port techniques (802.1Q sub-interfaces, DTP trunk
+// negotiation, double tagging) and the passive CDP/LLDP/DTP recon only exist on a wired
+// port. An access point does not forward tagged frames to a station and does not speak
 // those protocols over the air.
 //
-// So rather than let those attempts fail with a driver-level errno that means
-// nothing to the operator, NETY detects the link type and says plainly that
-// the technique does not apply here.
+// So rather than let those attempts fail with a driver-level errno that means nothing to
+// the operator, NETY detects the link type and says plainly that the technique does not
+// apply here.
 
 // IsWireless reports whether iface is an 802.11 interface.
 func IsWireless(iface string) bool {

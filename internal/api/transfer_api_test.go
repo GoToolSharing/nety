@@ -13,8 +13,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/store"
 )
 
-// Taking a whole mission off an installation and putting it back on another
-// one, which is what happens when the machine it ran on is about to be wiped.
+// Taking a whole mission off an installation and putting it back on another one, which is
+// what happens when the machine it ran on is about to be wiped.
 
 func TestMissionBundleRoundTripOverHTTP(t *testing.T) {
 	e := newEnv(t)
@@ -83,8 +83,8 @@ func TestMissionBundleRoundTripOverHTTP(t *testing.T) {
 	}
 }
 
-// An uncompressed bundle is accepted too, because someone will unzip the file
-// before uploading it.
+// An uncompressed bundle is accepted too, because someone will unzip the file before
+// uploading it.
 func TestImportAcceptsAnUncompressedBundle(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("root", model.RoleAdmin)
@@ -106,8 +106,8 @@ func TestImportAcceptsAnUncompressedBundle(t *testing.T) {
 	}
 }
 
-// Anything that is not a bundle comes back as a bad request with a reason,
-// not as a server error.
+// Anything that is not a bundle comes back as a bad request with a reason, not as a
+// server error.
 func TestImportRejectsRubbish(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("root", model.RoleAdmin)
@@ -131,8 +131,8 @@ func TestImportRejectsRubbish(t *testing.T) {
 }
 
 // Importing creates a mission and can recreate accounts, so it belongs to an
-// administrator. Exporting is the same privilege as exporting the results,
-// which a member already has.
+// administrator. Exporting is the same privilege as exporting the results, which a member
+// already has.
 func TestBundlePermissions(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("root", model.RoleAdmin)

@@ -16,8 +16,8 @@ import (
 
 var smbServiceNames = []string{"microsoft-ds", "netbios-ssn", "smb", "cifs", "samba"}
 
-// smbApplies selects the SMB service to test: 445, or 139 only when 445 is
-// not open (avoids duplicate findings for the same server).
+// smbApplies selects the SMB service to test: 445, or 139 only when 445 is not open
+// (avoids duplicate findings for the same server).
 func smbApplies(t *Target) bool {
 	s := t.Service
 	if s.Protocol != model.TCP {
@@ -170,8 +170,8 @@ func runSMBSessionCheck(ctx context.Context, t *Target, cred *ntlm.Credentials) 
 	what := "anonymous (null) session"
 	if cred != nil {
 		if !res.guestFlag && !strings.EqualFold(cred.User, "guest") {
-			// An unknown random user must map to guest; a real session
-			// without the guest flag would be very unusual: ignore.
+			// An unknown random user must map to guest; a real session without the guest
+			// flag would be very unusual: ignore.
 			return nil
 		}
 		what = fmt.Sprintf("session as user %q with an empty password (server flagged it guest=%v)", cred.User, res.guestFlag)
@@ -190,8 +190,8 @@ func runSMBSessionCheck(ctx context.Context, t *Target, cred *ntlm.Credentials) 
 		fmt.Fprintf(&ev, "; share enumeration failed: %v", res.enumErr)
 	}
 	if cred == nil {
-		// A bare anonymous session + IPC$ is the Windows default and not a
-		// finding by itself: require enumeration or share access.
+		// A bare anonymous session + IPC$ is the Windows default and not a finding by
+		// itself: require enumeration or share access.
 		if len(res.shares) > 0 || len(res.accessible) > 0 {
 			out = append(out, t.Finding(ev.String()))
 		}
@@ -259,8 +259,8 @@ func smbProbeSession(ctx context.Context, t *Target, cred *ntlm.Credentials) (*s
 	return res, nil
 }
 
-// smbDefaultShare reports administrative/default shares that are not
-// interesting for anonymous access (and normally denied anyway).
+// smbDefaultShare reports administrative/default shares that are not interesting for
+// anonymous access (and normally denied anyway).
 func smbDefaultShare(name string) bool {
 	n := strings.ToUpper(name)
 	switch n {
@@ -270,8 +270,8 @@ func smbDefaultShare(name string) bool {
 	return len(n) == 2 && n[1] == '$' && n[0] >= 'A' && n[0] <= 'Z'
 }
 
-// smbCanListShare tree-connects to share and opens its root directory for
-// listing (read-only access mask). Everything is closed afterwards.
+// smbCanListShare tree-connects to share and opens its root directory for listing
+// (read-only access mask). Everything is closed afterwards.
 func smbCanListShare(c *smb.Conn, share string) bool {
 	tr, err := c.TreeConnect(share)
 	if err != nil {

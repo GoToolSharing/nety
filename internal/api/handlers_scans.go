@@ -13,8 +13,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/store"
 )
 
-// scanProfile is a preset the launch form offers so the common cases are one
-// click and the operator only drops to custom when they need to.
+// scanProfile is a preset the launch form offers so the common cases are one click and
+// the operator only drops to custom when they need to.
 type scanProfile struct {
 	ID          string            `json:"id"`
 	Title       string            `json:"title"`
@@ -85,8 +85,7 @@ func (a *API) handleExportFormats(w http.ResponseWriter, r *http.Request, _ mode
 	a.ok(w, a.Exporter.Formats())
 }
 
-// ---------------------------------------------------------------------------
-// scans
+// --------------------------------------------------------------------------- scans
 // ---------------------------------------------------------------------------
 
 func (a *API) handleListScans(w http.ResponseWriter, r *http.Request, u model.User) {
@@ -160,8 +159,8 @@ func (a *API) handleCreateScan(w http.ResponseWriter, r *http.Request, u model.U
 	a.created(w, sc)
 }
 
-// validateScanOptions applies defaults and refuses configurations that would
-// fail later, when the operator is no longer watching.
+// validateScanOptions applies defaults and refuses configurations that would fail later,
+// when the operator is no longer watching.
 func (a *API) validateScanOptions(o *model.ScanOptions, kind model.ScanKind, net model.Network) error {
 	if o.Profile == "" {
 		o.Profile = "custom"
@@ -211,11 +210,10 @@ func (a *API) validateScanOptions(o *model.ScanOptions, kind model.ScanKind, net
 		if err != nil {
 			return fmt.Errorf("targets: %w", err)
 		}
-		// Refuse an impossible scope here, where the operator is still looking
-		// at the form, rather than letting the planner discover it later.
-		// Targets typed by hand are checked as given: silently dropping a
-		// fe80::/64 would start a scan with nothing in scope and leave the
-		// operator wondering why.
+		// Refuse an impossible scope here, where the operator is still looking at the
+		// form, rather than letting the planner discover it later. Targets typed by hand
+		// are checked as given: silently dropping a fe80::/64 would start a scan with
+		// nothing in scope and leave the operator wondering why.
 		if len(targets) > 0 {
 			if err := jobs.CheckScanSize(targets, nil); err != nil {
 				return fmt.Errorf("targets: %w", err)
@@ -292,9 +290,9 @@ func (a *API) handleDeleteScan(w http.ResponseWriter, r *http.Request, u model.U
 	a.ok(w, map[string]bool{"ok": true})
 }
 
-// handleStartScan starts a queued scan or resumes a paused/interrupted one -
-// the same endpoint, because from the operator's point of view it is the same
-// gesture and the runner picks up exactly where it stopped.
+// handleStartScan starts a queued scan or resumes a paused or interrupted one: the same
+// endpoint, because from the operator's point of view it is the same gesture and the
+// runner picks up exactly where it stopped.
 func (a *API) handleStartScan(w http.ResponseWriter, r *http.Request, u model.User) {
 	sc, ok := a.requireScan(w, r, u)
 	if !ok {

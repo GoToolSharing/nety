@@ -104,7 +104,10 @@ export default function LogPane({
             }
           >
             <span
-              className={cn('inline-block h-1.5 w-1.5 rounded-full bg-current', following && 'animate-pulse')}
+              className={cn(
+                'inline-block h-1.5 w-1.5 rounded-full bg-current',
+                following && 'animate-pulse',
+              )}
             />
             {following ? 'live' : 'paused'}
           </span>
@@ -118,10 +121,7 @@ export default function LogPane({
         role="log"
         aria-label="Scan log"
         aria-live="polite"
-        className={cn(
-          'log-pane scrollbar-thin overflow-y-auto bg-bg px-3 py-2',
-          height,
-        )}
+        className={cn('log-pane scrollbar-thin overflow-y-auto bg-bg px-3 py-2', height)}
       >
         {visible.length === 0 ? (
           <p className="py-6 text-center text-xs text-faint">
@@ -134,11 +134,19 @@ export default function LogPane({
                 {formatClock(l.time)}
               </span>
               <span
-                className={cn('w-10 shrink-0 uppercase', LEVEL_CLASS[l.level] ?? 'text-muted')}
+                className={cn(
+                  'w-10 shrink-0 uppercase',
+                  LEVEL_CLASS[l.level] ?? 'text-muted',
+                )}
               >
                 {l.level}
               </span>
-              <span className={cn('min-w-0 flex-1', l.level === 'error' ? 'text-crit' : 'text-fg')}>
+              <span
+                className={cn(
+                  'min-w-0 flex-1',
+                  l.level === 'error' ? 'text-crit' : 'text-fg',
+                )}
+              >
                 {l.message}
               </span>
             </div>
@@ -148,7 +156,12 @@ export default function LogPane({
 
       {!following && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
-          <Button size="sm" variant="primary" icon={<ChevronDownIcon />} onClick={jumpToLive}>
+          <Button
+            size="sm"
+            variant="primary"
+            icon={<ChevronDownIcon />}
+            onClick={jumpToLive}
+          >
             Back to live{missed > 0 ? ` (${missed} new)` : ''}
           </Button>
         </div>

@@ -1,5 +1,5 @@
-// Package server wires the HTTP server: TLS, security headers, the API and
-// the embedded single-page application.
+// Package server wires the HTTP server: TLS, security headers, the API and the embedded
+// single-page application.
 package server
 
 import (
@@ -27,8 +27,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/config"
 )
 
-// dist holds the compiled SPA. `make web` writes it; a placeholder page is
-// committed so the binary always builds.
+// dist holds the compiled SPA. `make web` writes it; a placeholder page is committed so
+// the binary always builds.
 //
 //go:embed all:dist
 var dist embed.FS
@@ -118,10 +118,10 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}
 }
 
-// tlsConfig loads the configured certificate or generates a self-signed one in
-// the data directory. A pentest laptop has no CA, so self-signed is the
-// realistic default; the fingerprint is logged so the operator can tell a
-// colleague what to expect in the browser warning.
+// tlsConfig loads the configured certificate or generates a self-signed one in the data
+// directory. A pentest laptop has no CA, so self-signed is the realistic default; the
+// fingerprint is logged so the operator can tell a colleague what to expect in the
+// browser warning.
 func (s *Server) tlsConfig() (*tls.Config, error) {
 	certFile, keyFile := s.cfg.TLSCertFile, s.cfg.TLSKeyFile
 	if certFile == "" {
@@ -212,12 +212,11 @@ func (s *Server) ensureSelfSigned(certFile, keyFile string) error {
 	return nil
 }
 
-// ---------------------------------------------------------------------------
-// static assets
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- static
+// assets ---------------------------------------------------------------------------
 
-// webRoot is the filesystem the SPA is served from: the embedded build, or a
-// directory set with NETY_WEB_DIR during development.
+// webRoot is the filesystem the SPA is served from: the embedded build, or a directory
+// set with NETY_WEB_DIR during development.
 func webRoot() (fs.FS, error) {
 	if dir := os.Getenv("NETY_WEB_DIR"); dir != "" {
 		return os.DirFS(dir), nil
@@ -229,8 +228,8 @@ func webRoot() (fs.FS, error) {
 	return sub, nil
 }
 
-// spaHandler serves the SPA, falling back to index.html so client-side routes
-// survive a reload.
+// spaHandler serves the SPA, falling back to index.html so client-side routes survive a
+// reload.
 func spaHandler(root fs.FS) http.Handler {
 	fileServer := http.FileServer(http.FS(root))
 
@@ -272,11 +271,11 @@ func serveIndex(w http.ResponseWriter, r *http.Request, root fs.FS) {
 	http.ServeContent(w, r, "index.html", time.Time{}, strings.NewReader(string(data)))
 }
 
-// securityHeaders applies the headers an internal tool should still set: the
-// console often holds a client's whole network inventory.
+// securityHeaders applies the headers an internal tool should still set: the console
+// often holds a client's whole network inventory.
 func securityHeaders(cfg config.Config, inlineHashes []string, next http.Handler) http.Handler {
-	// The SPA's theme bootstrap is inline; allow exactly its hash rather than
-	// opening the policy to all inline scripts.
+	// The SPA's theme bootstrap is inline; allow exactly its hash rather than opening the
+	// policy to all inline scripts.
 	scriptSrc := "script-src 'self'"
 	if len(inlineHashes) > 0 {
 		scriptSrc += " " + strings.Join(inlineHashes, " ")
@@ -310,8 +309,7 @@ func securityHeaders(cfg config.Config, inlineHashes []string, next http.Handler
 	})
 }
 
-// ---------------------------------------------------------------------------
-// helpers
+// --------------------------------------------------------------------------- helpers
 // ---------------------------------------------------------------------------
 
 func displayAddr(addr string) string {
@@ -325,8 +323,8 @@ func displayAddr(addr string) string {
 	return net.JoinHostPort(host, port)
 }
 
-// localURLs lists the addresses a colleague on the same VLAN can use, which is
-// exactly how this tool is shared during an engagement.
+// localURLs lists the addresses a colleague on the same VLAN can use, which is exactly
+// how this tool is shared during an engagement.
 func localURLs(scheme, listen string) []string {
 	_, port, err := net.SplitHostPort(listen)
 	if err != nil {

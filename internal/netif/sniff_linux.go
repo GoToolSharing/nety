@@ -17,14 +17,13 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// SniffL2 passively listens on iface for dur and decodes the switch-port
-// control plane: CDP and LLDP neighbour announcements, DTP (does the port
-// offer to negotiate a trunk?), STP (which bridge is root) and any 802.1Q tag
-// seen on the wire.
+// SniffL2 passively listens on iface for dur and decodes the switch-port control plane:
+// CDP and LLDP neighbour announcements, DTP (does the port offer to negotiate a trunk?),
+// STP (which bridge is root) and any 802.1Q tag seen on the wire.
 //
-// It is strictly passive: the socket is opened for reading only and NETY
-// transmits nothing. The interface is put in promiscuous mode for the duration
-// and taken out of it before returning.
+// It is strictly passive: the socket is opened for reading only and NETY transmits
+// nothing. The interface is put in promiscuous mode for the duration and taken out of it
+// before returning.
 func (n *Inspector) SniffL2(ctx context.Context, iface string, dur time.Duration) (model.L2Info, error) {
 	if dur <= 0 {
 		dur = 30 * time.Second
@@ -101,10 +100,9 @@ func (n *Inspector) SniffL2(ctx context.Context, iface string, dur time.Duration
 	return info, nil
 }
 
-// controlPlaneFilter keeps only what the collector can decode: LLDP, VLAN
-// tagged frames (for ObservedVLANs) and 802.3/LLC frames (CDP, DTP, STP).
-// Everything else - the bulk of the traffic on a busy port - is dropped in the
-// kernel.
+// controlPlaneFilter keeps only what the collector can decode: LLDP, VLAN tagged frames
+// (for ObservedVLANs) and 802.3/LLC frames (CDP, DTP, STP). Everything else, the bulk of
+// the traffic on a busy port, is dropped in the kernel.
 func controlPlaneFilter() ([]bpf.RawInstruction, error) {
 	const snaplen = 1 << 16
 	return bpf.Assemble([]bpf.Instruction{

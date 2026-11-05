@@ -1,9 +1,9 @@
 // Package auth handles password hashing, sessions and authorization.
 //
-// Passwords are hashed with Argon2id using per-password random salts, and the
-// encoded hash carries its own parameters so they can be raised later without
-// invalidating existing accounts. Session tokens are 256-bit random values;
-// only their SHA-256 is stored, so a database copy does not let anyone log in.
+// Passwords are hashed with Argon2id using per-password random salts, and the encoded
+// hash carries its own parameters so they can be raised later without invalidating
+// existing accounts. Session tokens are 256-bit random values; only their SHA-256 is
+// stored, so a database copy does not let anyone log in.
 package auth
 
 import (
@@ -84,8 +84,8 @@ func VerifyPassword(encoded, password string) bool {
 	return subtle.ConstantTimeCompare(got, want) == 1
 }
 
-// ValidatePassword enforces a minimal policy: long enough, and not a single
-// character class. Deliberately permissive about symbols - length matters more.
+// ValidatePassword enforces a minimal policy: long enough, and not a single character
+// class. Deliberately permissive about symbols: length matters more.
 func ValidatePassword(p string) error {
 	if len(p) < 12 {
 		return fmt.Errorf("%w: use at least 12 characters", ErrWeakPassword)
@@ -169,8 +169,8 @@ func New(st *store.Store, cfg Config) *Service {
 func (s *Service) Authenticate(ctx context.Context, username, password string) (model.User, error) {
 	user, err := s.st.UserByName(ctx, username)
 	if err != nil {
-		// Spend a comparable amount of time so a missing account is not
-		// distinguishable from a wrong password by timing alone.
+		// Spend a comparable amount of time so a missing account is not distinguishable
+		// from a wrong password by timing alone.
 		_ = VerifyPassword("$argon2id$v=19$m=65536,t=2,p=4$"+
 			base64.RawStdEncoding.EncodeToString(make([]byte, saltLen))+"$"+
 			base64.RawStdEncoding.EncodeToString(make([]byte, argonKeyLen)), password)
@@ -222,8 +222,8 @@ func (s *Service) StartSession(ctx context.Context, userID int64, userAgent, rem
 	return token, expires, nil
 }
 
-// ResolveSession validates a session token and returns its user. It refreshes
-// the idle timestamp at most once a minute to keep writes cheap.
+// ResolveSession validates a session token and returns its user. It refreshes the idle
+// timestamp at most once a minute to keep writes cheap.
 func (s *Service) ResolveSession(ctx context.Context, token string) (model.User, error) {
 	if token == "" {
 		return model.User{}, ErrInvalidCredentials
@@ -257,8 +257,8 @@ func (s *Service) EndSession(ctx context.Context, token string) error {
 	return s.st.DeleteSession(ctx, HashToken(token))
 }
 
-// ChangePassword verifies the current password and stores the new one,
-// invalidating every other session of that user.
+// ChangePassword verifies the current password and stores the new one, invalidating every
+// other session of that user.
 func (s *Service) ChangePassword(ctx context.Context, userID int64, current, next string) error {
 	user, err := s.st.UserByID(ctx, userID)
 	if err != nil {
@@ -332,11 +332,11 @@ func ValidRole(r model.Role) bool {
 // GeneratePassword returns a readable random password for bootstrapping and
 // administrative resets.
 //
-// The alphabet omits the characters people misread when copying a password off
-// a terminal (0/O, 1/l/I). Characters are drawn with rejection sampling rather
-// than a modulo, which would bias the distribution, and the draw is repeated
-// until it satisfies the policy instead of forcing fixed characters into known
-// positions - that would hand an attacker two characters for free.
+// The alphabet omits the characters people misread when copying a password off a terminal
+// (0/O, 1/l/I). Characters are drawn with rejection sampling rather than a modulo, which
+// would bias the distribution, and the draw is repeated until it satisfies the policy
+// instead of forcing fixed characters into known positions, which would hand an attacker
+// two characters for free.
 func GeneratePassword() (string, error) {
 	const alphabet = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 	const length = 20
@@ -355,8 +355,8 @@ func GeneratePassword() (string, error) {
 			return pw, nil
 		}
 	}
-	// With this alphabet and length the policy is satisfied overwhelmingly
-	// often; failing a hundred draws in a row means something is very wrong.
+	// With this alphabet and length the policy is satisfied overwhelmingly often; failing
+	// a hundred draws in a row means something is very wrong.
 	return "", errors.New("auth: could not generate a compliant password")
 }
 

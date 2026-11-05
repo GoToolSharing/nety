@@ -16,7 +16,9 @@ export default function PageContainer({
 }) {
   return (
     <div className="h-full overflow-y-auto">
-      <div className={cn('px-6 py-6', wide ? 'max-w-none' : 'mx-auto max-w-7xl', className)}>
+      <div
+        className={cn('px-6 py-6', wide ? 'max-w-none' : 'mx-auto max-w-7xl', className)}
+      >
         {children}
       </div>
     </div>

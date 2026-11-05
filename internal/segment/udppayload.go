@@ -5,11 +5,10 @@ import (
 	"strings"
 )
 
-// A UDP service only answers a probe it recognises, so an empty datagram would
-// report "filtered" for every reachable UDP service. These payloads are the
-// smallest well-formed request each common service replies to; anything else
-// gets a single zero byte, which at least elicits an ICMP port-unreachable
-// from a host that is reachable but not listening.
+// A UDP service only answers a probe it recognises, so an empty datagram would report
+// "filtered" for every reachable UDP service. These payloads are the smallest well-formed
+// request each common service replies to; anything else gets a single zero byte, which at
+// least elicits an ICMP port-unreachable from a host that is reachable but not listening.
 func udpPayload(port uint16, service string) []byte {
 	switch strings.ToLower(service) {
 	case "domain", "dns":
@@ -42,8 +41,8 @@ func udpPayload(port uint16, service string) []byte {
 	return []byte{0x00}
 }
 
-// dnsQuery is a standard recursion-desired A query for "version.bind" in the
-// CHAOS class, which both resolvers and authoritative servers answer.
+// dnsQuery is a standard recursion-desired A query for "version.bind" in the CHAOS class,
+// which both resolvers and authoritative servers answer.
 func dnsQuery() []byte {
 	b := []byte{
 		0x13, 0x37, // transaction id
@@ -121,8 +120,8 @@ func ssdpDiscover() []byte {
 		"ST: ssdp:all\r\n\r\n")
 }
 
-// tftpRead requests a file that will not exist, which yields an error packet
-// from a live TFTP server.
+// tftpRead requests a file that will not exist, which yields an error packet from a live
+// TFTP server.
 func tftpRead() []byte {
 	b := []byte{0x00, 0x01}
 	b = append(b, "nety-probe"...)

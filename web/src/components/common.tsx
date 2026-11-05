@@ -7,7 +7,14 @@ import {
   formatRelative,
   isAddressOrPrefix,
 } from '@/lib/format'
-import { ChevronDownIcon, ChevronUpIcon, CopyIcon, CheckIcon, SearchIcon, XIcon } from '@/components/icons'
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CopyIcon,
+  CheckIcon,
+  SearchIcon,
+  XIcon,
+} from '@/components/icons'
 
 /** Relative time with the absolute timestamp in the tooltip. */
 export function RelativeTime({
@@ -26,7 +33,11 @@ export function RelativeTime({
   }, [])
   if (!value) return <span className={cn('text-faint', className)}>-</span>
   return (
-    <time dateTime={value} title={formatAbsolute(value)} className={cn('tabular', className)}>
+    <time
+      dateTime={value}
+      title={formatAbsolute(value)}
+      className={cn('tabular', className)}
+    >
       {prefix}
       {formatRelative(value)}
     </time>
@@ -82,7 +93,12 @@ export function useSearchHotkey(ref: RefObject<HTMLInputElement>) {
       if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return
       const el = document.activeElement as HTMLElement | null
       const tag = el?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el?.isContentEditable) {
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        el?.isContentEditable
+      ) {
         return
       }
       e.preventDefault()
@@ -213,7 +229,9 @@ export function SelectAllCheckbox({
             : `Select the ${total.toLocaleString()} ${noun} these filters are showing`
       }
       aria-label={
-        all ? 'Clear the selection' : `Select all ${total} ${noun} matching the current filters`
+        all
+          ? 'Clear the selection'
+          : `Select all ${total} ${noun} matching the current filters`
       }
       className={cn(
         'h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]',
@@ -256,7 +274,7 @@ export function SortButton<K extends string>({
         // Browsers reset text-transform on form controls, so without this the
         // sortable headers lose the uppercase of the plain <th>s beside them
         // and the header row ends up in mixed case.
-        'inline-flex items-center gap-1 rounded [text-transform:inherit] [letter-spacing:inherit] hover:text-fg',
+        'inline-flex items-center gap-1 rounded [letter-spacing:inherit] [text-transform:inherit] hover:text-fg',
         active && 'text-fg',
         className,
       )}
@@ -314,10 +332,17 @@ export function SortHeader<K extends string>({
  * A click on a new column sorts ascending, a click on the one already sorted
  * reverses it.
  */
-export function useSort<K extends string>(initialKey: K, initialDir: SortDirection = 'asc') {
+export function useSort<K extends string>(
+  initialKey: K,
+  initialDir: SortDirection = 'asc',
+) {
   const [sort, setSort] = useState<SortState<K>>({ key: initialKey, dir: initialDir })
   const onSort = (key: K) =>
-    setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
+    setSort((s) =>
+      s.key === key
+        ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: 'asc' },
+    )
   return { sort, onSort, setSort }
 }
 
@@ -403,7 +428,12 @@ export function Pagination({
   const canNext = hasMore
 
   return (
-    <div className={cn('flex items-center justify-between gap-3 px-3 py-2 text-xs', className)}>
+    <div
+      className={cn(
+        'flex items-center justify-between gap-3 px-3 py-2 text-xs',
+        className,
+      )}
+    >
       <span className="tabular text-muted">
         {count === 0 ? (
           'No rows'
@@ -512,7 +542,9 @@ export function Tabs<T extends string>({
         >
           {t.label}
           {typeof t.count === 'number' && (
-            <span className="ml-1.5 tabular text-xs text-faint">{formatNumber(t.count)}</span>
+            <span className="tabular ml-1.5 text-xs text-faint">
+              {formatNumber(t.count)}
+            </span>
           )}
         </button>
       ))}
@@ -549,7 +581,9 @@ export function FilterChips<T extends string | number>({
         >
           {o.label}
           {typeof o.count === 'number' && (
-            <span className="tabular text-[11px] text-faint">{formatNumber(o.count)}</span>
+            <span className="tabular text-[11px] text-faint">
+              {formatNumber(o.count)}
+            </span>
           )}
         </button>
       ))}

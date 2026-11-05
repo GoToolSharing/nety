@@ -11,9 +11,9 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// Nmap XML output. The schema is the one every downstream tool already parses
-// (Metasploit db_import, Faraday, DefectDojo, python-libnmap...), so a NETY
-// scan drops straight into an existing workflow.
+// Nmap XML output. The schema is the one every downstream tool already parses (Metasploit
+// db_import, Faraday, DefectDojo, python-libnmap...), so a NETY scan drops straight into
+// an existing workflow.
 
 type nmapRun struct {
 	XMLName          xml.Name   `xml:"nmaprun"`
@@ -263,8 +263,8 @@ func writeNmapXML(w io.Writer, d model.MissionData) error {
 	return err
 }
 
-// writeGnmap renders the greppable format, still the quickest way to grep an
-// internal scan from a shell.
+// writeGnmap renders the greppable format, still the quickest way to grep an internal
+// scan from a shell.
 func writeGnmap(w io.Writer, d model.MissionData) error {
 	now := time.Now().UTC()
 	if _, err := fmt.Fprintf(w, "# NETY %s scan initiated %s as: nety export --mission %q\n",

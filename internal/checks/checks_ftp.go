@@ -141,8 +141,8 @@ const (
 	telnetSE   = 240
 )
 
-// telnetStrip removes IAC sequences from data and returns the printable
-// payload plus the negative replies to send (WONT for DO, DONT for WILL).
+// telnetStrip removes IAC sequences from data and returns the printable payload plus the
+// negative replies to send (WONT for DO, DONT for WILL).
 func telnetStrip(data []byte) (text []byte, reply []byte, sawIAC bool) {
 	for i := 0; i < len(data); i++ {
 		b := data[i]

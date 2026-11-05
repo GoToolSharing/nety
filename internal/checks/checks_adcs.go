@@ -27,9 +27,9 @@ func init() {
 	})
 }
 
-// adcsMarkers are strings the IIS enrolment application puts in its pages or
-// its authentication prompt. A status code alone would match any reverse
-// proxy that answers 401 for everything.
+// adcsMarkers are strings the IIS enrolment application puts in its pages or its
+// authentication prompt. A status code alone would match any reverse proxy that answers
+// 401 for everything.
 var adcsMarkers = []string{
 	"Microsoft Active Directory Certificate Services",
 	"Active Directory Certificate Services",
@@ -66,13 +66,13 @@ func adcsFinding(ctx context.Context, t *Target, c *http.Client, scheme, u strin
 			break
 		}
 	}
-	// IIS answers the enrolment application with a 401 and an empty body
-	// before authentication, so a marker in the body is only available on
-	// anonymous installations. The 401 plus the Windows authentication
-	// prompt on exactly this path is what identifies the application.
+	// IIS answers the enrolment application with a 401 and an empty body before
+	// authentication, so a marker in the body is only available on anonymous
+	// installations. The 401 plus the Windows authentication prompt on exactly this path
+	// is what identifies the application.
 	ntlmOK := ntlmOffered(r.Header)
-	// Plenty of front ends answer 401 for every unknown path, so the prompt
-	// only counts when the server is also the IIS instance that AD CS runs on.
+	// Plenty of front ends answer 401 for every unknown path, so the prompt only counts
+	// when the server is also the IIS instance that AD CS runs on.
 	isIIS := strings.Contains(strings.ToLower(r.Header.Get("Server")), "iis")
 	switch {
 	case r.Status == http.StatusUnauthorized && auth != "" && (isIIS || hasMarker):
@@ -105,8 +105,8 @@ func adcsFinding(ctx context.Context, t *Target, c *http.Client, scheme, u strin
 			ev.WriteString("\nServed over plain HTTP, so channel binding cannot protect the relay at all.")
 		}
 	} else {
-		// Without NTLM the relay path is closed, but an enrolment interface
-		// reachable from a user VLAN is still an exposure worth raising.
+		// Without NTLM the relay path is closed, but an enrolment interface reachable
+		// from a user VLAN is still an exposure worth raising.
 		ev.WriteString("\nNTLM is not offered on this endpoint, so the ESC8 relay path is not open here; the enrolment interface is still reachable from this network.")
 		f.Severity = model.SevMedium
 		f.Title = "AD CS web enrolment reachable from this network"

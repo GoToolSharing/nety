@@ -10,10 +10,10 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// The case the diff could not see before: a machine that kept its address and
-// whose service was upgraded between two scans. The service row holds one
-// merged description, so the previous version only survives because the
-// upsert writes it down as it replaces it.
+// The case the diff could not see before: a machine that kept its address and whose
+// service was upgraded between two scans. The service row holds one merged description,
+// so the previous version only survives because the upsert writes it down as it replaces
+// it.
 func TestDiffSeesAVersionChangeOnAnAddressThatDidNotMove(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -23,8 +23,8 @@ func TestDiffSeesAVersionChangeOnAnAddressThatDidNotMove(t *testing.T) {
 	tA := time.Now().UTC().Add(-48 * time.Hour)
 	tB := time.Now().UTC().Add(-2 * time.Hour)
 
-	// This database has been recording changes since before the first scan,
-	// which is what any mission started after the upgrade looks like.
+	// This database has been recording changes since before the first scan, which is what
+	// any mission started after the upgrade looks like.
 	if err := s.SetSetting(ctx, "service_changes_since",
 		strconv.FormatInt(tA.Add(-24*time.Hour).UnixMilli(), 10)); err != nil {
 		t.Fatal(err)

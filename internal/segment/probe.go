@@ -42,8 +42,8 @@ func errResult(detail string) probeResult {
 	return probeResult{Status: model.ReachError, Detail: detail}
 }
 
-// prober runs one probe. The Tester holds one so tests can substitute a fake
-// and exercise the orchestration without touching the network.
+// prober runs one probe. The Tester holds one so tests can substitute a fake and exercise
+// the orchestration without touching the network.
 type prober func(ctx context.Context, s probeSpec) probeResult
 
 // netProbe is the production prober.
@@ -67,8 +67,7 @@ func (t *Tester) netProbe(ctx context.Context, s probeSpec) probeResult {
 	return tcpProbe(ctx, s)
 }
 
-// ---------------------------------------------------------------------------
-// TCP
+// --------------------------------------------------------------------------- TCP
 // ---------------------------------------------------------------------------
 
 func tcpProbe(ctx context.Context, s probeSpec) probeResult {
@@ -95,8 +94,8 @@ func tcpProbe(ctx context.Context, s probeSpec) probeResult {
 		_ = conn.Close()
 		return probeResult{Status: model.ReachOpen, Detail: "TCP handshake completed", RTT: rtt}
 	}
-	// A deadline we set ourselves looks like a timeout to the caller, which is
-	// exactly the verdict we want, but a cancelled parent context is not.
+	// A deadline we set ourselves looks like a timeout to the caller, which is exactly
+	// the verdict we want, but a cancelled parent context is not.
 	if ctx.Err() != nil {
 		return probeResult{Status: model.ReachError, Detail: "cancelled", RTT: rtt}
 	}
@@ -115,8 +114,7 @@ func localTCPAddr(s probeSpec) (*net.TCPAddr, error) {
 	return a, nil
 }
 
-// ---------------------------------------------------------------------------
-// UDP
+// --------------------------------------------------------------------------- UDP
 // ---------------------------------------------------------------------------
 
 func udpProbe(ctx context.Context, s probeSpec) probeResult {
@@ -172,13 +170,11 @@ func udpProbe(ctx context.Context, s probeSpec) probeResult {
 	return probeResult{Status: st, Detail: detail, RTT: rtt}
 }
 
-// ---------------------------------------------------------------------------
-// ICMP
+// --------------------------------------------------------------------------- ICMP
 // ---------------------------------------------------------------------------
 
 // icmpEcho pings s.IP. It first tries an unprivileged datagram ICMP socket
-// (net.ipv4.ping_group_range) and falls back to a raw socket, which needs
-// CAP_NET_RAW.
+// (net.ipv4.ping_group_range) and falls back to a raw socket, which needs CAP_NET_RAW.
 func icmpEcho(ctx context.Context, s probeSpec) probeResult {
 	v6 := !s.IP.Is4()
 	nets := []string{"udp4", "ip4:icmp"}
@@ -268,10 +264,10 @@ func icmpEcho(ctx context.Context, s probeSpec) probeResult {
 		}
 		switch body := m.Body.(type) {
 		case *icmp.Echo:
-			// The reply must come from the host we are testing. On a raw ICMP
-			// socket every reply on the machine is delivered to every socket,
-			// so without this a concurrent probe's reply could be credited to
-			// this target and put a false "reachable" in the client's matrix.
+			// The reply must come from the host we are testing. On a raw ICMP socket
+			// every reply on the machine is delivered to every socket, so without this a
+			// concurrent probe's reply could be credited to this target and put a false
+			// "reachable" in the client's matrix.
 			if !peerIs(peer, s.IP) {
 				continue
 			}
@@ -326,17 +322,17 @@ func peerIs(peer net.Addr, want netip.Addr) bool {
 	return got.Unmap() == want.Unmap()
 }
 
-// matchesEcho decides whether an echo reply answers the probe we sent. The
-// caller has already checked that it comes from the right host.
+// matchesEcho decides whether an echo reply answers the probe we sent. The caller has
+// already checked that it comes from the right host.
 func matchesEcho(m *icmp.Message, body *icmp.Echo, magic []byte, seq int, v6 bool) bool {
-	// A datagram ICMP socket has its own ID rewritten by the kernel, so the
-	// 16 random payload bytes are the reliable discriminator.
+	// A datagram ICMP socket has its own ID rewritten by the kernel, so the 16 random
+	// payload bytes are the reliable discriminator.
 	if len(body.Data) >= len(magic) && string(body.Data[:len(magic)]) == string(magic) {
 		return true
 	}
-	// Some middleboxes and a few embedded stacks truncate or rewrite the
-	// payload. Falling back to the sequence number is acceptable only because
-	// the reply has already been matched to the target address.
+	// Some middleboxes and a few embedded stacks truncate or rewrite the payload. Falling
+	// back to the sequence number is acceptable only because the reply has already been
+	// matched to the target address.
 	if body.Seq == seq {
 		return true
 	}
@@ -418,8 +414,7 @@ func isRawICMP(c *icmp.PacketConn) bool {
 	return ok
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
+// --------------------------------------------------------------------------- Helpers
 // ---------------------------------------------------------------------------
 
 func addrPort(ip netip.Addr, port uint16) string {
@@ -428,8 +423,8 @@ func addrPort(ip netip.Addr, port uint16) string {
 
 var errNoSource = errors.New("segment: no usable source address")
 
-// sourceAddrFor asks the kernel which local address it would use to reach ip,
-// without sending anything (connect on a UDP socket only sets the route).
+// sourceAddrFor asks the kernel which local address it would use to reach ip, without
+// sending anything (connect on a UDP socket only sets the route).
 func sourceAddrFor(ip netip.Addr) (netip.Addr, error) {
 	network := "udp4"
 	if !ip.Is4() {

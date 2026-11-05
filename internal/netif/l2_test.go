@@ -7,9 +7,8 @@ import (
 	"time"
 )
 
-// ---------------------------------------------------------------------------
-// Fixture builders
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Fixture
+// builders ---------------------------------------------------------------------------
 
 func mac(s string) net.HardwareAddr {
 	m, err := net.ParseMAC(s)
@@ -73,8 +72,8 @@ func cdpFrame(src net.HardwareAddr) []byte {
 	// Voice VLAN reply: 1 byte app id + 2 byte VLAN.
 	p = append(p, cdpTLV(0x000e, []byte{0x01, 0x00, 0x6e})...) // VLAN 110
 
-	// Management address: count(4) + protocol type(1) + proto len(1) +
-	// proto(1=0xcc) + address length(2) + address(4).
+	// Management address: count(4) + protocol type(1) + proto len(1) + proto(1=0xcc) +
+	// address length(2) + address(4).
 	addr := binary.BigEndian.AppendUint32(nil, 1)
 	addr = append(addr, 0x01, 0x01, 0xcc, 0x00, 0x04, 10, 0, 0, 1)
 	p = append(p, cdpTLV(0x0016, addr)...)
@@ -88,8 +87,8 @@ func lldpTLV(typ uint8, val []byte) []byte {
 	return append(binary.BigEndian.AppendUint16(nil, h), val...)
 }
 
-// lldpFrame builds an LLDP advertisement with the 802.1 PVID and LLDP-MED
-// voice-policy TLVs a switch sends to an IP phone port.
+// lldpFrame builds an LLDP advertisement with the 802.1 PVID and LLDP-MED voice-policy
+// TLVs a switch sends to an IP phone port.
 func lldpFrame(src net.HardwareAddr) []byte {
 	chassis := mac("00:11:22:33:44:55")
 	var p []byte
@@ -139,8 +138,7 @@ func stpFrame(src net.HardwareAddr, rootPriority uint16, rootMAC net.HardwareAdd
 	return eth8023(STPMulticast, src, llc)
 }
 
-// ---------------------------------------------------------------------------
-// Tests
+// --------------------------------------------------------------------------- Tests
 // ---------------------------------------------------------------------------
 
 func TestDissectEthernetII(t *testing.T) {

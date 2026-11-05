@@ -2,8 +2,8 @@ package ntlm
 
 import "fmt"
 
-// ProductClass tells whether a Windows build identifies a client, a server or
-// is ambiguous (the same build ships as both).
+// ProductClass tells whether a Windows build identifies a client, a server or is
+// ambiguous (the same build ships as both).
 type ProductClass string
 
 const (
@@ -44,8 +44,8 @@ var win10Builds = map[uint16]winBuild{
 	26200: {"Windows 11 25H2", ClassClient},
 }
 
-// WindowsProduct maps an NTLM/SMB OS version to a marketing name and a class.
-// Unknown builds still return a generic but useful name.
+// WindowsProduct maps an NTLM/SMB OS version to a marketing name and a class. Unknown
+// builds still return a generic but useful name.
 func WindowsProduct(major, minor uint8, build uint16) (string, ProductClass) {
 	switch {
 	case major == 5 && minor == 0:

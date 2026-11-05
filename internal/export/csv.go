@@ -20,10 +20,10 @@ func writeHostsCSV(w io.Writer, d model.MissionData) error {
 	names := networkNames(d)
 	assets := assetIndex(d)
 
-	// The operator's own columns sit with the identity of the address, as they
-	// do on the services sheet. A skipped host is hidden on screen but exported
-	// like any other: this file is the record of what was found, and the
-	// status is what says it was out of scope.
+	// The operator's own columns sit with the identity of the address, as they do on the
+	// services sheet. A skipped host is hidden on screen but exported like any other:
+	// this file is the record of what was found, and the status is what says it was out
+	// of scope.
 	if err := cw.Write([]string{
 		"network", "vlan_id", "ip", "hostname",
 		"triage_status", "triage_note", "triage_by", "triage_at",
@@ -63,9 +63,9 @@ func writeServicesCSV(w io.Writer, d model.MissionData) error {
 	names := networkNames(d)
 	hosts := hostIndex(d)
 
-	// The triage columns come first after the identity of the service: this
-	// sheet is what gets pasted into the client's tracking spreadsheet, and
-	// "what is left to test" is the column people sort on.
+	// The triage columns come first after the identity of the service: this sheet is what
+	// gets pasted into the client's tracking spreadsheet, and "what is left to test" is
+	// the column people sort on.
 	if err := cw.Write([]string{
 		"network", "ip", "hostname", "port", "protocol", "state", "service",
 		"triage_status", "triage_note", "triage_by", "triage_at",
@@ -127,8 +127,8 @@ func writeFindingsCSV(w io.Writer, d model.MissionData) error {
 	names := networkNames(d)
 	hosts := hostIndex(d)
 
-	// Same shape as the services sheet: the operator's own columns sit with
-	// the identity of the finding, before the text a reader scrolls through.
+	// Same shape as the services sheet: the operator's own columns sit with the identity
+	// of the finding, before the text a reader scrolls through.
 	if err := cw.Write([]string{
 		"severity", "check_id", "title", "network", "ip", "hostname", "port",
 		"protocol",
@@ -206,8 +206,8 @@ func writeAssetsCSV(w io.Writer, d model.MissionData) error {
 	defer cw.Flush()
 	names := networkNames(d)
 
-	// A machine carries its own status, which is the one that was applied to
-	// every address of it.
+	// A machine carries its own status, which is the one that was applied to every
+	// address of it.
 	if err := cw.Write([]string{
 		"label", "kind",
 		"triage_status", "triage_note", "triage_by", "triage_at",
@@ -245,8 +245,8 @@ func writeAssetsCSV(w io.Writer, d model.MissionData) error {
 	return cw.Error()
 }
 
-// writeMatrixCSV renders the source × target grid, the table a client reads
-// first: which VLAN can reach which.
+// writeMatrixCSV renders the source × target grid, the table a client reads first: which
+// VLAN can reach which.
 func writeMatrixCSV(w io.Writer, d model.MissionData) error {
 	cw, err := csvWriter(w)
 	if err != nil {
@@ -297,10 +297,10 @@ func writeMatrixCSV(w io.Writer, d model.MissionData) error {
 // writeDiffCSV renders what changed between the last two scans of a network:
 // the sheet an operator opens on the second morning to see what moved.
 //
-// The three groups share one file with a `group` column rather than three
-// files, because they are one answer and a reader sorts through them together.
-// Hosts that answered at the same address both times are left out: this sheet
-// is the change, and the inventory is already in the other ones.
+// The three groups share one file with a `group` column rather than three files, because
+// they are one answer and a reader sorts through them together. Hosts that answered at
+// the same address both times are left out: this sheet is the change, and the inventory
+// is already in the other ones.
 func writeDiffCSV(w io.Writer, d model.MissionData) error {
 	cw, err := csvWriter(w)
 	if err != nil {
@@ -379,8 +379,8 @@ func writeTargets(w io.Writer, d model.MissionData) error {
 	return nil
 }
 
-// ---------------------------------------------------------------------------
-// indexes and small helpers
+// --------------------------------------------------------------------------- indexes and
+// small helpers
 // ---------------------------------------------------------------------------
 
 func hostIndex(d model.MissionData) map[int64]model.Host {

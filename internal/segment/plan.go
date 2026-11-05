@@ -21,9 +21,9 @@ type job struct {
 	iface   string     // set by the L2 techniques
 }
 
-// exclusiveGroup is a batch of jobs that share one system change: one route,
-// or one tagged sub-interface. The change is made once, every job in the
-// group is tested, then the change is reverted.
+// exclusiveGroup is a batch of jobs that share one system change: one route, or one
+// tagged sub-interface. The change is made once, every job in the group is tested, then
+// the change is reverted.
 type exclusiveGroup struct {
 	tech   string
 	vlanID int
@@ -45,10 +45,9 @@ func (p plan) count() int {
 	return n
 }
 
-// buildPlan expands targets x techniques into jobs, drops the combinations
-// that cannot apply, and de-duplicates: several services on the same host
-// collapse into a single ICMP test, and a repeated target never produces two
-// identical rows in the matrix.
+// buildPlan expands targets x techniques into jobs, drops the combinations that cannot
+// apply, and de-duplicates: several services on the same host collapse into a single ICMP
+// test, and a repeated target never produces two identical rows in the matrix.
 func buildPlan(opts engine.SegmentOptions, targets []engine.ReachTarget, techs []string) plan {
 	var p plan
 	seen := map[string]struct{}{}
@@ -183,8 +182,8 @@ func expand(opts engine.SegmentOptions, tgt engine.ReachTarget, tech string) []j
 	return nil
 }
 
-// vlansFor returns the VLAN ids to try for an L2 technique: the explicit list
-// from the options, or the target network's own VLAN id.
+// vlansFor returns the VLAN ids to try for an L2 technique: the explicit list from the
+// options, or the target network's own VLAN id.
 func vlansFor(opts engine.SegmentOptions, tgt engine.ReachTarget) []int {
 	if len(opts.VLANIDs) > 0 {
 		return sortedVLANs(opts.VLANIDs)
@@ -192,8 +191,8 @@ func vlansFor(opts engine.SegmentOptions, tgt engine.ReachTarget) []int {
 	return sortedVLANs([]int{tgt.TargetVLANID})
 }
 
-// portOffersTrunk reports whether the passive L2 recon saw the switch port
-// advertise that it is willing to negotiate a trunk.
+// portOffersTrunk reports whether the passive L2 recon saw the switch port advertise that
+// it is willing to negotiate a trunk.
 func portOffersTrunk(l2 model.L2Info) bool {
 	if !l2.DTPSeen {
 		return false
@@ -205,8 +204,8 @@ func portOffersTrunk(l2 model.L2Info) bool {
 	return false
 }
 
-// routedPrefix is the prefix a route technique installs for a target: the
-// target network's prefix that contains the IP, or a host route.
+// routedPrefix is the prefix a route technique installs for a target: the target
+// network's prefix that contains the IP, or a host route.
 func routedPrefix(tgt engine.ReachTarget) netip.Prefix {
 	ip := tgt.IP.Unmap()
 	for _, p := range tgt.TargetPrefixes {
@@ -228,8 +227,8 @@ func groupKey(j job) string {
 	return j.tech + "|" + strconv.Itoa(j.vlanID) + "|" + j.via.String() + "|" + routedPrefix(j.target).String()
 }
 
-// sortIPv6 puts routable addresses first so maxIPv6PerTarget keeps the useful
-// ones; a link-local address is almost never reachable across a boundary.
+// sortIPv6 puts routable addresses first so maxIPv6PerTarget keeps the useful ones; a
+// link-local address is almost never reachable across a boundary.
 func sortIPv6(in []netip.Addr) []netip.Addr {
 	out := make([]netip.Addr, 0, len(in))
 	seen := map[netip.Addr]struct{}{}

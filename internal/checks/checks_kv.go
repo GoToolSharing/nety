@@ -64,8 +64,8 @@ func runRedis(ctx context.Context, t *Target) []model.Finding {
 	return []model.Finding{t.Finding(ev)}
 }
 
-// redisReadReply reads a RESP reply to INFO. Errors (-NOAUTH, -DENIED...)
-// are returned as errors.
+// redisReadReply reads a RESP reply to INFO. Errors (-NOAUTH, -DENIED...) are returned as
+// errors.
 func redisReadReply(r *bufio.Reader) (string, error) {
 	line, err := r.ReadString('\n')
 	if err != nil {
@@ -250,8 +250,8 @@ func runZookeeper(ctx context.Context, t *Target) []model.Finding {
 	return []model.Finding{t.Finding("'envi' four-letter command answered without authentication: " + strings.Join(keep, "; "))}
 }
 
-// ---------------------------------------------------------------------------
-// small shared helpers for line protocols
+// --------------------------------------------------------------------------- small
+// shared helpers for line protocols
 // ---------------------------------------------------------------------------
 
 // beU32 is a bounds-checked big-endian uint32 read.

@@ -12,10 +12,10 @@ import (
 	"github.com/GoToolSharing/nety/internal/netif"
 )
 
-// Everything in this package that changes the operator's machine or the
-// client's switch goes through sysApplier, for two reasons: the netif-backed
-// implementation keeps the netlink/AF_PACKET details out of the orchestration
-// code, and a recording fake lets the tests prove that every change is undone
+// Everything in this package that changes the operator's machine or the client's switch
+// goes through sysApplier, for two reasons: the netif-backed implementation keeps the
+// netlink/AF_PACKET details out of the orchestration code, and a recording fake lets the
+// tests prove that every change is undone
 // - including when the scan is cancelled half way through.
 
 type sysApplier interface {
@@ -29,27 +29,27 @@ type sysApplier interface {
 	AddAddr(iface string, p netip.Prefix) error
 	DelAddr(iface string, p netip.Prefix) error
 
-	// DHCP obtains a lease on iface and applies the address. It returns the
-	// configured prefix and the lease's router.
+	// DHCP obtains a lease on iface and applies the address. It returns the configured
+	// prefix and the lease's router.
 	DHCP(ctx context.Context, iface string, timeout time.Duration) (netip.Prefix, netip.Addr, error)
-	// ReleaseDHCP gives back a lease taken on iface. It must be called while
-	// the interface still exists, and is a no-op when no lease was taken.
+	// ReleaseDHCP gives back a lease taken on iface. It must be called while the
+	// interface still exists, and is a no-op when no lease was taken.
 	ReleaseDHCP(iface string) error
-	// The Undo* calls revert a change only if this process made it, so a
-	// sub-interface, address or route that was already on the operator's
-	// machine is never removed by our cleanup.
+	// The Undo* calls revert a change only if this process made it, so a sub-interface,
+	// address or route that was already on the operator's machine is never removed by our
+	// cleanup.
 	UndoVLAN(name string) error
 	UndoAddr(iface string, p netip.Prefix) error
 	UndoRoute(dst netip.Prefix, via netip.Addr, iface string) error
-	// IsWireless reports whether iface is a Wi-Fi association rather than a
-	// wired switch port.
+	// IsWireless reports whether iface is a Wi-Fi association rather than a wired switch
+	// port.
 	IsWireless(iface string) bool
 
-	// RequestTrunk asks the switch port to form an 802.1Q trunk over DTP and
-	// waits for it to converge.
+	// RequestTrunk asks the switch port to form an 802.1Q trunk over DTP and waits for it
+	// to converge.
 	RequestTrunk(ctx context.Context, iface, domain string, settle time.Duration) error
-	// ReleaseTrunk advertises access mode again. Best effort: DTP has no
-	// explicit teardown.
+	// ReleaseTrunk advertises access mode again. Best effort: DTP has no explicit
+	// teardown.
 	ReleaseTrunk(iface, domain string) error
 
 	SendFrames(iface string, frames ...[]byte) error
@@ -116,13 +116,12 @@ func (netifApplier) InterfaceMAC(iface string) (net.HardwareAddr, error) {
 	return netif.InterfaceMAC(iface)
 }
 
-// ---------------------------------------------------------------------------
-// Cleanup scope
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Cleanup
+// scope ---------------------------------------------------------------------------
 
-// cleanup is the stack of undo actions for one Test call. Every setup step
-// pushes its undo immediately after it succeeds, so a cancellation or a panic
-// between two steps still unwinds what has been done.
+// cleanup is the stack of undo actions for one Test call. Every setup step pushes its
+// undo immediately after it succeeds, so a cancellation or a panic between two steps
+// still unwinds what has been done.
 type cleanup struct {
 	mu    sync.Mutex
 	stack []undoStep
@@ -153,8 +152,8 @@ func (c *cleanup) pending() []string {
 	return out
 }
 
-// unwindTo pops and runs undo actions until the stack is back to depth n. It
-// is used to tear down one technique's setup before the next one starts.
+// unwindTo pops and runs undo actions until the stack is back to depth n. It is used to
+// tear down one technique's setup before the next one starts.
 func (c *cleanup) unwindTo(n int, log *slog.Logger) error {
 	var errs []error
 	for {
@@ -187,8 +186,8 @@ func (c *cleanup) depth() int {
 	return len(c.stack)
 }
 
-// restore unwinds everything. It is safe to call twice and never panics, so it
-// can be deferred next to a recover.
+// restore unwinds everything. It is safe to call twice and never panics, so it can be
+// deferred next to a recover.
 func (c *cleanup) restore(log *slog.Logger) error {
 	c.mu.Lock()
 	if c.done {

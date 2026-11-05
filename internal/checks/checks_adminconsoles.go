@@ -11,10 +11,9 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// adminConsole is one application server management console. They are all
-// found the same way (recognise the product, then ask the management entry
-// point whether it answers an anonymous client), so they share a runner and
-// differ only in the table below.
+// adminConsole is one application server management console. They are all found the same
+// way (recognise the product, then ask the management entry point whether it answers an
+// anonymous client), so they share a runner and differ only in the table below.
 type adminConsole struct {
 	id          string
 	title       string
@@ -23,14 +22,14 @@ type adminConsole struct {
 	description string
 	remediation string
 	references  []string
-	// ports are the ports the product listens on by default. A service with
-	// no HTTP fingerprint on one of them is probed anyway, because the port
-	// scan often reaches these before the fingerprinter has anything to say.
+	// ports are the ports the product listens on by default. A service with no HTTP
+	// fingerprint on one of them is probed anyway, because the port scan often reaches
+	// these before the fingerprinter has anything to say.
 	ports []int
 	// keywords match the service fingerprint (title, Server header, product).
 	keywords []string
-	// probe returns the evidence and the severity that the observation
-	// deserves, or ok=false when the console is protected.
+	// probe returns the evidence and the severity that the observation deserves, or
+	// ok=false when the console is protected.
 	probe func(ctx context.Context, t *Target, c *http.Client, scheme string) (string, model.Severity, bool)
 }
 
@@ -164,9 +163,9 @@ func (ac adminConsole) run(ctx context.Context, t *Target) []model.Finding {
 	return nil
 }
 
-// probeTomcatManager asks the manager applications for their own start page.
-// A protected manager answers 401, which is not reported here: credentials
-// for it are the business of the gated default-credential check.
+// probeTomcatManager asks the manager applications for their own start page. A protected
+// manager answers 401, which is not reported here: credentials for it are the business of
+// the gated default-credential check.
 func probeTomcatManager(ctx context.Context, t *Target, c *http.Client, scheme string) (string, model.Severity, bool) {
 	for _, p := range []struct{ path, marker string }{
 		{"/manager/html", "Tomcat Web Application Manager"},
@@ -186,8 +185,8 @@ func probeTomcatManager(ctx context.Context, t *Target, c *http.Client, scheme s
 }
 
 func probeJBossManagement(ctx context.Context, t *Target, c *http.Client, scheme string) (string, model.Severity, bool) {
-	// WildFly's HTTP management endpoint answers a GET with the root resource
-	// when no security realm is configured on it.
+	// WildFly's HTTP management endpoint answers a GET with the root resource when no
+	// security realm is configured on it.
 	r, err := webDo(ctx, c, http.MethodGet, webURL(t, scheme, "/management"), nil, nil)
 	if err != nil {
 		return "", "", false
@@ -241,8 +240,8 @@ func probePortainer(ctx context.Context, t *Target, c *http.Client, scheme strin
 	if r.Status != http.StatusOK || !webJSON(r.Body, &st) || st.Version == "" {
 		return "", "", false
 	}
-	// 404 from this endpoint is Portainer saying no administrator exists yet.
-	// It is a read: nothing is created, and the account is not claimed.
+	// 404 from this endpoint is Portainer saying no administrator exists yet. It is a
+	// read: nothing is created, and the account is not claimed.
 	ra, err := webDo(ctx, c, http.MethodGet, webURL(t, scheme, "/api/users/admin/check"), nil, nil)
 	if err != nil {
 		return "", "", false

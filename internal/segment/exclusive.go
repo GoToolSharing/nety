@@ -17,10 +17,9 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// Techniques that change the operator's machine or the client's switch. They
-// run one group at a time, and every change is pushed onto the cleanup stack
-// the instant it succeeds, so an abort between two steps still unwinds what
-// has been done so far.
+// Techniques that change the operator's machine or the client's switch. They run one
+// group at a time, and every change is pushed onto the cleanup stack the instant it
+// succeeds, so an abort between two steps still unwinds what has been done so far.
 
 func (t *Tester) runExclusive(ctx context.Context, opts engine.SegmentOptions, g exclusiveGroup, cl *cleanup, em *emitter, log *slog.Logger) {
 	depth := cl.depth()
@@ -46,10 +45,10 @@ func (t *Tester) runExclusive(ctx context.Context, opts engine.SegmentOptions, g
 // gateway-route / alt-gateway
 // ---------------------------------------------------------------------------
 
-// runRouteGroup installs one route to the target prefix through a candidate
-// next hop, tests every target behind it, then removes the route. It answers
-// "would the router forward this if the client only knew the way?", which is a
-// different question from "is there a path configured today".
+// runRouteGroup installs one route to the target prefix through a candidate next hop,
+// tests every target behind it, then removes the route. It answers "would the router
+// forward this if the client only knew the way?", which is a different question from "is
+// there a path configured today".
 func (t *Tester) runRouteGroup(ctx context.Context, opts engine.SegmentOptions, g exclusiveGroup, cl *cleanup, em *emitter, log *slog.Logger) {
 	if !g.via.IsValid() {
 		t.errorResults(g.jobs, model.ReachError, "no next hop to route through", em)
@@ -82,13 +81,12 @@ func (t *Tester) runRouteGroup(ctx context.Context, opts engine.SegmentOptions, 
 	t.probeJobs(ctx, opts, g.jobs, em, func(j job) job { return j }, note)
 }
 
-// ---------------------------------------------------------------------------
-// dot1q-subif / dtp-trunk
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- dot1q-subif
+// / dtp-trunk ---------------------------------------------------------------------------
 
-// runVLANGroup creates a tagged sub-interface for one VLAN, gives it an
-// address, routes the target prefix through it and tests from inside that
-// VLAN. For dtp-trunk it first asks the switch port to become a trunk.
+// runVLANGroup creates a tagged sub-interface for one VLAN, gives it an address, routes
+// the target prefix through it and tests from inside that VLAN. For dtp-trunk it first
+// asks the switch port to become a trunk.
 func (t *Tester) runVLANGroup(ctx context.Context, opts engine.SegmentOptions, g exclusiveGroup, cl *cleanup, em *emitter, log *slog.Logger) {
 	parent := opts.Interface
 	if parent == "" {
@@ -130,16 +128,16 @@ func (t *Tester) runVLANGroup(ctx context.Context, opts engine.SegmentOptions, g
 			fmt.Sprintf("VLAN %d sub-interface %s has no usable address: %v", g.vlanID, name, err), em)
 		return
 	}
-	// Pushed after the sub-interface was created, so it runs before the
-	// interface is deleted: a DHCPRELEASE needs the interface to leave on.
+	// Pushed after the sub-interface was created, so it runs before the interface is
+	// deleted: a DHCPRELEASE needs the interface to leave on.
 	cl.push("release the DHCP lease on "+name, func() error { return t.sys.ReleaseDHCP(name) })
 	cl.push(fmt.Sprintf("remove address %s from %s", addr, name), func() error {
 		return t.sys.UndoAddr(name, addr)
 	})
 	note += fmt.Sprintf("tested from %s on VLAN %d (%s): ", addr.Addr(), g.vlanID, how)
 
-	// Route the target prefix out of the sub-interface so the probes do not
-	// follow the main routing table back out of the untagged interface.
+	// Route the target prefix out of the sub-interface so the probes do not follow the
+	// main routing table back out of the untagged interface.
 	if g.prefix.IsValid() && !addr.Contains(g.jobs[0].ip) {
 		if err := t.sys.AddRoute(g.prefix, gw, name); err != nil {
 			log.Warn("segment: could not route the target prefix through the sub-interface",
@@ -159,9 +157,9 @@ func (t *Tester) runVLANGroup(ctx context.Context, opts engine.SegmentOptions, g
 	}, note)
 }
 
-// addressSubif gives the sub-interface an address: DHCP first, because a lease
-// proves the VLAN has a live DHCP server and gives us the right gateway, then
-// the caller-supplied static fallback.
+// addressSubif gives the sub-interface an address: DHCP first, because a lease proves the
+// VLAN has a live DHCP server and gives us the right gateway, then the caller-supplied
+// static fallback.
 func (t *Tester) addressSubif(ctx context.Context, name string, g exclusiveGroup, opts engine.SegmentOptions) (netip.Prefix, netip.Addr, string, error) {
 	prefix, gw, err := t.sys.DHCP(ctx, name, dhcpTimeout)
 	if err == nil && prefix.IsValid() {
@@ -182,20 +180,19 @@ func (t *Tester) addressSubif(ctx context.Context, name string, g exclusiveGroup
 	return netip.Prefix{}, netip.Addr{}, "", fmt.Errorf("no DHCP answer (%v) and no static fallback for VLAN %d", dhcpErr, g.vlanID)
 }
 
-// vtpDomain is the VTP domain to put in the DTP advertisement. model.L2Info
-// does not carry it, and an empty (NULL) domain is what switches in the
-// default domain expect, which covers the overwhelming majority of access
-// ports; a switch in a named domain simply ignores the request.
+// vtpDomain is the VTP domain to put in the DTP advertisement. model.L2Info does not
+// carry it, and an empty (NULL) domain is what switches in the default domain expect,
+// which covers the overwhelming majority of access ports; a switch in a named domain
+// simply ignores the request.
 func vtpDomain(l2 model.L2Info) string { return "" }
 
-// ---------------------------------------------------------------------------
-// double-tag
+// --------------------------------------------------------------------------- double-tag
 // ---------------------------------------------------------------------------
 
-// runDoubleTagGroup emits a double-tagged frame per target. The technique is
-// inherently one-way, so the normal verdict is "sent"; a reply can still come
-// back along the ordinary routed path, and when it does we upgrade the verdict
-// to "reachable", which is the strongest possible evidence of a VLAN hop.
+// runDoubleTagGroup emits a double-tagged frame per target. The technique is inherently
+// one-way, so the normal verdict is "sent"; a reply can still come back along the
+// ordinary routed path, and when it does we upgrade the verdict to "reachable", which is
+// the strongest possible evidence of a VLAN hop.
 func (t *Tester) runDoubleTagGroup(ctx context.Context, opts engine.SegmentOptions, g exclusiveGroup, em *emitter, log *slog.Logger) {
 	native := opts.L2.NativeVLAN
 	if native == 0 {
@@ -215,8 +212,8 @@ func (t *Tester) runDoubleTagGroup(ctx context.Context, opts engine.SegmentOptio
 	}
 	dstMAC := opts.Local.GatewayMAC
 	if len(dstMAC) != 6 {
-		// Without the gateway's MAC the frame still reaches the switch, which
-		// is all double tagging needs; broadcast guarantees it is forwarded.
+		// Without the gateway's MAC the frame still reaches the switch, which is all
+		// double tagging needs; broadcast guarantees it is forwarded.
 		dstMAC = net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	}
 	src := opts.Local.LocalIP
@@ -247,8 +244,8 @@ func (t *Tester) doubleTagOne(ctx context.Context, opts engine.SegmentOptions, j
 		return errResult(err.Error())
 	}
 
-	// Listen for a reply on the ordinary path before transmitting. The frame
-	// itself cannot carry one back: the outer tag is consumed by the trunk.
+	// Listen for a reply on the ordinary path before transmitting. The frame itself
+	// cannot carry one back: the outer tag is consumed by the trunk.
 	reply := make(chan string, 1)
 	stop := t.watchEchoReply(ctx, magic, opts.Timeout, reply)
 	defer stop()
@@ -277,8 +274,8 @@ func (t *Tester) doubleTagOne(ctx context.Context, opts engine.SegmentOptions, j
 	return probeResult{Status: model.ReachSent, Detail: detail}
 }
 
-// watchEchoReply listens for an ICMP echo reply carrying magic and reports the
-// peer that sent it. The returned function stops the listener.
+// watchEchoReply listens for an ICMP echo reply carrying magic and reports the peer that
+// sent it. The returned function stops the listener.
 func (t *Tester) watchEchoReply(ctx context.Context, magic []byte, timeout time.Duration, out chan<- string) func() {
 	var conn *icmp.PacketConn
 	for _, network := range []string{"udp4", "ip4:icmp"} {
@@ -325,13 +322,13 @@ func (t *Tester) watchEchoReply(ctx context.Context, magic []byte, timeout time.
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Shared probing loop for the exclusive techniques
+// --------------------------------------------------------------------------- Shared
+// probing loop for the exclusive techniques
 // ---------------------------------------------------------------------------
 
-// probeJobs runs the jobs of one exclusive group sequentially (the system
-// state they share must not change underneath them) and prefixes every Detail
-// with note, so a reader of the report knows what was set up for the test.
+// probeJobs runs the jobs of one exclusive group sequentially (the system state they
+// share must not change underneath them) and prefixes every Detail with note, so a reader
+// of the report knows what was set up for the test.
 func (t *Tester) probeJobs(ctx context.Context, opts engine.SegmentOptions, jobs []job, em *emitter, prepare func(job) job, note string) {
 	for _, j := range jobs {
 		if ctx.Err() != nil {

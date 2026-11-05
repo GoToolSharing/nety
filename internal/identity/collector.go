@@ -1,16 +1,15 @@
-// Package identity collects identity evidence about a host and correlates
-// observations into long-lived assets.
+// Package identity collects identity evidence about a host and correlates observations
+// into long-lived assets.
 //
 // A pentester scans VLAN A on Monday and VLAN B on Tuesday; DHCP reshuffles
 // addresses in between. Identity evidence is what survives an IP change:
-// an SMB server GUID, an SNMP engine ID, an SSH host key, a NetBIOS name
-// table. The collector gathers it from the services that were actually found
-// open plus a handful of cheap UDP queries; the correlator (see correlator.go)
-// turns observations into assets.
+// an SMB server GUID, an SNMP engine ID, an SSH host key, a NetBIOS name table. The
+// collector gathers it from the services that were actually found open plus a handful of
+// cheap UDP queries; the correlator (see correlator.go) turns observations into assets.
 //
-// Every probe here is strictly read-only: it negotiates, reads what the
-// protocol volunteers before authentication, and hangs up. Nothing is written
-// on the target and no credential is ever guessed.
+// Every probe here is strictly read-only: it negotiates, reads what the protocol
+// volunteers before authentication, and hangs up. Nothing is written on the target and no
+// credential is ever guessed.
 package identity
 
 import (
@@ -28,8 +27,8 @@ import (
 )
 
 const (
-	// DefaultIOTimeout bounds a single network read/write. Probes that need
-	// several round trips get a multiple of it.
+	// DefaultIOTimeout bounds a single network read/write. Probes that need several round
+	// trips get a multiple of it.
 	DefaultIOTimeout = 4 * time.Second
 	// CollectBudget caps the whole Collect call whatever the caller's ctx.
 	CollectBudget = 60 * time.Second
@@ -62,9 +61,8 @@ func NewCollector(log *slog.Logger) engine.IdentityCollector {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Evidence sink
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Evidence
+// sink ---------------------------------------------------------------------------
 
 // evidenceSink accumulates evidence from concurrently running probes.
 type evidenceSink struct {
@@ -72,8 +70,8 @@ type evidenceSink struct {
 	items []model.IdentityEvidence
 }
 
-// add records one piece of evidence. Empty values and non-positive
-// confidences are dropped, so probes can call it unconditionally.
+// add records one piece of evidence. Empty values and non-positive confidences are
+// dropped, so probes can call it unconditionally.
 func (s *evidenceSink) add(kind model.EvidenceKind, value, source string, conf int, attrs map[string]string) {
 	value = strings.TrimSpace(value)
 	if value == "" || conf <= 0 {
@@ -104,9 +102,9 @@ func (s *evidenceSink) add(kind model.EvidenceKind, value, source string, conf i
 	s.mu.Unlock()
 }
 
-// evidence returns the deduplicated, deterministically ordered evidence.
-// Identical (kind, value, source) triples are merged, keeping the highest
-// confidence and the union of the attributes.
+// evidence returns the deduplicated, deterministically ordered evidence. Identical (kind,
+// value, source) triples are merged, keeping the highest confidence and the union of the
+// attributes.
 func (s *evidenceSink) evidence() []model.IdentityEvidence {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -154,8 +152,7 @@ func (s *evidenceSink) evidence() []model.IdentityEvidence {
 	return out
 }
 
-// ---------------------------------------------------------------------------
-// Collect
+// --------------------------------------------------------------------------- Collect
 // ---------------------------------------------------------------------------
 
 // namedProbe is one identity source scheduled by Collect.
@@ -164,10 +161,9 @@ type namedProbe struct {
 	run  func(ctx context.Context, sink *evidenceSink) error
 }
 
-// Collect gathers identity evidence for host. Probes run concurrently with a
-// bound; each has its own timeout and honours ctx. Errors from individual
-// probes are logged and skipped: a host that refuses SMB still yields its
-// SSH host key.
+// Collect gathers identity evidence for host. Probes run concurrently with a bound; each
+// has its own timeout and honours ctx. Errors from individual probes are logged and
+// skipped: a host that refuses SMB still yields its SSH host key.
 func (c *collector) Collect(ctx context.Context, host model.Host, services []model.Service, dns []netip.Addr) ([]model.IdentityEvidence, error) {
 	addr, ok := hostAddr(host, services)
 	if !ok {
@@ -182,8 +178,8 @@ func (c *collector) Collect(ctx context.Context, host model.Host, services []mod
 	open := openServices(services)
 	sink := &evidenceSink{}
 
-	// Evidence derivable from data the fingerprinter already collected costs
-	// nothing: SSH host keys, TLS certificates, favicon hashes, MAC/OUI.
+	// Evidence derivable from data the fingerprinter already collected costs nothing: SSH
+	// host keys, TLS certificates, favicon hashes, MAC/OUI.
 	c.fromServiceData(sink, host, open)
 
 	probes := c.plan(addr, open, dns)
@@ -220,8 +216,8 @@ func (c *collector) Collect(ctx context.Context, host model.Host, services []mod
 	return sink.evidence(), nil
 }
 
-// plan decides which network probes to run, using only services found open
-// plus the cheap UDP queries.
+// plan decides which network probes to run, using only services found open plus the cheap
+// UDP queries.
 func (c *collector) plan(addr netip.Addr, open []model.Service, dns []netip.Addr) []namedProbe {
 	ip := addr.String()
 	var out []namedProbe
@@ -264,8 +260,8 @@ func (c *collector) plan(addr netip.Addr, open []model.Service, dns []netip.Addr
 		}
 	}
 
-	// Cheap UDP queries, always attempted: one datagram each, and they are the
-	// only identity source for hosts with every TCP port filtered.
+	// Cheap UDP queries, always attempted: one datagram each, and they are the only
+	// identity source for hosts with every TCP port filtered.
 	add("nbstat", func(ctx context.Context, s *evidenceSink) error {
 		return c.probeNBSTAT(ctx, s, ip, portNBNS)
 	})
@@ -284,8 +280,8 @@ func (c *collector) plan(addr netip.Addr, open []model.Service, dns []netip.Addr
 	return out
 }
 
-// ---------------------------------------------------------------------------
-// Small shared helpers
+// --------------------------------------------------------------------------- Small
+// shared helpers
 // ---------------------------------------------------------------------------
 
 // withTimeout bounds ctx by d, never extending an earlier deadline.
@@ -331,9 +327,8 @@ func svcName(s model.Service) string {
 	return strings.ToLower(strings.TrimSpace(s.Name))
 }
 
-// isTLSService reports whether the service speaks TLS from the first byte,
-// either because the fingerprinter said so or because it sits on an implicit
-// TLS port.
+// isTLSService reports whether the service speaks TLS from the first byte, either because
+// the fingerprinter said so or because it sits on an implicit TLS port.
 func isTLSService(s model.Service, implicitTLSPorts ...int) bool {
 	if s.Tunnel == "ssl" || s.TLS != nil {
 		return true

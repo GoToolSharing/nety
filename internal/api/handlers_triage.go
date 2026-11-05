@@ -7,15 +7,14 @@ import (
 	"github.com/GoToolSharing/nety/internal/store"
 )
 
-// Triage: the operator's own pass over what a scan found. A scan says what is
-// exposed and which checks fired; deciding whether each service, and each
-// finding, is actually a problem is manual work, and these endpoints keep
-// track of it so a long engagement does not lose its place and a re-scan does
+// Triage: the operator's own pass over what a scan found. A scan says what is exposed and
+// which checks fired; deciding whether each service, and each finding, is actually a
+// problem is manual work, and these endpoints keep track of it so a long engagement does
+// not lose its place and a re-scan does
 // not wipe it. Services and findings are handled the same way on purpose:
 // going from one screen to the other should not mean learning anything new.
 
-// ---------------------------------------------------------------------------
-// Services
+// --------------------------------------------------------------------------- Services
 // ---------------------------------------------------------------------------
 
 // requireService loads a service and checks the caller may see its mission.
@@ -44,8 +43,8 @@ func (a *API) handleGetService(w http.ResponseWriter, r *http.Request, u model.U
 	a.ok(w, sv)
 }
 
-// handleTriageService records a status, a note, or both. A field left out is
-// left alone, so the note survives a status change and the other way round.
+// handleTriageService records a status, a note, or both. A field left out is left alone,
+// so the note survives a status change and the other way round.
 func (a *API) handleTriageService(w http.ResponseWriter, r *http.Request, u model.User) {
 	sv, ok := a.requireService(w, r, u)
 	if !ok {
@@ -111,16 +110,15 @@ func (a *API) handleBulkTriage(w http.ResponseWriter, r *http.Request, u model.U
 	}
 	a.audit(r, u, m.ID, "service.triaged_bulk",
 		itoa64(n)+" services -> "+string(req.Status))
-	// Tell every open browser to refresh the table rather than publishing
-	// thousands of individual rows.
+	// Tell every open browser to refresh the table rather than publishing thousands of
+	// individual rows.
 	a.Bus.PublishData(model.EvtScanLog, m.ID, 0, model.LogLine{
 		Level: "info", Message: "triage updated, resynchronise",
 	})
 	a.ok(w, map[string]any{"updated": n, "status": req.Status})
 }
 
-// ---------------------------------------------------------------------------
-// Findings
+// --------------------------------------------------------------------------- Findings
 // ---------------------------------------------------------------------------
 
 // requireFinding loads a finding and checks the caller may see its mission.
@@ -149,8 +147,8 @@ func (a *API) handleGetFinding(w http.ResponseWriter, r *http.Request, u model.U
 	a.ok(w, f)
 }
 
-// handleTriageFinding records a status, a note, or both, exactly as the
-// service version does: a field left out is left alone.
+// handleTriageFinding records a status, a note, or both, exactly as the service version
+// does: a field left out is left alone.
 func (a *API) handleTriageFinding(w http.ResponseWriter, r *http.Request, u model.User) {
 	f, ok := a.requireFinding(w, r, u)
 	if !ok {
@@ -183,8 +181,8 @@ func (a *API) handleTriageFinding(w http.ResponseWriter, r *http.Request, u mode
 	a.ok(w, updated)
 }
 
-// handleBulkFindingTriage applies one status to a selection, which is how a
-// wave of informational checks gets cleared in a single gesture.
+// handleBulkFindingTriage applies one status to a selection, which is how a wave of
+// informational checks gets cleared in a single gesture.
 func (a *API) handleBulkFindingTriage(w http.ResponseWriter, r *http.Request, u model.User) {
 	m, ok := a.requireMission(w, r, u)
 	if !ok {
@@ -216,25 +214,23 @@ func (a *API) handleBulkFindingTriage(w http.ResponseWriter, r *http.Request, u 
 	}
 	a.audit(r, u, m.ID, "finding.triaged_bulk",
 		itoa64(n)+" findings -> "+string(req.Status))
-	// Tell every open browser to refresh the table rather than publishing
-	// thousands of individual rows.
+	// Tell every open browser to refresh the table rather than publishing thousands of
+	// individual rows.
 	a.Bus.PublishData(model.EvtScanLog, m.ID, 0, model.LogLine{
 		Level: "info", Message: "triage updated, resynchronise",
 	})
 	a.ok(w, map[string]any{"updated": n, "status": req.Status})
 }
 
-// ---------------------------------------------------------------------------
-// Hosts and assets
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Hosts and
+// assets ---------------------------------------------------------------------------
 
-// Skipping is the reason these two exist. On a real engagement there is always
-// a machine nobody may touch: the client's own workstation, the pentester's
-// laptop, a device that was declared out of bounds. Marking each of its
-// services by hand is busywork, and its findings and segmentation results stay
-// in the way afterwards. Skipping the host, or the machine, parks all of it at
-// once: the rows are filtered out of the listings, never written to, so
-// un-skipping brings everything back exactly as the operator left it.
+// Skipping is the reason these two exist. On a real engagement there is always a machine
+// nobody may touch: the client's own workstation, the pentester's laptop, a device that
+// was declared out of bounds. Marking each of its services by hand is busywork, and its
+// findings and segmentation results stay in the way afterwards. Skipping the host, or the
+// machine, parks all of it at once: the rows are filtered out of the listings, never
+// written to, so un-skipping brings everything back exactly as the operator left it.
 
 // requireHost loads a host and checks the caller may see its mission.
 func (a *API) requireHost(w http.ResponseWriter, r *http.Request, u model.User) (model.Host, bool) {
@@ -253,8 +249,8 @@ func (a *API) requireHost(w http.ResponseWriter, r *http.Request, u model.User) 
 	return h, true
 }
 
-// handleTriageHost records a status, a note, or both, exactly as the service
-// version does: a field left out is left alone.
+// handleTriageHost records a status, a note, or both, exactly as the service version
+// does: a field left out is left alone.
 func (a *API) handleTriageHost(w http.ResponseWriter, r *http.Request, u model.User) {
 	h, ok := a.requireHost(w, r, u)
 	if !ok {
@@ -284,9 +280,8 @@ func (a *API) handleTriageHost(w http.ResponseWriter, r *http.Request, u model.U
 	a.withTriageAuthor(r, &updated.Triage)
 	a.Bus.PublishData(model.EvtHost, h.MissionID, 0, updated)
 	if req.Status != nil {
-		// Whole tables change when a host is skipped or put back in scope, and
-		// they are keyed on the host rather than on anything we could publish
-		// row by row.
+		// Whole tables change when a host is skipped or put back in scope, and they are
+		// keyed on the host rather than on anything we could publish row by row.
 		a.Bus.PublishData(model.EvtScanLog, h.MissionID, 0, model.LogLine{
 			Level: "info", Message: "triage updated, resynchronise",
 		})
@@ -331,8 +326,8 @@ func (a *API) handleBulkHostTriage(w http.ResponseWriter, r *http.Request, u mod
 	a.ok(w, map[string]any{"updated": n, "status": req.Status})
 }
 
-// handleBulkAssetTriage applies one status to a selection of machines, and to
-// every address of each of them.
+// handleBulkAssetTriage applies one status to a selection of machines, and to every
+// address of each of them.
 func (a *API) handleBulkAssetTriage(w http.ResponseWriter, r *http.Request, u model.User) {
 	m, ok := a.requireMission(w, r, u)
 	if !ok {
@@ -369,22 +364,20 @@ func (a *API) handleBulkAssetTriage(w http.ResponseWriter, r *http.Request, u mo
 	a.ok(w, map[string]any{"updated": n, "status": req.Status})
 }
 
-// ---------------------------------------------------------------------------
-// Shared
+// --------------------------------------------------------------------------- Shared
 // ---------------------------------------------------------------------------
 
-// handleTriageSummary powers the progress readout on the services and the
-// findings screens.
+// handleTriageSummary powers the progress readout on the services and the findings
+// screens.
 //
-// The service counts stay at the top level, where they have always been, and
-// the findings arrive beside them under their own key rather than mixed into
-// the same totals: the two passes are counted separately because they are
-// done separately. The hosts are counted the same way beside both.
+// The service counts stay at the top level, where they have always been, and the findings
+// arrive beside them under their own key rather than mixed into the same totals: the two
+// passes are counted separately because they are done separately. The hosts are counted
+// the same way beside both.
 //
-// The service and finding counts leave out the rows of a skipped host, exactly
-// as the listings do, so the bar above a table always adds up to the table
-// under it. `hidden` says what that left out, which is what the banner above
-// those tables reads from.
+// The service and finding counts leave out the rows of a skipped host, exactly as the
+// listings do, so the bar above a table always adds up to the table under it. `hidden`
+// says what that left out, which is what the banner above those tables reads from.
 func (a *API) handleTriageSummary(w http.ResponseWriter, r *http.Request, u model.User) {
 	m, ok := a.requireMission(w, r, u)
 	if !ok {
@@ -437,8 +430,8 @@ func triageTotals(counts map[model.TriageStatus]int) (total, reviewed int) {
 	return total, total - counts[model.TriageTodo]
 }
 
-// withTriageAuthor fills in who last touched the triage, so the UI can show a
-// name instead of a user id.
+// withTriageAuthor fills in who last touched the triage, so the UI can show a name
+// instead of a user id.
 func (a *API) withTriageAuthor(r *http.Request, t *model.Triage) {
 	if t.UpdatedBy == 0 {
 		return

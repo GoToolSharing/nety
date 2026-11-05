@@ -34,8 +34,8 @@ func init() {
 // x11SetupRequest is a little-endian connection setup with no authorization.
 var x11SetupRequest = []byte{'l', 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-// x11ParseSetup parses the setup reply header: status (0 failed, 1 success,
-// 2 authenticate), protocol version, vendor (on success) or reason.
+// x11ParseSetup parses the setup reply header: status (0 failed, 1 success, 2
+// authenticate), protocol version, vendor (on success) or reason.
 func x11ParseSetup(b []byte) (status byte, major, minor uint16, info string, ok bool) {
 	if len(b) < 8 {
 		return 0, 0, 0, "", false

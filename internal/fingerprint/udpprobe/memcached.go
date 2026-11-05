@@ -4,20 +4,19 @@ import (
 	"strings"
 )
 
-// mcOpaque is the fixed, synthetic opaque value of the binary-protocol probe;
-// memcached echoes it in the response header.
+// mcOpaque is the fixed, synthetic opaque value of the binary-protocol probe; memcached
+// echoes it in the response header.
 const mcOpaque uint32 = 0x4e455459 // "NETY"
 
-// memcachedUDPFrameLen is the 8-byte UDP framing header memcached prepends on
-// datagram transport: request id (2), sequence (2), total datagrams (2),
-// reserved (2).
+// memcachedUDPFrameLen is the 8-byte UDP framing header memcached prepends on datagram
+// transport: request id (2), sequence (2), total datagrams (2), reserved (2).
 const memcachedUDPFrameLen = 8
 
 // mcReqID is the UDP frame request id we send and verify.
 const mcReqID uint16 = 0x4e45
 
-// memcachedStatsPayload is the ASCII "stats" command, wrapped in the memcached
-// UDP framing header that the server requires on port 11211/udp.
+// memcachedStatsPayload is the ASCII "stats" command, wrapped in the memcached UDP
+// framing header that the server requires on port 11211/udp.
 func memcachedStatsPayload() []byte {
 	out := make([]byte, 0, memcachedUDPFrameLen+7)
 	out = append(out, byte(mcReqID>>8), byte(mcReqID&0xff)) // request id
@@ -28,8 +27,8 @@ func memcachedStatsPayload() []byte {
 	return out
 }
 
-// memcachedVersionPayload is the binary-protocol VERSION command (opcode 0x0b)
-// behind the same UDP framing header.
+// memcachedVersionPayload is the binary-protocol VERSION command (opcode 0x0b) behind the
+// same UDP framing header.
 func memcachedVersionPayload() []byte {
 	out := make([]byte, 0, memcachedUDPFrameLen+24)
 	out = append(out, byte(mcReqID>>8), byte(mcReqID&0xff))
@@ -152,8 +151,8 @@ func memcachedStats(stats map[string]string, r *Result) {
 func decodeMemcachedVersion(resp []byte) *Result {
 	body, framed := stripMemcachedFrame(resp)
 	if len(body) < 24 {
-		// A server with the binary protocol disabled answers the ASCII
-		// "VERSION x.y.z" line instead.
+		// A server with the binary protocol disabled answers the ASCII "VERSION x.y.z"
+		// line instead.
 		return decodeMemcachedASCIIVersion(resp)
 	}
 	if body[0] != 0x81 || body[1] != 0x0b {

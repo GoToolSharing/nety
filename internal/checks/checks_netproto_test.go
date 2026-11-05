@@ -18,8 +18,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// probeHost is probe with host facts attached, for the checks whose scope
-// comes from what the scan already learned about the host.
+// probeHost is probe with host facts attached, for the checks whose scope comes from what
+// the scan already learned about the host.
 func probeHost(t *testing.T, id string, host model.Host, svc model.Service, all ...model.Service) []model.Finding {
 	t.Helper()
 	c := lookupCheck(t, id)
@@ -159,9 +159,8 @@ func TestDNSZoneCandidatesStayPlausible(t *testing.T) {
 // ldap-signing-not-required
 // ---------------------------------------------------------------------------
 
-// ldapSigningServer answers the anonymous bind and the rootDSE read, then
-// answers the simple bind with simpleCode. ad=false serves a rootDSE that is
-// not Active Directory's.
+// ldapSigningServer answers the anonymous bind and the rootDSE read, then answers the
+// simple bind with simpleCode. ad=false serves a rootDSE that is not Active Directory's.
 func ldapSigningServer(t *testing.T, simpleCode int, ad bool) int {
 	return fakeServer(t, func(c net.Conn) {
 		binds := 0
@@ -250,8 +249,8 @@ func TestLDAPSigningNotRequired(t *testing.T) {
 // ms-rprn-spooler
 // ---------------------------------------------------------------------------
 
-// smbFake is a scripted SMB2 server, just enough of one to take an anonymous
-// session as far as a DCE/RPC bind on a named pipe.
+// smbFake is a scripted SMB2 server, just enough of one to take an anonymous session as
+// far as a DCE/RPC bind on a named pipe.
 type smbFake struct {
 	allowSession bool
 	allowTree    bool
@@ -492,8 +491,8 @@ func TestCiscoSmartInstall(t *testing.T) {
 // smtp-open-relay / smtp-vrfy-expn
 // ---------------------------------------------------------------------------
 
-// smtpServer answers EHLO and dispatches the rest to reply. It fails the test
-// if a check ever sends DATA.
+// smtpServer answers EHLO and dispatches the rest to reply. It fails the test if a check
+// ever sends DATA.
 func smtpServer(t *testing.T, reply func(cmd string) string) int {
 	t.Helper()
 	return fakeServer(t, func(c net.Conn) {
@@ -662,8 +661,7 @@ func TestTFTPNameListStaysSmall(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// ntp-monlist
+// --------------------------------------------------------------------------- ntp-monlist
 // ---------------------------------------------------------------------------
 
 // ntpMonlistReply builds a mode 7 MON_GETLIST_1 reply listing peers.
@@ -764,8 +762,8 @@ func TestSNMPWriteCommunity(t *testing.T) {
 	})
 }
 
-// TestSNMPWriteListDoesNotRepeatTheDefaultCheck keeps the two SNMP checks
-// from reporting the same community string twice in one report.
+// TestSNMPWriteListDoesNotRepeatTheDefaultCheck keeps the two SNMP checks from reporting
+// the same community string twice in one report.
 func TestSNMPWriteListDoesNotRepeatTheDefaultCheck(t *testing.T) {
 	if len(snmpWriteCommunities) > 3 {
 		t.Fatalf("%d write communities tried; the list must stay a spot check", len(snmpWriteCommunities))
@@ -779,8 +777,8 @@ func TestSNMPWriteListDoesNotRepeatTheDefaultCheck(t *testing.T) {
 	}
 }
 
-// TestNewProbesSendNoWrite walks the request builders that have a destructive
-// counterpart and asserts the destructive opcode never appears.
+// TestNewProbesSendNoWrite walks the request builders that have a destructive counterpart
+// and asserts the destructive opcode never appears.
 func TestNewProbesSendNoWrite(t *testing.T) {
 	if binary.BigEndian.Uint16(ntpMonlistRequest[2:]) != 0x032a {
 		t.Fatalf("the NTP probe is not MON_GETLIST_1: %x", ntpMonlistRequest[:4])

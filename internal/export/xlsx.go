@@ -10,8 +10,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// The workbook is what gets mailed to the client: one sheet per view, frozen
-// header rows, auto-filters and colour-coded severities and matrix cells.
+// The workbook is what gets mailed to the client: one sheet per view, frozen header rows,
+// auto-filters and colour-coded severities and matrix cells.
 func writeXLSX(w io.Writer, d model.MissionData) error {
 	f := excelize.NewFile()
 	defer f.Close()
@@ -127,8 +127,8 @@ func buildStyles(f *excelize.File) (xlsxStyles, error) {
 		model.TriageInProgress: {"DBEAFE", "1D4ED8"},
 		model.TriageDone:       {"DCFCE7", "166534"},
 		model.TriageFlagged:    {"FEE2E2", "991B1B"},
-		// A false positive is a judgement about the finding, so it gets its
-		// own colour rather than hiding inside the grey of "skipped".
+		// A false positive is a judgement about the finding, so it gets its own colour
+		// rather than hiding inside the grey of "skipped".
 		model.TriageFalsePositive: {"FEF3C7", "92400E"},
 		model.TriageSkipped:       {"E5E7EB", "6B7280"},
 	}
@@ -241,10 +241,10 @@ func sheetSummary(f *excelize.File, st xlsxStyles, d model.MissionData) error {
 	if err := f.SetCellStr(sheet, "A2", "Generated "+d.ExportedAt.Format("2006-01-02 15:04 MST")); err != nil {
 		return err
 	}
-	// A workbook that is shorter than the mission says so on its own first
-	// sheet. Whoever opens it months later will not remember which box was
-	// ticked when it was produced, and a count that is quietly short is the
-	// kind of thing a client asks about at the worst moment.
+	// A workbook that is shorter than the mission says so on its own first sheet. Whoever
+	// opens it months later will not remember which box was ticked when it was produced,
+	// and a count that is quietly short is the kind of thing a client asks about at the
+	// worst moment.
 	if err := f.SetCellStr(sheet, "A3", scopeLine(d)); err != nil {
 		return err
 	}
@@ -297,9 +297,9 @@ func sheetSummary(f *excelize.File, st xlsxStyles, d model.MissionData) error {
 
 func sheetHosts(f *excelize.File, st xlsxStyles, d model.MissionData, names map[int64]string) error {
 	const sheet = "Hosts"
-	// The review columns sit where they do on the Services sheet: with the
-	// identity of the row. A host the operator skipped is exported like any
-	// other, and its status is what tells the reader it was out of scope.
+	// The review columns sit where they do on the Services sheet: with the identity of
+	// the row. A host the operator skipped is exported like any other, and its status is
+	// what tells the reader it was out of scope.
 	headers := []string{"Network", "IP", "Hostname",
 		"Status", "Note", "Reviewed by", "Reviewed at",
 		"Domain", "MAC", "Vendor", "OS", "Machine", "Open ports", "Discovered by", "Last seen"}
@@ -377,8 +377,8 @@ func sheetServices(f *excelize.File, st xlsxStyles, d model.MissionData, names m
 
 func sheetFindings(f *excelize.File, st xlsxStyles, d model.MissionData, names map[int64]string) error {
 	const sheet = "Findings"
-	// The review columns sit where they do on the Services sheet: with the
-	// identity of the row, ahead of the long text.
+	// The review columns sit where they do on the Services sheet: with the identity of
+	// the row, ahead of the long text.
 	headers := []string{"Severity", "Title", "Network", "IP", "Port", "Check",
 		"Status", "Note", "Reviewed by", "Reviewed at",
 		"Description", "Evidence", "Remediation"}

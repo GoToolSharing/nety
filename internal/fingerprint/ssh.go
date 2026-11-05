@@ -15,26 +15,26 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// sshClientIdent is the identification string NETY presents. It must start
-// with "SSH-2.0-"; a conventional value keeps picky servers happy.
+// sshClientIdent is the identification string NETY presents. It must start with
+// "SSH-2.0-"; a conventional value keeps picky servers happy.
 const sshClientIdent = "SSH-2.0-OpenSSH_9.6"
 
-// sshProbeUser is the (non-existent) account used for the "none" probe. No
-// credential is ever sent: the request only makes the server disclose which
-// authentication methods it would accept.
+// sshProbeUser is the (non-existent) account used for the "none" probe. No credential is
+// ever sent: the request only makes the server disclose which authentication methods it
+// would accept.
 const sshProbeUser = "nety-audit"
 
-// maxHostKeyAlgos bounds how many extra handshakes we open to collect host
-// keys (one connection per algorithm).
+// maxHostKeyAlgos bounds how many extra handshakes we open to collect host keys (one
+// connection per algorithm).
 const maxHostKeyAlgos = 6
 
-// errStopAuth aborts the x/crypto/ssh handshake right after the server
-// answered the "none" authentication request.
+// errStopAuth aborts the x/crypto/ssh handshake right after the server answered the
+// "none" authentication request.
 var errStopAuth = errors.New("fingerprint: ssh auth probe done")
 
-// probeSSH collects everything observable from an SSH server without
-// authenticating: the identification banner, the offered algorithms, the host
-// keys and the accepted authentication methods.
+// probeSSH collects everything observable from an SSH server without authenticating: the
+// identification banner, the offered algorithms, the host keys and the accepted
+// authentication methods.
 func (f *fingerprinter) probeSSH(ctx context.Context, d *dialer, banner []byte) *model.SSHInfo {
 	info := &model.SSHInfo{Banner: cleanText(string(banner))}
 
@@ -75,8 +75,8 @@ func (f *fingerprinter) probeSSH(ctx context.Context, d *dialer, banner []byte) 
 				info.AuthMeth = boundedList(methods, 16)
 			}
 		}
-		// One successful handshake is enough when the server advertised no
-		// algorithm list we could read.
+		// One successful handshake is enough when the server advertised no algorithm list
+		// we could read.
 		if kex == nil && i == 0 {
 			break
 		}
@@ -84,9 +84,9 @@ func (f *fingerprinter) probeSSH(ctx context.Context, d *dialer, banner []byte) 
 	return info
 }
 
-// sshAlgorithms reads the server identification string and its KEXINIT, which
-// lists every algorithm the server is willing to use. This is done on a raw
-// connection: the exchange is unencrypted up to that point.
+// sshAlgorithms reads the server identification string and its KEXINIT, which lists every
+// algorithm the server is willing to use. This is done on a raw connection: the exchange
+// is unencrypted up to that point.
 func (d *dialer) sshAlgorithms(ctx context.Context) (string, *kexInit, error) {
 	c, err := d.dial(ctx)
 	if err != nil {
@@ -119,11 +119,10 @@ func (d *dialer) sshAlgorithms(ctx context.Context) (string, *kexInit, error) {
 	return ident, nil, errors.New("ssh: no KEXINIT received")
 }
 
-// sshHostKey performs a full key exchange restricted to one host key
-// algorithm, captures the presented key, then asks for the "none"
-// authentication method to learn which methods the server accepts. It never
-// sends a credential. none reports that "none" was ACCEPTED, i.e. the server
-// grants access without authentication.
+// sshHostKey performs a full key exchange restricted to one host key algorithm, captures
+// the presented key, then asks for the "none" authentication method to learn which
+// methods the server accepts. It never sends a credential. none reports that "none" was
+// ACCEPTED, i.e. the server grants access without authentication.
 func (d *dialer) sshHostKey(ctx context.Context, algo string) (key ssh.PublicKey, methods []string, none bool, err error) {
 	cfg := &ssh.ClientConfig{
 		Config:        permissiveSSHConfig(),
@@ -169,8 +168,8 @@ func (d *dialer) sshHostKey(ctx context.Context, algo string) (key ssh.PublicKey
 	return key, methods, none, err
 }
 
-// sshHostKeyAlgos picks the host key algorithms worth asking for: those the
-// server advertised and this build can verify, certificates excluded.
+// sshHostKeyAlgos picks the host key algorithms worth asking for: those the server
+// advertised and this build can verify, certificates excluded.
 func sshHostKeyAlgos(k *kexInit) []string {
 	if k == nil || len(k.HostKeyAlgos) == 0 {
 		return []string{""} // let x/crypto negotiate whatever it prefers
@@ -198,9 +197,8 @@ func sshHostKeyAlgos(k *kexInit) []string {
 	return out
 }
 
-// permissiveSSHConfig accepts every algorithm this build knows, including the
-// insecure legacy ones: the goal is to observe old servers, not to protect a
-// session.
+// permissiveSSHConfig accepts every algorithm this build knows, including the insecure
+// legacy ones: the goal is to observe old servers, not to protect a session.
 func permissiveSSHConfig() ssh.Config {
 	sup, ins := ssh.SupportedAlgorithms(), ssh.InsecureAlgorithms()
 	return ssh.Config{
@@ -310,10 +308,10 @@ var distroHints = []struct{ needle, label, os string }{
 }
 
 // parseSSHIdent derives product, version, extra info, OS and CPEs from an SSH
-// identification string, following nmap's conventions: the vendor comment is
-// folded into the version and summarised in the extra info, so
-// "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6" yields product "OpenSSH",
-// version "8.9p1 Ubuntu-3ubuntu0.6" and extra "Ubuntu Linux; protocol 2.0".
+// identification string, following nmap's conventions: the vendor comment is folded into
+// the version and summarised in the extra info, so "SSH-2.0-OpenSSH_8.9p1
+// Ubuntu-3ubuntu0.6" yields product "OpenSSH", version "8.9p1 Ubuntu-3ubuntu0.6" and
+// extra "Ubuntu Linux; protocol 2.0".
 func parseSSHIdent(ident string) sshIdent {
 	var out sshIdent
 	m := sshIdentRe.FindStringSubmatch(strings.TrimSpace(cleanText(ident)))

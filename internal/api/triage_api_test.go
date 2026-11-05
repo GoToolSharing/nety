@@ -120,8 +120,8 @@ func TestBulkTriageEndpoint(t *testing.T) {
 	}
 }
 
-// A viewer may read the triage but must not change it, and a non-member must
-// not see the service at all.
+// A viewer may read the triage but must not change it, and a non-member must not see the
+// service at all.
 func TestTriagePermissions(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("alice", model.RoleOperator)
@@ -159,8 +159,7 @@ func TestTriagePermissions(t *testing.T) {
 
 var _ = store.ErrNotFound
 
-// ---------------------------------------------------------------------------
-// Findings
+// --------------------------------------------------------------------------- Findings
 // ---------------------------------------------------------------------------
 
 func seedFinding(t *testing.T, e *testEnv, missionID, networkID int64, ip, checkID string) model.Finding {
@@ -292,8 +291,8 @@ func TestBulkFindingTriageEndpoint(t *testing.T) {
 	}
 }
 
-// A viewer may read a finding's triage but must not change it, and a
-// non-member must not see the finding at all.
+// A viewer may read a finding's triage but must not change it, and a non-member must not
+// see the finding at all.
 func TestFindingTriagePermissions(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("alice", model.RoleOperator)

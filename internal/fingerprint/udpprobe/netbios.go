@@ -30,8 +30,8 @@ func netbiosPayload() []byte {
 	return b
 }
 
-// skipNBName walks a (possibly compressed) NetBIOS name at off and returns the
-// offset just past it.
+// skipNBName walks a (possibly compressed) NetBIOS name at off and returns the offset
+// just past it.
 func skipNBName(b []byte, off int) (int, bool) {
 	for i := 0; i < 8; i++ { // bounded: at most 8 labels
 		if off < 0 || off >= len(b) {
@@ -216,8 +216,8 @@ func decodeNetBIOS(resp []byte) *Result {
 		r.setBool("netbios.master_browser", true)
 	}
 
-	// Adapter statistics follow the name table: the first 6 bytes are the unit
-	// id, i.e. the adapter MAC.
+	// Adapter statistics follow the name table: the first 6 bytes are the unit id, i.e.
+	// the adapter MAC.
 	macOff := 1 + len(names)*18
 	zeroMAC := true
 	if macOff+6 <= len(rdata) {
@@ -235,9 +235,9 @@ func decodeNetBIOS(resp []byte) *Result {
 		}
 	}
 
-	// Samba reports an all-zero adapter address; a real Windows NetBIOS stack
-	// reports the NIC MAC. That, plus the Windows-specific suffixes, is the
-	// usual way to tell them apart.
+	// Samba reports an all-zero adapter address; a real Windows NetBIOS stack reports the
+	// NIC MAC. That, plus the Windows-specific suffixes, is the usual way to tell them
+	// apart.
 	windowsish := hasDC || hasPDC || server != "" || browser
 	switch {
 	case !zeroMAC && windowsish:

@@ -32,8 +32,8 @@ var snmpEnterprises = map[uint32]string{
 	6574: "synology", 24681: "qnap", 1981: "emc", 789: "netapp", 2620: "checkpoint", 3076: "cisco-altiga",
 }
 
-// buildSNMPv3Discovery builds an unauthenticated SNMPv3 GetRequest used for
-// engine ID discovery (RFC 3414 4.).
+// buildSNMPv3Discovery builds an unauthenticated SNMPv3 GetRequest used for engine ID
+// discovery (RFC 3414 4.).
 func buildSNMPv3Discovery(msgID, reqID uint32) []byte {
 	i32 := func(v uint32) []byte {
 		b := make([]byte, 4)

@@ -43,7 +43,11 @@ export function TableSkeleton({
 
 export function CardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('card space-y-3 p-4', className)} role="status" aria-label="Loading">
+    <div
+      className={cn('card space-y-3 p-4', className)}
+      role="status"
+      aria-label="Loading"
+    >
       <Skeleton className="h-3 w-24" />
       <Skeleton className="h-7 w-32" />
       <Skeleton className="h-3 w-40" />
@@ -102,7 +106,9 @@ export function ErrorState({
   const message =
     error instanceof Error ? error.message : typeof error === 'string' ? error : ''
   return (
-    <div className={cn('flex flex-col items-center gap-3 px-6 py-12 text-center', className)}>
+    <div
+      className={cn('flex flex-col items-center gap-3 px-6 py-12 text-center', className)}
+    >
       <div className="flex h-11 w-11 items-center justify-center rounded-full border border-crit/40 bg-crit/10 text-crit">
         <AlertIcon width={20} height={20} />
       </div>
@@ -145,14 +151,20 @@ export function InlineAlert({
   return (
     <div
       role={tone === 'crit' ? 'alert' : 'status'}
-      className={cn('flex gap-2.5 rounded-md border px-3 py-2.5 text-sm', tones[tone], className)}
+      className={cn(
+        'flex gap-2.5 rounded-md border px-3 py-2.5 text-sm',
+        tones[tone],
+        className,
+      )}
     >
       <span className="mt-0.5 shrink-0">
         {icon ?? (tone === 'info' ? <InfoIcon /> : <AlertIcon />)}
       </span>
       <div className="min-w-0 flex-1">
         {title && <div className="font-semibold">{title}</div>}
-        {children && <div className={cn('text-fg/90', title && 'mt-0.5')}>{children}</div>}
+        {children && (
+          <div className={cn('text-fg/90', title && 'mt-0.5')}>{children}</div>
+        )}
       </div>
     </div>
   )

@@ -7,9 +7,9 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// An operator on a mission must see who else is on it. Listing every account
-// is an administrator's privilege, so returning bare ids left a plain operator
-// with an empty team on a mission they belong to.
+// An operator on a mission must see who else is on it. Listing every account is an
+// administrator's privilege, so returning bare ids left a plain operator with an empty
+// team on a mission they belong to.
 func TestOperatorSeesTheMissionTeam(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("root", model.RoleAdmin)

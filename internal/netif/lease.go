@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// Lease is a DHCP lease, however it was obtained (parsed from a lease file or
-// negotiated by the built-in client).
+// Lease is a DHCP lease, however it was obtained (parsed from a lease file or negotiated
+// by the built-in client).
 type Lease struct {
 	Interface  string
 	Address    netip.Addr
@@ -33,8 +33,8 @@ type Lease struct {
 // Valid reports whether the lease carries a usable address.
 func (l Lease) Valid() bool { return l.Address.IsValid() && !l.Address.IsUnspecified() }
 
-// CIDR returns the lease address with its prefix length, defaulting to /24
-// when the server did not send a subnet mask.
+// CIDR returns the lease address with its prefix length, defaulting to /24 when the
+// server did not send a subnet mask.
 func (l Lease) CIDR() netip.Prefix {
 	if l.Prefix.IsValid() && l.Prefix.Bits() > 0 {
 		return netip.PrefixFrom(l.Address, l.Prefix.Bits())
@@ -45,12 +45,11 @@ func (l Lease) CIDR() netip.Prefix {
 	return netip.PrefixFrom(l.Address, 64)
 }
 
-// ---------------------------------------------------------------------------
-// Lease file discovery
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Lease file
+// discovery ---------------------------------------------------------------------------
 
-// LeaseGlobs are the well-known lease file locations, most specific first.
-// "%s" is replaced by the interface name, "%d" by its ifindex.
+// LeaseGlobs are the well-known lease file locations, most specific first. "%s" is
+// replaced by the interface name, "%d" by its ifindex.
 var LeaseGlobs = []string{
 	"/run/systemd/netif/leases/%d",                // systemd-networkd (key=value)
 	"/var/lib/NetworkManager/*-%s-*.lease",        // NetworkManager internal DHCP (key=value)
@@ -69,13 +68,12 @@ var LeaseGlobs = []string{
 	"/var/lib/dhcp/dhclient-*-%s.lease",           //
 }
 
-// FindLease looks for a DHCP lease for iface under root ("/" in production,
-// a temporary directory in tests) and returns the freshest usable one.
+// FindLease looks for a DHCP lease for iface under root ("/" in production, a temporary
+// directory in tests) and returns the freshest usable one.
 //
-// NETY does not send DHCP traffic during passive detection: Detect reports a
-// DHCP server only when a lease file says so. The active client
-// (DHCPAcquire) is used solely on the temporary sub-interfaces created by the
-// opt-in L2 segmentation techniques.
+// NETY does not send DHCP traffic during passive detection: Detect reports a DHCP server
+// only when a lease file says so. The active client (DHCPAcquire) is used solely on the
+// temporary sub-interfaces created by the opt-in L2 segmentation techniques.
 func FindLease(root, iface string, ifIndex int) (Lease, bool) {
 	var best Lease
 	found := false
@@ -157,13 +155,12 @@ func pickISCLease(leases []Lease, iface string) (Lease, bool) {
 	return best, found
 }
 
-// ---------------------------------------------------------------------------
-// key=value leases (systemd-networkd, NetworkManager internal DHCP, udhcpc)
+// --------------------------------------------------------------------------- key=value
+// leases (systemd-networkd, NetworkManager internal DHCP, udhcpc)
 // ---------------------------------------------------------------------------
 
-// ParseKVLease parses the "KEY=value" lease format written by
-// systemd-networkd (/run/systemd/netif/leases/<ifindex>) and by
-// NetworkManager's internal DHCP client.
+// ParseKVLease parses the "KEY=value" lease format written by systemd-networkd
+// (/run/systemd/netif/leases/<ifindex>) and by NetworkManager's internal DHCP client.
 func ParseKVLease(r io.Reader) Lease {
 	var l Lease
 	sc := bufio.NewScanner(r)
@@ -271,12 +268,12 @@ func maskToBits(v string) int {
 	return ones
 }
 
-// ---------------------------------------------------------------------------
-// ISC dhclient leases
+// --------------------------------------------------------------------------- ISC
+// dhclient leases
 // ---------------------------------------------------------------------------
 
-// ParseISCLeases parses /var/lib/dhcp/dhclient*.leases. Entries are returned
-// in file order; the last one for an interface is the current lease.
+// ParseISCLeases parses /var/lib/dhcp/dhclient*.leases. Entries are returned in file
+// order; the last one for an interface is the current lease.
 func ParseISCLeases(r io.Reader) []Lease {
 	var out []Lease
 	var cur *Lease
@@ -384,8 +381,8 @@ func applyISCOption(l *Lease, name, value string) {
 	}
 }
 
-// parseISCTime parses `<weekday> YYYY/MM/DD HH:MM:SS` (UTC) and the `epoch
-// <seconds>;` form emitted by newer dhclient versions.
+// parseISCTime parses `<weekday> YYYY/MM/DD HH:MM:SS` (UTC) and the `epoch <seconds>;`
+// form emitted by newer dhclient versions.
 func parseISCTime(fields []string) (time.Time, bool) {
 	if len(fields) >= 2 && fields[0] == "epoch" {
 		if n, err := strconv.ParseInt(fields[1], 10, 64); err == nil {

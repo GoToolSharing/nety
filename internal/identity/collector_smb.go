@@ -12,8 +12,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// ntlmEvidence converts an NTLM CHALLENGE into identity evidence.
-// extra attributes are merged into every evidence item.
+// ntlmEvidence converts an NTLM CHALLENGE into identity evidence. extra attributes are
+// merged into every evidence item.
 func ntlmEvidence(sink *evidenceSink, ch *ntlm.Challenge, source string, extra map[string]string) {
 	if ch == nil {
 		return
@@ -74,8 +74,8 @@ func ntlmEvidence(sink *evidenceSink, ch *ntlm.Challenge, source string, extra m
 	}
 }
 
-// probeSMB collects SMB2 NEGOTIATE facts + NTLM CHALLENGE, and SMB1 native
-// strings when the server still speaks SMB1.
+// probeSMB collects SMB2 NEGOTIATE facts + NTLM CHALLENGE, and SMB1 native strings when
+// the server still speaks SMB1.
 func (c *collector) probeSMB(ctx context.Context, sink *evidenceSink, ip string, port int) error {
 	pctx, cancel := withTimeout(ctx, 3*c.ioTimeout)
 	defer cancel()
@@ -114,8 +114,8 @@ func (c *collector) probeSMB(ctx context.Context, sink *evidenceSink, ip string,
 	if smb2Err != nil && pctx.Err() != nil {
 		return smb2Err
 	}
-	// SMB1: only when SMB2 failed (legacy host) or answered SMB1 only. Modern
-	// hosts with SMB1 disabled would just reset the connection.
+	// SMB1: only when SMB2 failed (legacy host) or answered SMB1 only. Modern hosts with
+	// SMB1 disabled would just reset the connection.
 	if smb2Err == nil {
 		return nil
 	}

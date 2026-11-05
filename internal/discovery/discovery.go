@@ -1,8 +1,7 @@
-// Package discovery implements host discovery: ARP/NDP sweeps on directly
-// connected segments, ICMP echo/timestamp, TCP SYN and ACK pings and UDP
-// probes with real protocol payloads (raw sockets, Linux), with an
-// unprivileged fallback (TCP connect ping, ICMP over "udp" ping sockets, UDP
-// sockets) used without privileges and on non-Linux systems.
+// Package discovery implements host discovery: ARP/NDP sweeps on directly connected
+// segments, ICMP echo/timestamp, TCP SYN and ACK pings and UDP probes with real protocol
+// payloads (raw sockets, Linux), with an unprivileged fallback (TCP connect ping, ICMP
+// over "udp" ping sockets, UDP sockets) used without privileges and on non-Linux systems.
 package discovery
 
 import (
@@ -49,8 +48,8 @@ const (
 	DefaultRate    = 5000
 	DefaultRetries = 1
 	DefaultTimeout = 2 * time.Second
-	// coalesceWindow is how long answers for a host are merged after the
-	// first one before the host is emitted.
+	// coalesceWindow is how long answers for a host are merged after the first one before
+	// the host is emitted.
 	coalesceWindow = 500 * time.Millisecond
 )
 
@@ -148,21 +147,19 @@ func cleanPorts(in, def []uint16) []uint16 {
 
 // Discover finds live hosts among opts.Targets (minus opts.Excludes).
 //
-// Each host is emitted once: the first answer opens a short merge window
-// (500ms) during which further answering methods, the MAC (ARP/NDP) and TTL
-// are accumulated; later answers for an already emitted host are only
-// logged. Methods is therefore best effort (complete for answers arriving
-// close together, which is the common case since all probes for a host are
-// sent back-to-back).
+// Each host is emitted once: the first answer opens a short merge window (500ms) during
+// which further answering methods, the MAC (ARP/NDP) and TTL are accumulated; later
+// answers for an already emitted host are only logged. Methods is therefore best effort
+// (complete for answers arriving close together, which is the common case since all
+// probes for a host are sent back-to-back).
 //
-// With raw socket privileges on Linux the raw engine is used (ARP/NDP for
-// on-link targets, ICMP echo/timestamp, TCP SYN/ACK, UDP payloads).
-// Otherwise the unprivileged engine runs: ICMP echo over ping sockets when
-// the system allows it, TCP connect ping on TCPPorts (an accepted or refused
-// connection proves the host is up) and UDP probes.
+// With raw socket privileges on Linux the raw engine is used (ARP/NDP for on-link
+// targets, ICMP echo/timestamp, TCP SYN/ACK, UDP payloads). Otherwise the unprivileged
+// engine runs: ICMP echo over ping sockets when the system allows it, TCP connect ping on
+// TCPPorts (an accepted or refused connection proves the host is up) and UDP probes.
 //
-// Retries: 0 = default (1), < 0 = none. Timeout is the late-reply wait after
-// the last probe. Rate is in packets (or connection attempts) per second.
+// Retries: 0 = default (1), < 0 = none. Timeout is the late-reply wait after the last
+// probe. Rate is in packets (or connection attempts) per second.
 func (d *Discoverer) Discover(ctx context.Context, opts engine.DiscoveryOptions, out func(engine.DiscoveredHost)) error {
 	if out == nil {
 		return errors.New("discovery: nil output callback")
@@ -302,8 +299,8 @@ func (c *collector) finalize(st *hostState) engine.DiscoveredHost {
 	return h
 }
 
-// close emits every pending host and waits for in-flight callbacks; no
-// callback runs after close returns.
+// close emits every pending host and waits for in-flight callbacks; no callback runs
+// after close returns.
 func (c *collector) close() {
 	c.mu.Lock()
 	c.closed = true

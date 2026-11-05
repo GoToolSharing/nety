@@ -7,9 +7,9 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// TestTriageSurvivesRescan is the property that makes triage worth having: an
-// operator spends a day going through services by hand, re-runs the scan the
-// next morning, and must not lose any of it.
+// TestTriageSurvivesRescan is the property that makes triage worth having: an operator
+// spends a day going through services by hand, re-runs the scan the next morning, and
+// must not lose any of it.
 func TestTriageSurvivesRescan(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -133,8 +133,7 @@ func TestBulkTriageIsScopedToTheMission(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Findings
+// --------------------------------------------------------------------------- Findings
 // ---------------------------------------------------------------------------
 
 func seedFinding(t *testing.T, s *Store, missionID int64, ip, checkID string) model.Finding {
@@ -150,9 +149,9 @@ func seedFinding(t *testing.T, s *Store, missionID int64, ip, checkID string) mo
 	return f
 }
 
-// TestFindingTriageSurvivesRescan is the same property as for services: a
-// check firing again the next morning must not erase the verdict the operator
-// already wrote against it.
+// TestFindingTriageSurvivesRescan is the same property as for services: a check firing
+// again the next morning must not erase the verdict the operator already wrote against
+// it.
 func TestFindingTriageSurvivesRescan(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -271,8 +270,8 @@ func TestBulkFindingTriageIsScopedToTheMission(t *testing.T) {
 		t.Fatalf("expected every status in the counts, got %+v", counts)
 	}
 
-	// Service and finding counts are kept apart: triaging one says nothing
-	// about the other.
+	// Service and finding counts are kept apart: triaging one says nothing about the
+	// other.
 	svcCounts, err := s.TriageCounts(ctx, mine.ID, 0, false)
 	if err != nil {
 		t.Fatalf("service counts: %v", err)

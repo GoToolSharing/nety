@@ -9,7 +9,12 @@ import { Card, KeyValue, PageHeader } from '@/components/ui/Card'
 import { Drawer, ConfirmDialog } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
-import { EmptyState, ErrorState, InlineAlert, TableSkeleton } from '@/components/ui/Feedback'
+import {
+  EmptyState,
+  ErrorState,
+  InlineAlert,
+  TableSkeleton,
+} from '@/components/ui/Feedback'
 import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
 import {
@@ -21,15 +26,15 @@ import {
   SortHeader,
   useSort,
 } from '@/components/common'
-import {
-  addressHistory,
-  formatNumber,
-  humanizeId,
-  isAddressOrPrefix,
-} from '@/lib/format'
+import { addressHistory, formatNumber, humanizeId, isAddressOrPrefix } from '@/lib/format'
 import { cn } from '@/lib/cn'
 import { SKIPPED_ROW_CLASS, SkipToggle, TriageNote } from '@/components/Triage'
-import { ASSET_KIND_LABELS, AssetKindIcon, AssetIcon, MergeIcon } from '@/components/icons'
+import {
+  ASSET_KIND_LABELS,
+  AssetKindIcon,
+  AssetIcon,
+  MergeIcon,
+} from '@/components/icons'
 import { ASSET_KINDS, type Asset, type AssetKind, type TriageStatus } from '@/types/api'
 
 /**
@@ -126,7 +131,12 @@ function AssetDrawer({
         width="lg"
         title={
           <span className="flex items-center gap-2">
-            <AssetKindIcon kind={asset.kind} width={18} height={18} className="text-accent" />
+            <AssetKindIcon
+              kind={asset.kind}
+              width={18}
+              height={18}
+              className="text-accent"
+            />
             {asset.label || `Asset #${asset.id}`}
           </span>
         }
@@ -159,9 +169,10 @@ function AssetDrawer({
           {asset.triage?.status === 'skipped' && (
             <p className="mt-1.5 text-xs text-muted">
               Skipped: every one of its {addressCount(asset)} address
-              {addressCount(asset) === 1 ? '' : 'es'} is out of scope, and so is any address it
-              turns up on later. Its services, its findings and the segmentation tests aimed at
-              it are hidden from the other screens. Nothing was deleted.
+              {addressCount(asset) === 1 ? '' : 'es'} is out of scope, and so is any
+              address it turns up on later. Its services, its findings and the
+              segmentation tests aimed at it are hidden from the other screens. Nothing
+              was deleted.
             </p>
           )}
         </section>
@@ -218,7 +229,10 @@ function AssetDrawer({
                   </tr>
                 ) : (
                   history.map((ip) => (
-                    <tr key={`${ip.ip}-${ip.network_id}`} className={cn(!ip.current && 'opacity-70')}>
+                    <tr
+                      key={`${ip.ip}-${ip.network_id}`}
+                      className={cn(!ip.current && 'opacity-70')}
+                    >
                       <td>
                         <Mono className="font-medium">{ip.ip}</Mono>
                       </td>
@@ -240,7 +254,8 @@ function AssetDrawer({
 
         <section className="mt-4">
           <h3 className="panel-title mb-1.5">
-            Identity keys ({(asset.keys ?? []).length}) - why NETY believes it is the same machine
+            Identity keys ({(asset.keys ?? []).length}) - why NETY believes it is the same
+            machine
           </h3>
           <div className="table-scroll rounded-md border border-border">
             <table className="data-table">
@@ -257,7 +272,8 @@ function AssetDrawer({
                 {(asset.keys ?? []).length === 0 ? (
                   <tr>
                     <td colSpan={5} className="text-center text-muted">
-                      No identity evidence collected. Enable identity collection on the scan.
+                      No identity evidence collected. Enable identity collection on the
+                      scan.
                     </td>
                   </tr>
                 ) : (
@@ -275,7 +291,9 @@ function AssetDrawer({
                           <Mono>{k.source || '-'}</Mono>
                         </td>
                         <td className="text-right">
-                          <Badge tone={confidenceTone(k.confidence)}>{k.confidence}/100</Badge>
+                          <Badge tone={confidenceTone(k.confidence)}>
+                            {k.confidence}/100
+                          </Badge>
                         </td>
                         <td className="text-muted">
                           <RelativeTime value={k.last_seen} />
@@ -343,9 +361,9 @@ function AssetDrawer({
               <h3 className="panel-title mb-1.5">Merge another asset into this one</h3>
               <div className="space-y-3 rounded-md border border-border bg-elevated/50 p-3">
                 <p className="text-xs text-muted">
-                  Use this when the correlator split one machine in two - for example the same
-                  server seen on two VLANs without a shared identity key. The source asset's IPs
-                  and keys move here, and the source disappears.
+                  Use this when the correlator split one machine in two, for example when
+                  the same server seen on two VLANs without a shared identity key. The
+                  source asset's IPs and keys move here, and the source disappears.
                 </p>
                 <SelectField
                   label="Asset to merge in (source)"
@@ -388,10 +406,11 @@ function AssetDrawer({
         busy={merge.isPending}
         body={
           <>
-            <strong className="text-fg">{sourceAsset?.label || mergeSource}</strong> will be
-            merged into <strong className="text-fg">{asset.label || `#${asset.id}`}</strong>. Its
-            addresses and identity keys move over and the source asset is removed. This cannot be
-            undone.
+            <strong className="text-fg">{sourceAsset?.label || mergeSource}</strong> will
+            be merged into{' '}
+            <strong className="text-fg">{asset.label || `#${asset.id}`}</strong>. Its
+            addresses and identity keys move over and the source asset is removed. This
+            cannot be undone.
           </>
         }
         onConfirm={async () => {
@@ -493,7 +512,9 @@ export default function AssetsPage() {
   const all = assets.data ?? []
 
   // Keep the drawer in sync when a live event updates the selected asset.
-  const selectedLive = selected ? (all.find((a) => a.id === selected.id) ?? selected) : null
+  const selectedLive = selected
+    ? (all.find((a) => a.id === selected.id) ?? selected)
+    : null
 
   const kindCounts = useMemo(() => {
     const c = new Map<AssetKind, number>()
@@ -534,8 +555,9 @@ export default function AssetsPage() {
 
       {multiVlan > 0 && (
         <InlineAlert tone="info" className="mt-4">
-          {multiVlan} asset{multiVlan > 1 ? 's are' : ' is'} present on more than one network -
-          a multi-homed machine is often the shortest path across a segment boundary.
+          {multiVlan} asset{multiVlan > 1 ? 's are' : ' is'} present on more than one
+          network: a multi-homed machine is often the shortest path across a segment
+          boundary.
         </InlineAlert>
       )}
 
@@ -547,7 +569,9 @@ export default function AssetsPage() {
           className="w-full max-w-sm"
         />
         <AddressFilterInput value={address} onChange={setAddress} />
-        <span className="tabular text-xs text-faint">{formatNumber(rows.length)} assets</span>
+        <span className="tabular text-xs text-faint">
+          {formatNumber(rows.length)} assets
+        </span>
       </div>
 
       {picked.size > 0 && (
@@ -612,7 +636,9 @@ export default function AssetsPage() {
           <EmptyState
             icon={<AssetIcon width={20} height={20} />}
             title={
-              all.length === 0 && !address ? 'No asset yet' : 'No asset matches those filters'
+              all.length === 0 && !address
+                ? 'No asset yet'
+                : 'No asset matches those filters'
             }
             description={
               all.length === 0 && !address
@@ -644,11 +670,26 @@ export default function AssetsPage() {
                   <SortHeader column="label" label="Asset" sort={sort} onSort={onSort} />
                   <SortHeader column="kind" label="Kind" sort={sort} onSort={onSort} />
                   <SortHeader column="os" label="OS" sort={sort} onSort={onSort} />
-                  <SortHeader column="domain" label="Domain" sort={sort} onSort={onSort} />
-                  <SortHeader column="ips" label="Addresses" sort={sort} onSort={onSort} />
+                  <SortHeader
+                    column="domain"
+                    label="Domain"
+                    sort={sort}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    column="ips"
+                    label="Addresses"
+                    sort={sort}
+                    onSort={onSort}
+                  />
                   <th>Identity keys</th>
                   <th>Tags</th>
-                  <SortHeader column="last_seen" label="Last seen" sort={sort} onSort={onSort} />
+                  <SortHeader
+                    column="last_seen"
+                    label="Last seen"
+                    sort={sort}
+                    onSort={onSort}
+                  />
                 </tr>
               </thead>
               <tbody>
@@ -699,10 +740,14 @@ export default function AssetsPage() {
                           <span className="truncate">{a.label || `Asset #${a.id}`}</span>
                         </span>
                         {a.hostname && a.hostname !== a.label && (
-                          <span className="ml-[23px] block text-xs text-faint">{a.hostname}</span>
+                          <span className="ml-[23px] block text-xs text-faint">
+                            {a.hostname}
+                          </span>
                         )}
                       </td>
-                      <td className="text-muted">{ASSET_KIND_LABELS[a.kind] ?? a.kind}</td>
+                      <td className="text-muted">
+                        {ASSET_KIND_LABELS[a.kind] ?? a.kind}
+                      </td>
                       <td className="max-w-[200px] truncate text-muted" title={a.os}>
                         {a.os || '-'}
                       </td>
@@ -749,7 +794,9 @@ export default function AssetsPage() {
                                 {k}
                               </Badge>
                             ))}
-                          {(a.keys ?? []).length === 0 && <span className="text-faint">-</span>}
+                          {(a.keys ?? []).length === 0 && (
+                            <span className="text-faint">-</span>
+                          )}
                         </span>
                       </td>
                       <td>
@@ -759,7 +806,9 @@ export default function AssetsPage() {
                               {t}
                             </Badge>
                           ))}
-                          {(a.tags ?? []).length === 0 && <span className="text-faint">-</span>}
+                          {(a.tags ?? []).length === 0 && (
+                            <span className="text-faint">-</span>
+                          )}
                         </span>
                       </td>
                       <td className={cn('text-muted')}>

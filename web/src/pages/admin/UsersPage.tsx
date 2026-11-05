@@ -12,7 +12,12 @@ import { Card, PageHeader } from '@/components/ui/Card'
 import { Button, IconButton } from '@/components/ui/Button'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
 import { Checkbox, SelectField, TextField } from '@/components/ui/Field'
-import { EmptyState, ErrorState, InlineAlert, TableSkeleton } from '@/components/ui/Feedback'
+import {
+  EmptyState,
+  ErrorState,
+  InlineAlert,
+  TableSkeleton,
+} from '@/components/ui/Feedback'
 import { Badge } from '@/components/ui/Badge'
 import { RelativeTime, SearchInput } from '@/components/common'
 import { useToast } from '@/components/ui/Toast'
@@ -70,7 +75,11 @@ function CreateUserModal({ open, onClose }: { open: boolean; onClose: () => void
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
-          <Button variant="primary" loading={create.isPending} onClick={() => void submit()}>
+          <Button
+            variant="primary"
+            loading={create.isPending}
+            onClick={() => void submit()}
+          >
             Create user
           </Button>
         </>
@@ -148,7 +157,10 @@ function ResetPasswordModal({
     }
     try {
       await reset.mutateAsync({ id: user.id, password, mustChange })
-      toast.success('Password reset', `${user.username} can sign in with the new password.`)
+      toast.success(
+        'Password reset',
+        `${user.username} can sign in with the new password.`,
+      )
       setPassword('')
       onClose()
     } catch (err) {
@@ -165,7 +177,11 @@ function ResetPasswordModal({
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
-          <Button variant="primary" loading={reset.isPending} onClick={() => void submit()}>
+          <Button
+            variant="primary"
+            loading={reset.isPending}
+            onClick={() => void submit()}
+          >
             Reset password
           </Button>
         </>
@@ -231,7 +247,11 @@ export default function UsersPage() {
         title="Users"
         description="Accounts that can sign in to this NETY instance."
         actions={
-          <Button variant="primary" icon={<PlusIcon />} onClick={() => setCreateOpen(true)}>
+          <Button
+            variant="primary"
+            icon={<PlusIcon />}
+            onClick={() => setCreateOpen(true)}
+          >
             New user
           </Button>
         }
@@ -294,9 +314,13 @@ export default function UsersPage() {
                           aria-label={`Role of ${u.username}`}
                           value={u.role}
                           disabled={isMe}
-                          onChange={(e) => void update(u, { role: e.target.value as Role })}
+                          onChange={(e) =>
+                            void update(u, { role: e.target.value as Role })
+                          }
                           className="input-base h-7 w-auto py-0 text-xs"
-                          title={isMe ? 'You cannot change your own role' : ROLE_BLURB[u.role]}
+                          title={
+                            isMe ? 'You cannot change your own role' : ROLE_BLURB[u.role]
+                          }
                         >
                           {ROLES.map((r) => (
                             <option key={r} value={r}>
@@ -313,7 +337,10 @@ export default function UsersPage() {
                             <Badge tone="ok">Active</Badge>
                           )}
                           {u.must_change_password && (
-                            <Badge tone="warn" title="Must choose a new password on next sign-in">
+                            <Badge
+                              tone="warn"
+                              title="Must choose a new password on next sign-in"
+                            >
                               must change pw
                             </Badge>
                           )}
@@ -331,14 +358,20 @@ export default function UsersPage() {
                       </td>
                       <td>
                         <div className="flex items-center justify-end gap-1.5">
-                          <Button size="sm" onClick={() => setResetting(u)} icon={<LockIcon width={13} height={13} />}>
+                          <Button
+                            size="sm"
+                            onClick={() => setResetting(u)}
+                            icon={<LockIcon width={13} height={13} />}
+                          >
                             Reset
                           </Button>
                           <Button
                             size="sm"
                             disabled={isMe}
                             onClick={() => void update(u, { disabled: !u.disabled })}
-                            title={isMe ? 'You cannot disable your own account' : undefined}
+                            title={
+                              isMe ? 'You cannot disable your own account' : undefined
+                            }
                           >
                             {u.disabled ? 'Enable' : 'Disable'}
                           </Button>

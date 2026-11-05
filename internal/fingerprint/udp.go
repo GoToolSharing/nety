@@ -13,17 +13,16 @@ import (
 const (
 	// maxUDPProbes bounds how many datagrams we send to one UDP port.
 	maxUDPProbes = 20
-	// udpSweepIntensity is the intensity from which probes that do not claim
-	// the port are tried too, so a service parked on a non-standard port is
-	// still identified.
+	// udpSweepIntensity is the intensity from which probes that do not claim the port are
+	// tried too, so a service parked on a non-standard port is still identified.
 	udpSweepIntensity = 7
-	// udpRepeatLimit stops the loop on a service that answers every probe
-	// with the same bytes (echo services, dumb proxies).
+	// udpRepeatLimit stops the loop on a service that answers every probe with the same
+	// bytes (echo services, dumb proxies).
 	udpRepeatLimit = 3
 )
 
-// udpPlan orders the probes to send: the ones aimed at this port first, then,
-// at high intensity, the rest. targeted is how many of them claim the port.
+// udpPlan orders the probes to send: the ones aimed at this port first, then, at high
+// intensity, the rest. targeted is how many of them claim the port.
 func udpPlan(port uint16, intensity int) (plan []udpprobe.Probe, targeted int) {
 	plan = udpprobe.For(port)
 	targeted = len(plan)
@@ -45,9 +44,9 @@ func udpPlan(port uint16, intensity int) (plan []udpprobe.Probe, targeted int) {
 	return plan, targeted
 }
 
-// fingerprintUDP identifies a UDP service from the answers to a set of
-// protocol probes. The port scanner already established that something
-// answers there; our job is to say what.
+// fingerprintUDP identifies a UDP service from the answers to a set of protocol probes.
+// The port scanner already established that something answers there; our job is to say
+// what.
 func (f *fingerprinter) fingerprintUDP(
 	ctx context.Context, d *dialer, svc *model.Service, intensity int,
 ) error {
@@ -62,8 +61,8 @@ func (f *fingerprinter) fingerprintUDP(
 		if pctx.Err() != nil || sent >= maxUDPProbes || repeats >= udpRepeatLimit {
 			break
 		}
-		// Probes that do not claim this port are a long shot: give them one
-		// round trip, not the full per-probe budget.
+		// Probes that do not claim this port are a long shot: give them one round trip,
+		// not the full per-probe budget.
 		wait := capDuration(d.timeout, 4*time.Second)
 		if sent >= targeted {
 			wait = capDuration(d.timeout, time.Second)
@@ -71,8 +70,8 @@ func (f *fingerprinter) fingerprintUDP(
 		sent++
 		resp, err := d.sendProbe(pctx, p.Payload, false, wait)
 		if err != nil {
-			// ICMP port unreachable surfaces as ECONNREFUSED on a connected
-			// UDP socket: the port is not actually serving.
+			// ICMP port unreachable surfaces as ECONNREFUSED on a connected UDP socket:
+			// the port is not actually serving.
 			f.log.Debug("udp probe failed",
 				"target", d.addr(), "probe", p.Name, "err", err)
 			continue
@@ -163,9 +162,9 @@ func applyUDPResult(svc *model.Service, r *udpprobe.Result) {
 	svc.Confidence = conf
 }
 
-// udpExchange sends one datagram and waits for an answer, retrying a few
-// times because UDP loses packets silently. It is used by the nmap UDP probe
-// engine, which does not own the socket.
+// udpExchange sends one datagram and waits for an answer, retrying a few times because
+// UDP loses packets silently. It is used by the nmap UDP probe engine, which does not own
+// the socket.
 func udpExchange(ctx context.Context, dial func(context.Context) (net.Conn, error),
 	payload []byte, wait time.Duration, retries int) []byte {
 	if wait <= 0 {

@@ -13,9 +13,9 @@ type ResolvConf struct {
 	Nameservers []netip.Addr
 	Search      []string
 	Domain      string
-	// Stub is true when the only nameserver is a local stub resolver
-	// (127.0.0.53 for systemd-resolved, 127.0.0.1 for dnsmasq-style setups),
-	// meaning the real upstream servers must be looked up elsewhere.
+	// Stub is true when the only nameserver is a local stub resolver (127.0.0.53 for
+	// systemd-resolved, 127.0.0.1 for dnsmasq-style setups), meaning the real upstream
+	// servers must be looked up elsewhere.
 	Stub bool
 }
 
@@ -24,8 +24,8 @@ type ResolvConf struct {
 var SystemdStubResolver = netip.MustParseAddr("127.0.0.53")
 
 // ResolvConfPaths are the files Detect reads, most authoritative first.
-// /run/systemd/resolve/resolv.conf holds the real upstream servers when
-// /etc/resolv.conf only points at the 127.0.0.53 stub.
+// /run/systemd/resolve/resolv.conf holds the real upstream servers when /etc/resolv.conf
+// only points at the 127.0.0.53 stub.
 var ResolvConfPaths = []string{
 	"/run/systemd/resolve/resolv.conf",
 	"/etc/resolv.conf",
@@ -34,9 +34,8 @@ var ResolvConfPaths = []string{
 	"/etc/resolvconf/run/resolv.conf",
 }
 
-// ParseResolvConf parses one resolv.conf stream. Unknown directives, comments
-// (# and ;) and malformed addresses are ignored: this must never fail on a
-// vendor-mangled file.
+// ParseResolvConf parses one resolv.conf stream. Unknown directives, comments (# and ;)
+// and malformed addresses are ignored: this must never fail on a vendor-mangled file.
 func ParseResolvConf(r io.Reader) ResolvConf {
 	var rc ResolvConf
 	sc := bufio.NewScanner(r)
@@ -97,10 +96,10 @@ func parseResolvAddr(s string) (netip.Addr, bool) {
 	return a.Unmap(), true
 }
 
-// LoadResolvConf reads every readable file in paths under root and merges
-// them. Loopback stub resolvers are dropped as soon as a real upstream server
-// is known, so the caller reports the servers the segment actually uses.
-// root is normally "/"; tests pass a temporary directory.
+// LoadResolvConf reads every readable file in paths under root and merges them. Loopback
+// stub resolvers are dropped as soon as a real upstream server is known, so the caller
+// reports the servers the segment actually uses. root is normally "/"; tests pass a
+// temporary directory.
 func LoadResolvConf(root string, paths []string) ResolvConf {
 	var merged ResolvConf
 	sawStub := false
@@ -126,8 +125,8 @@ func LoadResolvConf(root string, paths []string) ResolvConf {
 		}
 	}
 	if len(merged.Nameservers) == 0 && sawStub {
-		// Only a stub resolver is configured and its upstreams are not
-		// readable: report the stub rather than nothing.
+		// Only a stub resolver is configured and its upstreams are not readable: report
+		// the stub rather than nothing.
 		merged.Nameservers = []netip.Addr{SystemdStubResolver}
 		merged.Stub = true
 	}

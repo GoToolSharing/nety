@@ -9,12 +9,23 @@ import { TextField } from '@/components/ui/Field'
 import { InlineAlert } from '@/components/ui/Feedback'
 import { useToast } from '@/components/ui/Toast'
 import { Badge } from '@/components/ui/Badge'
-import { AlertIcon, LockIcon, LogoutIcon, MoonIcon, NetyMark, SunIcon } from '@/components/icons'
+import {
+  AlertIcon,
+  LockIcon,
+  LogoutIcon,
+  MoonIcon,
+  NetyMark,
+  SunIcon,
+} from '@/components/icons'
 import { formatDuration } from '@/lib/format'
 
 function Logo() {
   return (
-    <Link to="/missions" className="flex items-center gap-2 rounded" aria-label="NETY home">
+    <Link
+      to="/missions"
+      className="flex items-center gap-2 rounded"
+      aria-label="NETY home"
+    >
       <NetyMark size={24} />
       <span className="text-[15px] font-semibold tracking-tight">NETY</span>
     </Link>
@@ -154,7 +165,9 @@ export default function AppShell() {
           )}
 
           <IconButton
-            label={theme === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme'}
+            label={
+              theme === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme'
+            }
             onClick={toggle}
           >
             {theme === 'dark' ? <SunIcon /> : <MoonIcon />}

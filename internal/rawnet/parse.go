@@ -20,8 +20,8 @@ const (
 	ICMPv6EchoReply      = 129
 )
 
-// Packet is a decoded frame. Slices (MACs, Payload) alias the input buffer:
-// copy them if they must outlive the next read.
+// Packet is a decoded frame. Slices (MACs, Payload) alias the input buffer: copy them if
+// they must outlive the next read.
 type Packet struct {
 	SrcMAC, DstMAC net.HardwareAddr
 	EtherType      uint16
@@ -63,8 +63,8 @@ type Packet struct {
 	InnerSrcPort, InnerDstPort uint16
 }
 
-// ParseFrame decodes an Ethernet frame into p (reset first). It returns
-// false for truncated or uninteresting frames.
+// ParseFrame decodes an Ethernet frame into p (reset first). It returns false for
+// truncated or uninteresting frames.
 func ParseFrame(data []byte, p *Packet) bool {
 	*p = Packet{}
 	if len(data) < 14 {
@@ -157,8 +157,7 @@ func parseIPv6(b []byte, p *Packet) bool {
 	return parseTransport(rest, p, true)
 }
 
-// skipIPv6Ext walks IPv6 extension headers. frag is true for a non-first
-// fragment.
+// skipIPv6Ext walks IPv6 extension headers. frag is true for a non-first fragment.
 func skipIPv6Ext(nh uint8, b []byte) (uint8, []byte, bool, bool) {
 	for range 8 {
 		switch nh {

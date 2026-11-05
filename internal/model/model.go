@@ -1,6 +1,6 @@
-// Package model holds the shared domain types of NETY. Every other package
-// (engines, store, API, exports) speaks in these types. JSON tags are the
-// wire format of the REST API and of the JSON export, keep them stable.
+// Package model holds the shared domain types of NETY. Every other package (engines,
+// store, API, exports) speaks in these types. JSON tags are the wire format of the REST
+// API and of the JSON export, keep them stable.
 package model
 
 import (
@@ -8,9 +8,8 @@ import (
 	"time"
 )
 
-// ---------------------------------------------------------------------------
-// Users & missions
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Users &
+// missions ---------------------------------------------------------------------------
 
 type Role string
 
@@ -46,8 +45,8 @@ type Mission struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
-// ---------------------------------------------------------------------------
-// Networks (one per VLAN / attachment point)
+// --------------------------------------------------------------------------- Networks
+// (one per VLAN / attachment point)
 // ---------------------------------------------------------------------------
 
 // Network is a network segment (usually a VLAN) the operator plugged into.
@@ -93,8 +92,7 @@ type L2Neighbor struct {
 	Capabilities []string `json:"capabilities,omitempty"`
 }
 
-// ---------------------------------------------------------------------------
-// Scans
+// --------------------------------------------------------------------------- Scans
 // ---------------------------------------------------------------------------
 
 type ScanKind string
@@ -103,8 +101,8 @@ const (
 	ScanDiscovery    ScanKind = "discovery"    // full mapping of the current network
 	ScanSegmentation ScanKind = "segmentation" // replay other networks' services from here
 	ScanL2Probe      ScanKind = "l2probe"      // passive/active L2 recon (CDP/LLDP/DTP/VLAN brute)
-	// ScanChecks re-runs detection and the checks over what previous scans
-	// already inventoried, without discovering or port-scanning anything.
+	// ScanChecks re-runs detection and the checks over what previous scans already
+	// inventoried, without discovering or port-scanning anything.
 	ScanChecks ScanKind = "checks"
 )
 
@@ -123,8 +121,8 @@ const (
 type ScanOptions struct {
 	Profile string `json:"profile"` // quick | standard | full | custom
 
-	// Targets. If AutoTargets is true, the local prefixes of the network are
-	// added (and, if the mission has a scope, its CIDRs).
+	// Targets. If AutoTargets is true, the local prefixes of the network are added (and,
+	// if the mission has a scope, its CIDRs).
 	Targets     []string `json:"targets"`
 	Excludes    []string `json:"excludes"`
 	AutoTargets bool     `json:"auto_targets"`
@@ -142,9 +140,9 @@ type ScanOptions struct {
 	ServiceDetection   bool `json:"service_detection"`   //
 	IdentityCollection bool `json:"identity_collection"` //
 	Checks             bool `json:"checks"`              //
-	// AllowDefaultCreds enables the only intrusive check family: a short,
-	// curated list of vendor default credentials, capped so nothing can be
-	// locked out. Off by default and opted into per scan.
+	// AllowDefaultCreds enables the only intrusive check family: a short, curated list of
+	// vendor default credentials, capped so nothing can be locked out. Off by default and
+	// opted into per scan.
 	AllowDefaultCreds bool `json:"allow_default_creds"`
 
 	// Segmentation only.
@@ -166,9 +164,9 @@ type ScanStats struct {
 	MatchedAssets int64 `json:"matched_assets"`
 }
 
-// WorkPhase identifies a stage of a scan. A scan is split into persisted work
-// units per phase so that it can be paused, stopped, or interrupted by a crash
-// and resumed later without losing or redoing work.
+// WorkPhase identifies a stage of a scan. A scan is split into persisted work units per
+// phase so that it can be paused, stopped, or interrupted by a crash and resumed later
+// without losing or redoing work.
 type WorkPhase string
 
 const (
@@ -197,9 +195,9 @@ const (
 	WorkFailed  WorkStatus = "failed"
 )
 
-// WorkUnit is one resumable chunk of a scan (a slice of targets, a batch of
-// host/port probes, one service to fingerprint, one reachability test...).
-// Payload is a phase-specific JSON document interpreted by the runner.
+// WorkUnit is one resumable chunk of a scan (a slice of targets, a batch of host/port
+// probes, one service to fingerprint, one reachability test...). Payload is a
+// phase-specific JSON document interpreted by the runner.
 type WorkUnit struct {
 	ID       int64           `json:"id"`
 	ScanID   int64           `json:"scan_id"`
@@ -234,8 +232,8 @@ type Scan struct {
 	Progress  float64         `json:"progress"` // 0..1 over the whole scan
 	Phases    []PhaseProgress `json:"phases"`
 	Stats     ScanStats       `json:"stats"`
-	// Resumable is false once a scan reached a terminal state it cannot be
-	// continued from (completed, or failed before any work unit was created).
+	// Resumable is false once a scan reached a terminal state it cannot be continued from
+	// (completed, or failed before any work unit was created).
 	Resumable  bool       `json:"resumable"`
 	PausedAt   *time.Time `json:"paused_at,omitempty"`
 	ETASeconds int64      `json:"eta_seconds,omitempty"`
@@ -246,12 +244,11 @@ type Scan struct {
 	FinishedAt *time.Time `json:"finished_at,omitempty"`
 }
 
-// ---------------------------------------------------------------------------
-// Hosts & services
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Hosts &
+// services ---------------------------------------------------------------------------
 
-// Host is an IP seen alive on a given network. The (MissionID, NetworkID, IP)
-// triple is unique; AssetID links it to a long-lived physical/logical machine.
+// Host is an IP seen alive on a given network. The (MissionID, NetworkID, IP) triple is
+// unique; AssetID links it to a long-lived physical/logical machine.
 type Host struct {
 	ID           int64    `json:"id"`
 	MissionID    int64    `json:"mission_id"`
@@ -266,11 +263,10 @@ type Host struct {
 	OS           string   `json:"os,omitempty"`
 	TTL          int      `json:"ttl,omitempty"`
 	DiscoveredBy []string `json:"discovered_by,omitempty"` // arp, icmp-echo, tcp-syn:443 ...
-	// Triage is the operator's pass over this address. Skipping it is how a
-	// machine that must not be touched is parked: its services, its findings
-	// and the segmentation tests aimed at it drop out of the working views
-	// without anything being deleted. Owned by the operator, never written by
-	// a scan.
+	// Triage is the operator's pass over this address. Skipping it is how a machine that
+	// must not be touched is parked: its services, its findings and the segmentation
+	// tests aimed at it drop out of the working views without anything being deleted.
+	// Owned by the operator, never written by a scan.
 	Triage     Triage    `json:"triage"`
 	FirstSeen  time.Time `json:"first_seen"`
 	LastSeen   time.Time `json:"last_seen"`
@@ -293,10 +289,10 @@ const (
 	PortOpenFiltered PortState = "open|filtered"
 )
 
-// TriageStatus is where the operator is with a service, a finding, a host or
-// an asset. NETY finds what is exposed; going through each one by hand is
-// still the operator's job, and this is how that pass is tracked so nothing is
-// forgotten and a re-scan does not erase the work.
+// TriageStatus is where the operator is with a service, a finding, a host or an asset.
+// NETY finds what is exposed; going through each one by hand is still the operator's job,
+// and this is how that pass is tracked so nothing is forgotten and a re-scan does not
+// erase the work.
 type TriageStatus string
 
 const (
@@ -306,11 +302,11 @@ const (
 	TriageFlagged    TriageStatus = "flagged"     // tested, something to report
 	TriageSkipped    TriageStatus = "skipped"     // out of scope or not worth testing
 
-	// TriageFalsePositive is not the same judgement as skipped, and the
-	// difference matters when the report is written. Skipped means "I am not
-	// spending time on this". False positive means "I looked, and the tool is
-	// wrong". One is a choice about where to put the effort; the other is a
-	// statement about the finding, and it is the one a client may ask about.
+	// TriageFalsePositive is not the same judgement as skipped, and the difference
+	// matters when the report is written. Skipped means "I am not spending time on this".
+	// False positive means "I looked, and the tool is wrong". One is a choice about where
+	// to put the effort; the other is a statement about the finding, and it is the one a
+	// client may ask about.
 	TriageFalsePositive TriageStatus = "false_positive"
 )
 
@@ -320,10 +316,10 @@ var AllTriageStatuses = []TriageStatus{
 	TriageFalsePositive, TriageSkipped,
 }
 
-// DismissedTriageStatuses are the two ways of putting a row aside: the
-// operator chose not to spend time on it, or decided the tool was wrong about
-// it. Neither is outstanding work, so neither belongs in the counters and
-// headlines that are meant to say what is left to deal with.
+// DismissedTriageStatuses are the two ways of putting a row aside: the operator chose not
+// to spend time on it, or decided the tool was wrong about it. Neither is outstanding
+// work, so neither belongs in the counters and headlines that are meant to say what is
+// left to deal with.
 var DismissedTriageStatuses = []TriageStatus{TriageSkipped, TriageFalsePositive}
 
 // Dismissed reports whether this status means the row has been set aside.
@@ -331,8 +327,8 @@ func Dismissed(s TriageStatus) bool {
 	return s == TriageSkipped || s == TriageFalsePositive
 }
 
-// LiveTriageStatuses is every status that is not a dismissal. Passing it as a
-// filter is how a listing asks for "what is still on the table".
+// LiveTriageStatuses is every status that is not a dismissal. Passing it as a filter is
+// how a listing asks for "what is still on the table".
 func LiveTriageStatuses() []TriageStatus {
 	out := make([]TriageStatus, 0, len(AllTriageStatuses))
 	for _, s := range AllTriageStatuses {
@@ -353,9 +349,8 @@ func ValidTriageStatus(s TriageStatus) bool {
 	return false
 }
 
-// Triage is the operator's own record against a service, a finding, a host or
-// an asset: where they are with it and what they found. It is never written by
-// a scan.
+// Triage is the operator's own record against a service, a finding, a host or an asset:
+// where they are with it and what they found. It is never written by a scan.
 type Triage struct {
 	Status        TriageStatus `json:"status"`
 	Note          string       `json:"note,omitempty"`
@@ -388,8 +383,8 @@ type Service struct {
 	Extra      map[string]string `json:"extra,omitempty"`  // protocol specific facts
 	Confidence int               `json:"confidence"`       // 0..100
 	Method     string            `json:"method,omitempty"` // probe-match | port-table | fingerprintx ...
-	// Triage is the operator's manual pass over this service. Owned by the
-	// operator, never written by a scan.
+	// Triage is the operator's manual pass over this service. Owned by the operator,
+	// never written by a scan.
 	Triage     Triage    `json:"triage"`
 	FirstSeen  time.Time `json:"first_seen"`
 	LastSeen   time.Time `json:"last_seen"`
@@ -447,8 +442,8 @@ type SSHHostKey struct {
 	SHA256 string `json:"sha256"` // OpenSSH style "SHA256:base64"
 }
 
-// ---------------------------------------------------------------------------
-// Identity & assets: keep track of the same machine across days / IPs / VLANs
+// --------------------------------------------------------------------------- Identity &
+// assets: keep track of the same machine across days / IPs / VLANs
 // ---------------------------------------------------------------------------
 
 type EvidenceKind string
@@ -508,10 +503,10 @@ type Asset struct {
 	IPs       []AssetIP  `json:"ips"`
 	Tags      []string   `json:"tags,omitempty"`
 	Notes     string     `json:"notes,omitempty"`
-	// Triage is the operator's pass over the machine itself, not over one of
-	// its addresses: setting it applies the same status to every host attached
-	// to this asset, and a host the correlator attaches later to a skipped
-	// asset is skipped too. Owned by the operator, never written by a scan.
+	// Triage is the operator's pass over the machine itself, not over one of its
+	// addresses: setting it applies the same status to every host attached to this asset,
+	// and a host the correlator attaches later to a skipped asset is skipped too. Owned
+	// by the operator, never written by a scan.
 	Triage    Triage    `json:"triage"`
 	FirstSeen time.Time `json:"first_seen"`
 	LastSeen  time.Time `json:"last_seen"`
@@ -533,8 +528,8 @@ type AssetIP struct {
 	LastSeen  time.Time `json:"last_seen"`
 }
 
-// HostObservation is everything learned about one host during one scan,
-// fed to the correlator to decide which asset it belongs to.
+// HostObservation is everything learned about one host during one scan, fed to the
+// correlator to decide which asset it belongs to.
 type HostObservation struct {
 	MissionID int64              `json:"mission_id"`
 	NetworkID int64              `json:"network_id"`
@@ -551,13 +546,13 @@ type AssetDecision struct {
 	Score   int      `json:"score"`   // 0..100
 	Reasons []string `json:"reasons"` // human readable, e.g. "smb-server-guid match"
 	Asset   Asset    `json:"asset"`   // merged/updated asset (new one if !Matched, ID=0)
-	// Conflicts lists other existing asset IDs that also partially matched
-	// (e.g. same hostname, different SSH key) so the UI can flag them.
+	// Conflicts lists other existing asset IDs that also partially matched (e.g. same
+	// hostname, different SSH key) so the UI can flag them.
 	Conflicts []int64 `json:"conflicts,omitempty"`
 }
 
-// ---------------------------------------------------------------------------
-// Findings (light checks)
+// --------------------------------------------------------------------------- Findings
+// (light checks)
 // ---------------------------------------------------------------------------
 
 type Severity string
@@ -586,9 +581,9 @@ type Finding struct {
 	Evidence    string   `json:"evidence"`
 	Remediation string   `json:"remediation"`
 	References  []string `json:"references,omitempty"`
-	// Triage is the operator's manual pass over this finding: a check firing
-	// is not the same as a problem worth reporting, and that verdict is made
-	// by hand. Owned by the operator, never written by a scan.
+	// Triage is the operator's manual pass over this finding: a check firing is not the
+	// same as a problem worth reporting, and that verdict is made by hand. Owned by the
+	// operator, never written by a scan.
 	Triage     Triage    `json:"triage"`
 	FirstSeen  time.Time `json:"first_seen"`
 	LastSeen   time.Time `json:"last_seen"`
@@ -660,8 +655,8 @@ type MatrixCell struct {
 	LastTestedAt    *time.Time     `json:"last_tested_at,omitempty"`
 }
 
-// ---------------------------------------------------------------------------
-// Live events (websocket) and export bundle
+// --------------------------------------------------------------------------- Live events
+// (websocket) and export bundle
 // ---------------------------------------------------------------------------
 
 type EventType string
@@ -703,17 +698,17 @@ type MissionData struct {
 	Findings []Finding     `json:"findings"`
 	Reach    []ReachResult `json:"reach"`
 	Matrix   []MatrixCell  `json:"matrix"`
-	// Diff is what the last scan of the network changed against the one
-	// before it. The export caller fills it in, and it stays nil when the
-	// mission has only ever been scanned once.
+	// Diff is what the last scan of the network changed against the one before it. The
+	// export caller fills it in, and it stays nil when the mission has only ever been
+	// scanned once.
 	Diff *ScanDiff `json:"diff,omitempty"`
 	// ExportedAt / By are set by the exporter caller.
 	ExportedAt time.Time `json:"exported_at"`
 	ExportedBy string    `json:"exported_by"`
-	// Omitted records what the operator's own triage kept out of this export.
-	// It travels with the data so the file itself can say it: a spreadsheet
-	// that is shorter than the mission must admit as much on its own, without
-	// needing whoever opens it to remember which boxes were ticked.
+	// Omitted records what the operator's own triage kept out of this export. It travels
+	// with the data so the file itself can say it: a spreadsheet that is shorter than the
+	// mission must admit as much on its own, without needing whoever opens it to remember
+	// which boxes were ticked.
 	Omitted *OmittedRows `json:"omitted,omitempty"`
 }
 
@@ -755,28 +750,27 @@ func (o *OmittedRows) Total() int {
 	return o.SetAside.Total() + o.Unreviewed.Total()
 }
 
-// ---------------------------------------------------------------------------
-// Scan to scan diff
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Scan to
+// scan diff ---------------------------------------------------------------------------
 
 // DiffChange says what happened to one row between two scans.
 type DiffChange string
 
 const (
-	// DiffAdded is a host the later scan found and the earlier one did not,
-	// or a port the later scan found open and the earlier one did not.
+	// DiffAdded is a host the later scan found and the earlier one did not, or a port the
+	// later scan found open and the earlier one did not.
 	DiffAdded DiffChange = "added"
-	// DiffRemoved is the other way round: the earlier scan had it and the
-	// later one no longer does.
+	// DiffRemoved is the other way round: the earlier scan had it and the later one no
+	// longer does.
 	DiffRemoved DiffChange = "removed"
-	// DiffSame is a row both scans saw, unchanged. Only hosts are reported
-	// this way; an unchanged service or finding is left out of the diff.
+	// DiffSame is a row both scans saw, unchanged. Only hosts are reported this way; an
+	// unchanged service or finding is left out of the diff.
 	DiffSame DiffChange = "same"
-	// DiffMoved is one machine seen at two different addresses, which the
-	// asset correlation is what makes recognisable.
+	// DiffMoved is one machine seen at two different addresses, which the asset
+	// correlation is what makes recognisable.
 	DiffMoved DiffChange = "moved"
-	// DiffChanged is a service both scans saw whose product or version
-	// string is not the same any more.
+	// DiffChanged is a service both scans saw whose product or version string is not the
+	// same any more.
 	DiffChanged DiffChange = "changed"
 )
 
@@ -799,24 +793,23 @@ func ScanRefOf(s Scan) ScanRef {
 	}
 }
 
-// ScanDiff is what changed on a network between two of its scans. From is
-// always the earlier of the two and To the later one, whichever way round the
-// caller asked for them.
+// ScanDiff is what changed on a network between two of its scans. From is always the
+// earlier of the two and To the later one, whichever way round the caller asked for them.
 type ScanDiff struct {
 	MissionID int64 `json:"mission_id"`
 	NetworkID int64 `json:"network_id"`
-	// From is nil when there was no earlier scan to compare against, which is
-	// what the first scan of a network looks like.
+	// From is nil when there was no earlier scan to compare against, which is what the
+	// first scan of a network looks like.
 	From *ScanRef `json:"from"`
 	To   ScanRef  `json:"to"`
-	// FromPicked is true when the caller did not name the earlier scan and
-	// the server chose the most recent one before this.
+	// FromPicked is true when the caller did not name the earlier scan and the server
+	// chose the most recent one before this.
 	FromPicked bool `json:"from_picked"`
-	// Message explains an empty diff in one sentence, for the UI to show
-	// instead of three empty tables.
+	// Message explains an empty diff in one sentence, for the UI to show instead of three
+	// empty tables.
 	Message string `json:"message,omitempty"`
-	// Caveats are what this comparison cannot see, in plain words. They come
-	// from the database keeping one row per result rather than one per scan.
+	// Caveats are what this comparison cannot see, in plain words. They come from the
+	// database keeping one row per result rather than one per scan.
 	Caveats []string `json:"caveats,omitempty"`
 	// Changed is false when the two scans found exactly the same thing.
 	Changed  bool              `json:"changed"`
@@ -830,9 +823,9 @@ type ScanDiff struct {
 type ScanDiffCounts struct {
 	HostsAdded   int `json:"hosts_added"`
 	HostsRemoved int `json:"hosts_removed"`
-	// HostsSame counts every host both scans saw, including the ones that
-	// moved; HostsMoved counts the moves alone, so it is a part of HostsSame
-	// and not a fourth group.
+	// HostsSame counts every host both scans saw, including the ones that moved;
+	// HostsMoved counts the moves alone, so it is a part of HostsSame and not a fourth
+	// group.
 	HostsSame       int `json:"hosts_same"`
 	HostsMoved      int `json:"hosts_moved"`
 	PortsOpened     int `json:"ports_opened"`
@@ -842,8 +835,8 @@ type ScanDiffCounts struct {
 	FindingsCleared int `json:"findings_cleared"`
 }
 
-// Total is how many rows the diff holds, which is what decides whether
-// anything changed at all.
+// Total is how many rows the diff holds, which is what decides whether anything changed
+// at all.
 func (c ScanDiffCounts) Total() int {
 	return c.HostsAdded + c.HostsRemoved + c.HostsMoved +
 		c.PortsOpened + c.PortsClosed + c.ServicesChanged +
@@ -855,8 +848,8 @@ type ScanDiffHost struct {
 	Change DiffChange `json:"change"`
 	HostID int64      `json:"host_id"`
 	IP     string     `json:"ip"`
-	// PreviousIP is where the same machine answered during the earlier scan,
-	// set only on a move.
+	// PreviousIP is where the same machine answered during the earlier scan, set only on
+	// a move.
 	PreviousIP     string `json:"previous_ip,omitempty"`
 	PreviousHostID int64  `json:"previous_host_id,omitempty"`
 	Hostname       string `json:"hostname,omitempty"`

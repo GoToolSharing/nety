@@ -25,8 +25,8 @@ func TestLookupVendors(t *testing.T) {
 		{"raspberry pi", "B8:27:EB:01:02:03", "Raspberry Pi Foundation"},
 		{"hyper-v", "00:15:5D:01:02:03", "Microsoft Corporation"},
 
-		// MA-M (28 bit): two assignments inside the same MA-L block, which
-		// only a longest-prefix match can tell apart.
+		// MA-M (28 bit): two assignments inside the same MA-L block, which only a
+		// longest-prefix match can tell apart.
 		{"ma-m low nibble", "00:55:DA:01:23:45", "Shinko Technos co.,ltd."},
 		{"ma-m high nibble", "00:55:DA:11:23:45", "KoolPOS Inc."},
 
@@ -219,8 +219,8 @@ func TestParseBits(t *testing.T) {
 	}
 }
 
-// TestDatabaseLoaded checks the embedded blob really decoded, rather than
-// silently falling back to the empty database.
+// TestDatabaseLoaded checks the embedded blob really decoded, rather than silently
+// falling back to the empty database.
 func TestDatabaseLoaded(t *testing.T) {
 	t.Parallel()
 	d := load()
@@ -254,8 +254,8 @@ func TestDatabaseLoaded(t *testing.T) {
 	}
 }
 
-// TestDecodeCorrupt makes sure a damaged blob degrades to an empty database
-// instead of panicking.
+// TestDecodeCorrupt makes sure a damaged blob degrades to an empty database instead of
+// panicking.
 func TestDecodeCorrupt(t *testing.T) {
 	t.Parallel()
 	inputs := [][]byte{
@@ -280,8 +280,8 @@ func TestDecodeCorrupt(t *testing.T) {
 	}
 }
 
-// TestConcurrentLoad exercises the sync.OnceValue initialisation from many
-// goroutines at once; -race turns this into a real data-race check.
+// TestConcurrentLoad exercises the sync.OnceValue initialisation from many goroutines at
+// once; -race turns this into a real data-race check.
 func TestConcurrentLoad(t *testing.T) {
 	t.Parallel()
 	const goroutines = 64
@@ -350,8 +350,8 @@ func BenchmarkParse(b *testing.B) {
 	}
 }
 
-// BenchmarkColdLoad measures a full cold database load, decompression
-// included; it must stay well under the ~30 ms budget.
+// BenchmarkColdLoad measures a full cold database load, decompression included; it must
+// stay well under the ~30 ms budget.
 func BenchmarkColdLoad(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {

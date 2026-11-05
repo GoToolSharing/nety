@@ -19,13 +19,13 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// A small DHCPv4 client built directly on AF_PACKET. It has to be raw: the
-// sub-interfaces created by the dot1q-subif / dtp-trunk techniques have no
-// address yet, so a UDP socket cannot send the broadcast DISCOVER.
+// A small DHCPv4 client built directly on AF_PACKET. It has to be raw: the sub-interfaces
+// created by the dot1q-subif / dtp-trunk techniques have no address yet, so a UDP socket
+// cannot send the broadcast DISCOVER.
 
-// DHCPAcquire runs a DISCOVER/OFFER/REQUEST/ACK exchange on iface and returns
-// the granted lease. It does NOT configure the interface: the caller decides
-// whether to apply it (ConfigureDHCP does both).
+// DHCPAcquire runs a DISCOVER/OFFER/REQUEST/ACK exchange on iface and returns the granted
+// lease. It does NOT configure the interface: the caller decides whether to apply it
+// (ConfigureDHCP does both).
 func DHCPAcquire(ctx context.Context, iface string, cfg DHCPConfig) (Lease, error) {
 	ifi, err := net.InterfaceByName(iface)
 	if err != nil {
@@ -114,8 +114,8 @@ func dhcpRound(ctx context.Context, conn *packet.Conn, ifi *net.Interface, mac n
 	return lease, nil
 }
 
-// awaitDHCP reads frames until a DHCP message of want with matching xid and
-// client MAC arrives. It returns the message and the sender's MAC.
+// awaitDHCP reads frames until a DHCP message of want with matching xid and client MAC
+// arrives. It returns the message and the sender's MAC.
 func awaitDHCP(ctx context.Context, conn *packet.Conn, xid uint32, mac net.HardwareAddr, want DHCPMessageType) (*DHCPMessage, net.HardwareAddr, error) {
 	buf := make([]byte, 1<<16)
 	for {
@@ -166,8 +166,8 @@ func macEqual(a, b net.HardwareAddr) bool {
 	return true
 }
 
-// udpPayload extracts the UDP payload of an IPv4 packet matching the ports.
-// Fragmented datagrams are ignored (DHCP never needs them).
+// udpPayload extracts the UDP payload of an IPv4 packet matching the ports. Fragmented
+// datagrams are ignored (DHCP never needs them).
 func udpPayload(ip []byte, srcPort, dstPort uint16) ([]byte, bool) {
 	if len(ip) < 20 || ip[0]>>4 != 4 {
 		return nil, false
@@ -191,8 +191,8 @@ func udpPayload(ip []byte, srcPort, dstPort uint16) ([]byte, bool) {
 	return udp[8:ulen], true
 }
 
-// sendDHCP serialises and transmits one DHCP message as a complete
-// Ethernet/IPv4/UDP frame.
+// sendDHCP serialises and transmits one DHCP message as a complete Ethernet/IPv4/UDP
+// frame.
 func sendDHCP(conn *packet.Conn, src, dst net.HardwareAddr, srcIP, dstIP netip.Addr, m *DHCPMessage) error {
 	eth := &layers.Ethernet{
 		SrcMAC:       src,
@@ -223,8 +223,8 @@ func sendDHCP(conn *packet.Conn, src, dst net.HardwareAddr, srcIP, dstIP netip.A
 	return nil
 }
 
-// dhcpRelease gives a lease back. Best effort: a failure is logged by the
-// cleanup machinery, never fatal.
+// dhcpRelease gives a lease back. Best effort: a failure is logged by the cleanup
+// machinery, never fatal.
 func dhcpRelease(iface string, mac net.HardwareAddr, client, server netip.Addr) error {
 	ifi, err := net.InterfaceByName(iface)
 	if err != nil {
@@ -260,9 +260,8 @@ func dhcpClientFilter() ([]bpf.RawInstruction, error) {
 	})
 }
 
-// ConfigureDHCP obtains a lease on iface and applies it (address, and a
-// default route via the lease router when iface has none). Every change is
-// registered for cleanup.
+// ConfigureDHCP obtains a lease on iface and applies it (address, and a default route via
+// the lease router when iface has none). Every change is registered for cleanup.
 func ConfigureDHCP(ctx context.Context, iface string, cfg DHCPConfig) (Lease, error) {
 	lease, err := DHCPAcquire(ctx, iface, cfg)
 	if err != nil {
@@ -274,8 +273,8 @@ func ConfigureDHCP(ctx context.Context, iface string, cfg DHCPConfig) (Lease, er
 	return lease, nil
 }
 
-// ConfigureStatic applies a static address to iface, for when no DHCP server
-// answers on the VLAN under test. Registered for cleanup.
+// ConfigureStatic applies a static address to iface, for when no DHCP server answers on
+// the VLAN under test. Registered for cleanup.
 func ConfigureStatic(iface string, addr netip.Prefix) error {
 	if err := SetLinkUp(iface); err != nil {
 		return err

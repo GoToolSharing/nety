@@ -1,13 +1,13 @@
-// Package rawnet holds the shared raw-packet plumbing used by the discovery
-// and port scanning engines: AF_PACKET sockets with classic BPF filters,
-// route / next-hop resolution, ARP / neighbour resolution, frame building
-// and parsing, a high-rate token bucket, stateless probe validation cookies
-// and an O(1)-memory random permutation over huge scan spaces.
+// Package rawnet holds the shared raw-packet plumbing used by the discovery and port
+// scanning engines: AF_PACKET sockets with classic BPF filters, route / next-hop
+// resolution, ARP / neighbour resolution, frame building and parsing, a high-rate token
+// bucket, stateless probe validation cookies and an O(1)-memory random permutation over
+// huge scan spaces.
 //
 // The portable pieces (cookies, permutation, address spaces, limiter, frame
-// building/parsing, BPF assembly) compile and are tested on every OS. The
-// socket/netlink pieces are Linux only; other platforms get stubs returning
-// engine.ErrUnsupported and CanRaw() == false.
+// building/parsing, BPF assembly) compile and are tested on every OS. The socket/netlink
+// pieces are Linux only; other platforms get stubs returning engine.ErrUnsupported and
+// CanRaw() == false.
 package rawnet
 
 import (
@@ -17,16 +17,15 @@ import (
 	"net/netip"
 )
 
-// Cookie is a keyed hash used to validate replies without keeping per-probe
-// state (masscan "SYN cookie" scheme): the TCP sequence number, ICMP
-// identifier or UDP source port of a probe is derived from a SipHash-2-4 of
-// the probe's (destination IP, destination port, source port) under a random
-// per-scan key. A reply is accepted only if the field echoed by the target
-// matches the hash recomputed from the reply's addressing.
+// Cookie is a keyed hash used to validate replies without keeping per-probe state
+// (masscan "SYN cookie" scheme): the TCP sequence number, ICMP identifier or UDP source
+// port of a probe is derived from a SipHash-2-4 of the probe's (destination IP,
+// destination port, source port) under a random per-scan key. A reply is accepted only if
+// the field echoed by the target matches the hash recomputed from the reply's addressing.
 //
-// The scheme does not rely on source-port randomness: with a fixed source
-// port (segmentation bypass tests) the 32-bit keyed sequence number alone
-// authenticates SYN-ACKs.
+// The scheme does not rely on source-port randomness: with a fixed source port
+// (segmentation bypass tests) the 32-bit keyed sequence number alone authenticates
+// SYN-ACKs.
 type Cookie struct {
 	k0, k1 uint64
 }
@@ -35,21 +34,20 @@ type Cookie struct {
 func NewCookie() Cookie {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {
-		// crypto/rand never fails on supported platforms (Go >= 1.24 it
-		// panics internally instead); keep a deterministic fallback anyway.
+		// crypto/rand never fails on supported platforms (Go >= 1.24 it panics internally
+		// instead); keep a deterministic fallback anyway.
 		binary.LittleEndian.PutUint64(b[:8], 0x736f6d6570736575)
 		binary.LittleEndian.PutUint64(b[8:], 0x646f72616e646f6d)
 	}
 	return Cookie{k0: binary.LittleEndian.Uint64(b[:8]), k1: binary.LittleEndian.Uint64(b[8:])}
 }
 
-// NewCookieWithKey builds a cookie from an explicit key (tests, resumable
-// scans).
+// NewCookieWithKey builds a cookie from an explicit key (tests, resumable scans).
 func NewCookieWithKey(k0, k1 uint64) Cookie { return Cookie{k0: k0, k1: k1} }
 
-// Sum64 returns the 64-bit keyed hash of (dst, dstPort, srcPort, tag). tag
-// distinguishes probe families (e.g. SYN vs ACK vs ICMP) so that a reply to
-// one probe type cannot validate another.
+// Sum64 returns the 64-bit keyed hash of (dst, dstPort, srcPort, tag). tag distinguishes
+// probe families (e.g. SYN vs ACK vs ICMP) so that a reply to one probe type cannot
+// validate another.
 func (c Cookie) Sum64(dst netip.Addr, dstPort, srcPort uint16, tag uint8) uint64 {
 	var msg [21]byte
 	a := dst.As16()

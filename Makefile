@@ -61,6 +61,10 @@ toolchain:
 toolchain-rebuild:
 	docker build --no-cache -f build/Dockerfile.toolchain -t $(TOOL_IMAGE) build
 
+## Format the SPA sources (prettier, 90 columns).
+fmt-web: toolchain
+	$(DOCKER_RUN) bash -c 'cd web && npm ci --no-audit --no-fund && npm run format'
+
 web: toolchain
 	$(DOCKER_RUN) bash -c 'cd web && npm ci --no-audit --no-fund && npm run build'
 

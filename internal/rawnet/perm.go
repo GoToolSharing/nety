@@ -2,10 +2,10 @@ package rawnet
 
 import "math/bits"
 
-// Permutation is a keyed pseudo-random bijection over [0, n), computed with
-// O(1) memory (blackrock-style). It is a balanced Feistel network over the
-// smallest even-bit-width power-of-two domain >= n, combined with cycle
-// walking to stay inside [0, n). Scanners use it to visit huge (host x port)
+// Permutation is a keyed pseudo-random bijection over [0, n), computed with O(1) memory
+// (blackrock-style). It is a balanced Feistel network over the smallest even-bit-width
+// power-of-two domain >= n, combined with cycle walking to stay inside [0, n). Scanners
+// use it to visit huge (host x port)
 // spaces in a randomized order without materialising the space:
 //
 //	for i := uint64(0); i < p.Len(); i++ { idx := p.At(i); host, port := idx/P, idx%P }
@@ -21,8 +21,8 @@ type Permutation struct {
 
 const feistelRounds = 6
 
-// NewPermutation returns a permutation of [0, n) keyed by seed. Distinct seeds
-// give independent orders (use a different seed per retry round).
+// NewPermutation returns a permutation of [0, n) keyed by seed. Distinct seeds give
+// independent orders (use a different seed per retry round).
 func NewPermutation(n, seed uint64) *Permutation {
 	p := &Permutation{n: n}
 	if n <= 2 {
@@ -49,8 +49,8 @@ func NewPermutation(n, seed uint64) *Permutation {
 // Len is the size of the permuted domain.
 func (p *Permutation) Len() uint64 { return p.n }
 
-// At returns the i-th element of the permutation, i in [0, Len()). The
-// result for i >= Len() is unspecified.
+// At returns the i-th element of the permutation, i in [0, Len()). The result for i >=
+// Len() is unspecified.
 func (p *Permutation) At(i uint64) uint64 {
 	if p.single {
 		return i

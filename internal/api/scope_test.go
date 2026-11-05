@@ -8,10 +8,10 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// A scope that cannot be enumerated must be refused while the operator is
-// still looking at the form. Before this, an IPv6 /64 was accepted, and the
-// planner then allocated work units until the kernel killed the process; all
-// the operator saw was the server restarting.
+// A scope that cannot be enumerated must be refused while the operator is still looking
+// at the form. Before this, an IPv6 /64 was accepted, and the planner then allocated work
+// units until the kernel killed the process; all the operator saw was the server
+// restarting.
 func TestImpossibleScopeIsRefused(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("alice", model.RoleOperator)

@@ -211,8 +211,7 @@ func TestFramesRoundTrip(t *testing.T) {
 
 func TestParseICMPError(t *testing.T) {
 	fb := NewFrameBuilder()
-	// Build the original UDP datagram, then wrap its IP part in an ICMP
-	// port unreachable.
+	// Build the original UDP datagram, then wrap its IP part in an ICMP port unreachable.
 	orig, _ := fb.UDP(L2{SrcMAC: macA, DstMAC: macB}, ip4A, ip4B, 64, 33000, 161, []byte("x"))
 	inner := append([]byte(nil), orig[14:14+28]...)
 	f, err := fb.ICMPEcho(L2{SrcMAC: macB, DstMAC: macA}, ip4B, ip4A, 64, 0, 0, append(make([]byte, 0), inner...))

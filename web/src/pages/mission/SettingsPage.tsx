@@ -169,11 +169,12 @@ export default function SettingsPage() {
           />
           <CardBody className="space-y-3">
             <p className="text-xs text-muted">
-              Everything the mission owns travels: its networks, its scans with their pending
-              work units and their logs, its hosts, services, assets with the addresses each
-              machine has held, findings, segmentation results, and every status and note your
-              team wrote, with who wrote them. Not the audit log, which belongs to this server
-              and can name work on another client, and no password ever.
+              Everything the mission owns travels: its networks, its scans with their
+              pending work units and their logs, its hosts, services, assets with the
+              addresses each machine has held, findings, segmentation results, and every
+              status and note your team wrote, with who wrote them. Not the audit log,
+              which belongs to this server and can name work on another client, and no
+              password ever.
             </p>
             <p className="text-xs text-faint">
               Restoring it always creates a new mission. It never merges into one that is
@@ -203,11 +204,11 @@ export default function SettingsPage() {
               <div className="rounded-md border border-border p-3">
                 <div className="text-sm font-medium text-fg">Reset the results</div>
                 <p className="mt-1 text-xs text-muted">
-                  Removes every scan with its logs, and every host, service, finding, asset
-                  and segmentation result. Keeps the mission, its scope, its team and its
-                  networks with their interface, VLAN and addressing, so you do not set the
-                  VLANs up again. The mission goes back to the state it was in once the
-                  networks were configured and nothing had been scanned.
+                  Removes every scan with its logs, and every host, service, finding,
+                  asset and segmentation result. Keeps the mission, its scope, its team
+                  and its networks with their interface, VLAN and addressing, so you do
+                  not set the VLANs up again. The mission goes back to the state it was in
+                  once the networks were configured and nothing had been scanned.
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-faint">
                   {stored.map(([label, n]) => (
@@ -229,8 +230,8 @@ export default function SettingsPage() {
               <div className="rounded-md border border-crit/40 bg-crit/5 p-3">
                 <div className="text-sm font-medium text-fg">Delete the mission</div>
                 <p className="mt-1 text-xs text-muted">
-                  Removes everything above and the mission itself: its networks, its scope and
-                  who had access to it. Nothing is left to come back to.
+                  Removes everything above and the mission itself: its networks, its scope
+                  and who had access to it. Nothing is left to come back to.
                 </p>
                 <Button
                   variant="danger"
@@ -335,7 +336,12 @@ function ConfirmByName({
         <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-        <Button variant="danger" disabled={!matches} loading={busy} onClick={() => void run()}>
+        <Button
+          variant="danger"
+          disabled={!matches}
+          loading={busy}
+          onClick={() => void run()}
+        >
           {kind === 'delete' ? 'Delete the mission' : 'Reset the results'}
         </Button>
       </div>

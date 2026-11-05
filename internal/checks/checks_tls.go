@@ -174,8 +174,8 @@ type tlsHelloResult struct {
 
 var errTLSMalformed = errors.New("tls: malformed server response")
 
-// tlsParseServerResponse parses the first record(s) received after a
-// ClientHello: either an Alert or a Handshake starting with ServerHello.
+// tlsParseServerResponse parses the first record(s) received after a ClientHello: either
+// an Alert or a Handshake starting with ServerHello.
 func tlsParseServerResponse(b []byte) (*tlsHelloResult, error) {
 	if len(b) < 5 {
 		return nil, errTLSMalformed
@@ -213,9 +213,8 @@ func tlsParseServerResponse(b []byte) (*tlsHelloResult, error) {
 			return nil, errTLSMalformed
 		}
 		r.Cipher = binary.BigEndian.Uint16(h[35+sidLen:])
-		// TLS 1.3 servers put 0x0303 in server_version and the real
-		// version in supported_versions: irrelevant here since we never
-		// offer TLS 1.3.
+		// TLS 1.3 servers put 0x0303 in server_version and the real version in
+		// supported_versions: irrelevant here since we never offer TLS 1.3.
 		return r, nil
 	}
 	return nil, errTLSMalformed

@@ -181,6 +181,5 @@ func TestServiceNameFallback(t *testing.T) {
 	}
 }
 
-// The SNMP, NetBIOS, DNS and BER decoders live in
-// internal/fingerprint/udpprobe and are tested there, against byte fixtures,
-// without a socket.
+// The SNMP, NetBIOS, DNS and BER decoders live in internal/fingerprint/udpprobe and are
+// tested there, against byte fixtures, without a socket.

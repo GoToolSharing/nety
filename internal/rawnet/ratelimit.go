@@ -6,12 +6,11 @@ import (
 	"time"
 )
 
-// Limiter is a token bucket tuned for packet rates from a few pps to well
-// over 100k pps. Instead of one timer per packet it keeps a virtual
-// "next send" clock: Wait(n) reserves n tokens and sleeps only when the
-// reservation is ahead of wall time, so sleeping granularity (~50µs-1ms) does
-// not limit throughput and the long-run average stays exact. Callers should
-// send in batches (see Batch) at high rates.
+// Limiter is a token bucket tuned for packet rates from a few pps to well over 100k pps.
+// Instead of one timer per packet it keeps a virtual "next send" clock: Wait(n) reserves
+// n tokens and sleeps only when the reservation is ahead of wall time, so sleeping
+// granularity (~50µs-1ms) does not limit throughput and the long-run average stays exact.
+// Callers should send in batches (see Batch) at high rates.
 //
 // A Limiter is safe for concurrent use.
 type Limiter struct {
@@ -22,9 +21,9 @@ type Limiter struct {
 	now      func() time.Time
 }
 
-// NewLimiter returns a limiter for rate tokens per second (<= 0 means
-// unlimited). burst bounds how many tokens may be spent back-to-back after an
-// idle period (<= 0 picks rate/100, at least 1).
+// NewLimiter returns a limiter for rate tokens per second (<= 0 means unlimited). burst
+// bounds how many tokens may be spent back-to-back after an idle period (<= 0 picks
+// rate/100, at least 1).
 func NewLimiter(rate, burst int) *Limiter {
 	l := &Limiter{now: time.Now}
 	l.SetRate(rate, burst)
@@ -53,8 +52,8 @@ func (l *Limiter) SetRate(rate, burst int) {
 	l.burst = burst
 }
 
-// Batch returns a sensible batch size for the configured rate (about 1ms of
-// traffic, between 1 and 256).
+// Batch returns a sensible batch size for the configured rate (about 1ms of traffic,
+// between 1 and 256).
 func (l *Limiter) Batch() int {
 	l.mu.Lock()
 	defer l.mu.Unlock()

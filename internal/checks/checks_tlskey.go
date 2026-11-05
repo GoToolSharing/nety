@@ -33,8 +33,8 @@ var minKeyBits = map[string]int{
 	"ed448":   0,
 }
 
-// weakSigAlgos are signature algorithms whose hash is broken for the purpose
-// of certificate forgery.
+// weakSigAlgos are signature algorithms whose hash is broken for the purpose of
+// certificate forgery.
 var weakSigAlgos = []string{"md2", "md5", "sha1", "sha-1"}
 
 func runTLSWeakKey(_ context.Context, t *Target) []model.Finding {
@@ -55,8 +55,8 @@ func runTLSWeakKey(_ context.Context, t *Target) []model.Finding {
 	if sig := strings.ToLower(strings.ReplaceAll(ti.SigAlgo, " ", "")); sig != "" {
 		for _, w := range weakSigAlgos {
 			if strings.Contains(sig, w) {
-				// A self-signed root signs itself: the signature is not a
-				// trust decision there, but a leaf certificate's is.
+				// A self-signed root signs itself: the signature is not a trust decision
+				// there, but a leaf certificate's is.
 				problems = append(problems, fmt.Sprintf("signature algorithm %s", ti.SigAlgo))
 				break
 			}
@@ -75,8 +75,8 @@ func runTLSWeakKey(_ context.Context, t *Target) []model.Finding {
 	return []model.Finding{f}
 }
 
-// normalizeKeyAlgo maps the many spellings a fingerprinter may produce onto a
-// canonical algorithm family.
+// normalizeKeyAlgo maps the many spellings a fingerprinter may produce onto a canonical
+// algorithm family.
 func normalizeKeyAlgo(s string) string {
 	s = strings.ToLower(strings.TrimSpace(s))
 	switch {

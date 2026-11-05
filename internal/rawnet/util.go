@@ -20,6 +20,5 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 	}
 }
 
-// SleepCtx sleeps for d or until ctx is done, returning ctx.Err() in the
-// latter case.
+// SleepCtx sleeps for d or until ctx is done, returning ctx.Err() in the latter case.
 func SleepCtx(ctx context.Context, d time.Duration) error { return sleepCtx(ctx, d) }

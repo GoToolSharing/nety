@@ -8,8 +8,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// The address filter and the sortable headers reach every result listing
-// through the same two parameters, so they are checked together here.
+// The address filter and the sortable headers reach every result listing through the same
+// two parameters, so they are checked together here.
 func TestListingsFilterByAddressAndSort(t *testing.T) {
 	e := newEnv(t)
 	e.newUser("alice", model.RoleOperator)
@@ -21,8 +21,8 @@ func TestListingsFilterByAddressAndSort(t *testing.T) {
 	}
 	base := "/api/missions/" + itoa(m.ID) + "/services"
 
-	// A subnet keeps the two addresses in it, in numeric order: .9 then .100,
-	// which is the pair a text sort gets backwards.
+	// A subnet keeps the two addresses in it, in numeric order: .9 then .100, which is
+	// the pair a text sort gets backwards.
 	var listed []model.Service
 	if got := alice.do("GET", base+"?ip=10.20.0.0/24&sort=ip", nil, &listed); got != http.StatusOK {
 		t.Fatalf("filtered listing: %d", got)
@@ -47,8 +47,8 @@ func TestListingsFilterByAddressAndSort(t *testing.T) {
 		t.Fatalf("unexpected rows for a single address: %+v", addressesOf(listed))
 	}
 
-	// A sort key the server does not know leaves the listing alone instead of
-	// failing, so an old bookmark still shows the table.
+	// A sort key the server does not know leaves the listing alone instead of failing, so
+	// an old bookmark still shows the table.
 	if got := alice.do("GET", base+"?sort=banner", nil, &listed); got != http.StatusOK || len(listed) != 3 {
 		t.Fatalf("an unknown sort key must fall back: %d, %d rows", got, len(listed))
 	}

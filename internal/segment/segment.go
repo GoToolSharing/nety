@@ -1,13 +1,13 @@
-// Package segment answers the question a VLAN segmentation audit exists to
-// answer: plugged into network S, which of the services inventoried on
-// networks T != S can actually be reached, and how.
+// Package segment answers the question a VLAN segmentation audit exists to answer:
+// plugged into network S, which of the services inventoried on networks T != S can
+// actually be reached, and how.
 //
-// For every (target, technique) pair it emits one model.ReachResult as soon as
-// the verdict is known, so the operator watches the reachability matrix fill
-// up live. Techniques range from "just connect" to "create a tagged
-// sub-interface for the target VLAN"; the ones that touch the client's switch
-// are opt-in (SegmentOptions.AllowL2Active) and every system change is undone
-// before Test returns - on success, on error, on cancellation and on panic.
+// For every (target, technique) pair it emits one model.ReachResult as soon as the
+// verdict is known, so the operator watches the reachability matrix fill up live.
+// Techniques range from "just connect" to "create a tagged sub-interface for the target
+// VLAN"; the ones that touch the client's switch are opt-in
+// (SegmentOptions.AllowL2Active) and every system change is undone before Test returns -
+// on success, on error, on cancellation and on panic.
 package segment
 
 import (
@@ -31,19 +31,19 @@ var errUnsupported = engine.ErrUnsupported
 const (
 	defaultTimeout     = 3 * time.Second
 	defaultConcurrency = 32
-	// dhcpTimeout bounds the DHCP exchange on a freshly created
-	// sub-interface; a VLAN with no DHCP server must not stall the scan.
+	// dhcpTimeout bounds the DHCP exchange on a freshly created sub-interface; a VLAN
+	// with no DHCP server must not stall the scan.
 	dhcpTimeout = 6 * time.Second
-	// dtpSettle is how long to wait after asking for a trunk before assuming
-	// the switch has converged.
+	// dtpSettle is how long to wait after asking for a trunk before assuming the switch
+	// has converged.
 	dtpSettle = 5 * time.Second
 	// maxIPv6PerTarget bounds how many of a target's IPv6 addresses are tried.
 	maxIPv6PerTarget = 2
 )
 
-// StaticFallbackFunc supplies an address to configure on a tagged
-// sub-interface when the target VLAN has no DHCP server (or does not answer).
-// It returns the address to assign and the next hop to route through.
+// StaticFallbackFunc supplies an address to configure on a tagged sub-interface when the
+// target VLAN has no DHCP server (or does not answer). It returns the address to assign
+// and the next hop to route through.
 type StaticFallbackFunc func(vlanID int, prefixes []netip.Prefix) (addr netip.Prefix, gateway netip.Addr, ok bool)
 
 // Tester implements engine.SegmentTester.
@@ -59,10 +59,9 @@ type Tester struct {
 
 var _ engine.SegmentTester = (*Tester)(nil)
 
-// New returns a SegmentTester. ps is used as a fallback for the fixed
-// source-port techniques when the process may not bind a privileged local
-// port; ni supplies the local L2/L3 context. Either may be nil, which only
-// disables the features that need them.
+// New returns a SegmentTester. ps is used as a fallback for the fixed source-port
+// techniques when the process may not bind a privileged local port; ni supplies the local
+// L2/L3 context. Either may be nil, which only disables the features that need them.
 func New(log *slog.Logger, ps engine.PortScanner, ni engine.NetInspector) engine.SegmentTester {
 	if log == nil {
 		log = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError}))
@@ -78,20 +77,20 @@ func New(log *slog.Logger, ps engine.PortScanner, ni engine.NetInspector) engine
 	return t
 }
 
-// SetStaticFallback replaces the address picker used by the dot1q-subif and
-// dtp-trunk techniques when the target VLAN has no DHCP server. Wiring code
-// can type-assert the engine.SegmentTester to *Tester to call it.
+// SetStaticFallback replaces the address picker used by the dot1q-subif and dtp-trunk
+// techniques when the target VLAN has no DHCP server. Wiring code can type-assert the
+// engine.SegmentTester to *Tester to call it.
 func (t *Tester) SetStaticFallback(f StaticFallbackFunc) {
 	if f != nil {
 		t.staticFallback = f
 	}
 }
 
-// DefaultStaticFallback picks a high address inside the target network, far
-// from the DHCP pool and from the infrastructure addresses at the bottom of
-// the range, and assumes the first address of the prefix is the router. It
-// deliberately refuses to guess when the target prefixes are unknown: silently
-// squatting an address on a client VLAN is worse than skipping a test.
+// DefaultStaticFallback picks a high address inside the target network, far from the DHCP
+// pool and from the infrastructure addresses at the bottom of the range, and assumes the
+// first address of the prefix is the router. It deliberately refuses to guess when the
+// target prefixes are unknown: silently squatting an address on a client VLAN is worse
+// than skipping a test.
 func DefaultStaticFallback(vlanID int, prefixes []netip.Prefix) (netip.Prefix, netip.Addr, bool) {
 	for _, p := range prefixes {
 		if !p.IsValid() || !p.Addr().Is4() || p.Bits() > 30 {
@@ -110,19 +109,17 @@ func DefaultStaticFallback(vlanID int, prefixes []netip.Prefix) (netip.Prefix, n
 	return netip.Prefix{}, netip.Addr{}, false
 }
 
-// ---------------------------------------------------------------------------
-// Test
+// --------------------------------------------------------------------------- Test
 // ---------------------------------------------------------------------------
 
-// Test tries to reach every target with every enabled technique and streams
-// one model.ReachResult per (target, technique[, vlan]) through out as soon as
-// it is known.
+// Test tries to reach every target with every enabled technique and streams one
+// model.ReachResult per (target, technique[, vlan]) through out as soon as it is known.
 func (t *Tester) Test(ctx context.Context, opts engine.SegmentOptions, targets []engine.ReachTarget, out func(model.ReachResult)) (err error) {
 	log := t.logger(opts)
 	cl := newCleanup()
 
-	// Deferred in this order so the cleanup runs *while* a panic is unwinding
-	// and the recover still turns it into an error.
+	// Deferred in this order so the cleanup runs *while* a panic is unwinding and the
+	// recover still turns it into an error.
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("segment: panic during reachability testing", "panic", r)
@@ -152,11 +149,10 @@ func (t *Tester) Test(ctx context.Context, opts engine.SegmentOptions, targets [
 		}
 	}
 
-	// Wi-Fi behaves exactly like a cable for everything that rides on IP, but
-	// the switch-port techniques have no meaning on an access point
-	// association: an AP does not forward 802.1Q-tagged frames to a station
-	// and does not speak DTP. Drop them with an explicit reason rather than
-	// letting each one fail against the driver.
+	// Wi-Fi behaves exactly like a cable for everything that rides on IP, but the
+	// switch-port techniques have no meaning on an access point association: an AP does
+	// not forward 802.1Q-tagged frames to a station and does not speak DTP. Drop them
+	// with an explicit reason rather than letting each one fail against the driver.
 	if t.sys.IsWireless(opts.Interface) {
 		kept := techs[:0]
 		for _, id := range techs {
@@ -192,8 +188,8 @@ func (t *Tester) Test(ctx context.Context, opts engine.SegmentOptions, targets [
 	if err := t.runParallel(ctx, opts, plan.parallel, em); err != nil {
 		return err
 	}
-	// Techniques that change system state run one group at a time so two of
-	// them can never fight over the routing table or the same sub-interface.
+	// Techniques that change system state run one group at a time so two of them can
+	// never fight over the routing table or the same sub-interface.
 	for _, g := range plan.exclusive {
 		if ctx.Err() != nil {
 			break
@@ -228,9 +224,8 @@ func normalizeOptions(o engine.SegmentOptions) engine.SegmentOptions {
 	return o
 }
 
-// ---------------------------------------------------------------------------
-// Parallel phase
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Parallel
+// phase ---------------------------------------------------------------------------
 
 func (t *Tester) runParallel(ctx context.Context, opts engine.SegmentOptions, jobs []job, em *emitter) error {
 	if len(jobs) == 0 {
@@ -270,9 +265,9 @@ feed:
 	return nil
 }
 
-// runProbe calls the prober, turning a panic into an error result instead of
-// taking the whole server down: a single malformed target must never kill a
-// scan that has been running for an hour.
+// runProbe calls the prober, turning a panic into an error result instead of taking the
+// whole server down: a single malformed target must never kill a scan that has been
+// running for an hour.
 func (t *Tester) runProbe(ctx context.Context, spec probeSpec) (pr probeResult) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -302,8 +297,8 @@ func (t *Tester) runJob(ctx context.Context, opts engine.SegmentOptions, j job) 
 	}
 	pr := t.runProbe(ctx, spec)
 	if pr.Status == model.ReachFiltered && j.srcPort != 0 && t.ps != nil {
-		// A bound privileged source port may have been refused locally; the
-		// injected scanner can still try it with a raw SYN.
+		// A bound privileged source port may have been refused locally; the injected
+		// scanner can still try it with a raw SYN.
 		if alt, ok := t.portScanFallback(ctx, opts, j); ok {
 			pr = alt
 		}
@@ -311,10 +306,9 @@ func (t *Tester) runJob(ctx context.Context, opts engine.SegmentOptions, j job) 
 	return resultFor(j, pr)
 }
 
-// portScanFallback re-runs a fixed-source-port test through the injected
-// PortScanner. The scanner only reports open ports, so this can confirm
-// reachability but never distinguishes closed from filtered: the detail says
-// so.
+// portScanFallback re-runs a fixed-source-port test through the injected PortScanner. The
+// scanner only reports open ports, so this can confirm reachability but never
+// distinguishes closed from filtered: the detail says so.
 func (t *Tester) portScanFallback(ctx context.Context, opts engine.SegmentOptions, j job) (probeResult, bool) {
 	if t.ps == nil || j.target.Port == 0 {
 		return probeResult{}, false
@@ -347,8 +341,7 @@ func (t *Tester) portScanFallback(ctx context.Context, opts engine.SegmentOption
 	}, true
 }
 
-// ---------------------------------------------------------------------------
-// Results
+// --------------------------------------------------------------------------- Results
 // ---------------------------------------------------------------------------
 
 func resultFor(j job, pr probeResult) model.ReachResult {
@@ -377,16 +370,16 @@ func resultFor(j job, pr probeResult) model.ReachResult {
 	return r
 }
 
-// errorResults emits the same failure for every job of a group, so a target is
-// never silently missing from the matrix.
+// errorResults emits the same failure for every job of a group, so a target is never
+// silently missing from the matrix.
 func (t *Tester) errorResults(jobs []job, status model.ReachStatus, detail string, em *emitter) {
 	for _, j := range jobs {
 		em.emit(resultFor(j, probeResult{Status: status, Detail: detail}))
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Emitter: streaming, progress and rate limiting
+// --------------------------------------------------------------------------- Emitter:
+// streaming, progress and rate limiting
 // ---------------------------------------------------------------------------
 
 type emitter struct {
@@ -399,8 +392,8 @@ type emitter struct {
 }
 
 func (e *emitter) emit(r model.ReachResult) {
-	// The engine contract allows concurrent callbacks, but serialising here
-	// costs nothing at these volumes and keeps the live UI ordering sane.
+	// The engine contract allows concurrent callbacks, but serialising here costs nothing
+	// at these volumes and keeps the live UI ordering sane.
 	e.mu.Lock()
 	e.out(r)
 	e.mu.Unlock()

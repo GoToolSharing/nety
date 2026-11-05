@@ -9,16 +9,16 @@ import (
 )
 
 // maxExtraLen caps every value stored in Result.Extra. The values end up in
-// model.Service.Extra and are rendered in the UI, so they must stay printable
-// and small whatever the peer sent.
+// model.Service.Extra and are rendered in the UI, so they must stay printable and small
+// whatever the peer sent.
 const maxExtraLen = 256
 
 // maxJoined caps comma-joined lists before truncation.
 const maxListItems = 64
 
-// sanitize makes an arbitrary byte-derived string safe to store: invalid UTF-8
-// is dropped, control characters become spaces, runs of whitespace collapse and
-// the result is truncated to maxExtraLen runes.
+// sanitize makes an arbitrary byte-derived string safe to store: invalid UTF-8 is
+// dropped, control characters become spaces, runs of whitespace collapse and the result
+// is truncated to maxExtraLen runes.
 func sanitize(s string) string {
 	if s == "" {
 		return ""
@@ -51,8 +51,8 @@ func sanitize(s string) string {
 	return strings.TrimRight(b.String(), " ")
 }
 
-// printableASCII keeps only printable ASCII, used for banners carved out of
-// binary payloads (vendor IDs, NetBIOS names).
+// printableASCII keeps only printable ASCII, used for banners carved out of binary
+// payloads (vendor IDs, NetBIOS names).
 func printableASCII(b []byte) string {
 	var sb strings.Builder
 	sb.Grow(len(b))
@@ -80,8 +80,8 @@ func hexStr(b []byte) string {
 	return hex.EncodeToString(b)
 }
 
-// reVersion matches a dotted numeric version, optionally with a patch suffix
-// such as "4.2.8p15" or "1.6.9-1".
+// reVersion matches a dotted numeric version, optionally with a patch suffix such as
+// "4.2.8p15" or "1.6.9-1".
 var reVersion = regexp.MustCompile(`([0-9]+\.[0-9]+(?:\.[0-9]+)*(?:[pP][0-9]+)?)`)
 
 // firstVersion returns the first dotted numeric version found in s.
@@ -93,8 +93,8 @@ func firstVersion(s string) string {
 	return m[1]
 }
 
-// versionAfter looks for marker (case-insensitive) and returns the first dotted
-// version appearing after it, within a bounded window.
+// versionAfter looks for marker (case-insensitive) and returns the first dotted version
+// appearing after it, within a bounded window.
 func versionAfter(s, marker string) string {
 	i := indexFold(s, marker)
 	if i < 0 {
@@ -141,9 +141,9 @@ func u16(b []byte, off int) (uint16, bool) {
 	return uint16(b[off])<<8 | uint16(b[off+1]), true
 }
 
-// headerValues parses a CRLF (or LF) delimited "Key: value" block, lowercasing
-// keys. It stops after maxHeaders lines and truncates oversized values. The
-// first line is returned separately as the start line.
+// headerValues parses a CRLF (or LF) delimited "Key: value" block, lowercasing keys. It
+// stops after maxHeaders lines and truncates oversized values. The first line is returned
+// separately as the start line.
 func headerValues(data []byte, maxHeaders int) (startLine string, hdrs map[string]string) {
 	hdrs = make(map[string]string, 16)
 	if len(data) > 64*1024 {

@@ -28,10 +28,9 @@ func init() {
 	})
 }
 
-// tftpWellKnownNames is a short list of the names network equipment and PXE
-// setups actually use. It is not a wordlist and must not become one: the
-// point is to show that an unauthenticated read works, not to find out what
-// else the server holds.
+// tftpWellKnownNames is a short list of the names network equipment and PXE setups
+// actually use. It is not a wordlist and must not become one: the point is to show that
+// an unauthenticated read works, not to find out what else the server holds.
 var tftpWellKnownNames = []string{
 	"running-config",
 	"startup-config",
@@ -72,14 +71,14 @@ func runTFTPAnonymousRead(ctx context.Context, t *Target) []model.Finding {
 	return nil
 }
 
-// tftpReadFirstBlock asks for one file and stops at the first data block. An
-// ERROR packet is sent back so the server releases the transfer immediately
-// instead of retransmitting until it times out. Nothing is written: a read
-// request is the only operation used, and the WRQ opcode is never sent.
+// tftpReadFirstBlock asks for one file and stops at the first data block. An ERROR packet
+// is sent back so the server releases the transfer immediately instead of retransmitting
+// until it times out. Nothing is written: a read request is the only operation used, and
+// the WRQ opcode is never sent.
 //
-// The socket is deliberately unconnected. A TFTP server answers a read
-// request from a fresh ephemeral port rather than from port 69, so a
-// connected socket would drop the reply it is waiting for.
+// The socket is deliberately unconnected. A TFTP server answers a read request from a
+// fresh ephemeral port rather than from port 69, so a connected socket would drop the
+// reply it is waiting for.
 func tftpReadFirstBlock(ctx context.Context, t *Target, name string) (int, string, error) {
 	pc, err := (&net.ListenConfig{}).ListenPacket(ctx, "udp", ":0")
 	if err != nil {
@@ -136,9 +135,9 @@ func tftpAbort(pc net.PacketConn, to net.Addr) {
 	_, _ = pc.WriteTo(pkt, to)
 }
 
-// tftpSnippet shows just enough of the file to prove it was served. The
-// content is kept short on purpose: these files hold secrets, and a client
-// report is not the place to copy them.
+// tftpSnippet shows just enough of the file to prove it was served. The content is kept
+// short on purpose: these files hold secrets, and a client report is not the place to
+// copy them.
 func tftpSnippet(b []byte) string {
 	if len(b) > 100 {
 		b = b[:100]

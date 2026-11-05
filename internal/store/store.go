@@ -1,13 +1,13 @@
 // Package store is the SQLite persistence layer of NETY.
 //
-// Results are written the moment they are discovered (see R1 in
-// docs/ARCHITECTURE.md), and scan progress is tracked as persisted work units
-// (see R2) so a scan survives a pause, a stop or a crash.
+// Results are written the moment they are discovered (see R1 in docs/ARCHITECTURE.md),
+// and scan progress is tracked as persisted work units (see R2) so a scan survives a
+// pause, a stop or a crash.
 //
-// Concurrency model: SQLite in WAL mode with two pools - a single-connection
-// writer (SQLite allows one writer at a time anyway, serialising in Go avoids
-// SQLITE_BUSY entirely) and a multi-connection reader pool. Every exported
-// method is safe for concurrent use.
+// Concurrency model: SQLite in WAL mode with two pools: a single-connection writer
+// (SQLite allows one writer at a time anyway, serialising in Go avoids SQLITE_BUSY
+// entirely) and a multi-connection reader pool. Every exported method is safe for
+// concurrent use.
 package store
 
 import (
@@ -35,8 +35,8 @@ var schemaSQL string
 // ErrNotFound is returned when a row does not exist.
 var ErrNotFound = errors.New("store: not found")
 
-// ErrConflict is returned on a unique-constraint violation that the caller is
-// expected to handle (duplicate username, duplicate mission name...).
+// ErrConflict is returned on a unique-constraint violation that the caller is expected to
+// handle (duplicate username, duplicate mission name...).
 var ErrConflict = errors.New("store: already exists")
 
 // Store owns the database handles.
@@ -79,8 +79,8 @@ func Open(path string, log *slog.Logger) (*Store, error) {
 }
 
 func openDB(path string, writer bool) (*sql.DB, error) {
-	// modernc.org/sqlite honours PRAGMA statements passed as _pragma query
-	// parameters. busy_timeout guards against the rare writer/checkpoint race.
+	// modernc.org/sqlite honours PRAGMA statements passed as _pragma query parameters.
+	// busy_timeout guards against the rare writer/checkpoint race.
 	dsn := path + "?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(WAL)" +
 		"&_pragma=synchronous(NORMAL)" +
@@ -149,12 +149,12 @@ type migration struct {
 	apply func(ctx context.Context, tx *sql.Tx) error
 }
 
-// migrations are applied in order, once each. Append only - never edit or
-// reorder an entry that has shipped.
+// migrations are applied in order, once each. Append only: never edit or reorder an
+// entry that has shipped.
 //
-// schema.sql only ever runs CREATE ... IF NOT EXISTS, so it creates new
-// databases but cannot alter an existing table. Anything added to a table that
-// has already shipped needs an entry here as well.
+// schema.sql only ever runs CREATE ... IF NOT EXISTS, so it creates new databases but
+// cannot alter an existing table. Anything added to a table that has already shipped
+// needs an entry here as well.
 var migrations = []migration{
 	{
 		name: "service triage columns",
@@ -184,10 +184,10 @@ var migrations = []migration{
 		},
 	},
 	{
-		// Findings get the same operator-owned record as services. Written out
-		// in full rather than sharing code with the entry above: a migration
-		// is a historical record of what ran, and it should not change shape
-		// because a later one needed something slightly different.
+		// Findings get the same operator-owned record as services. Written out in full
+		// rather than sharing code with the entry above: a migration is a historical
+		// record of what ran, and it should not change shape because a later one needed
+		// something slightly different.
 		name: "finding triage columns",
 		apply: func(ctx context.Context, tx *sql.Tx) error {
 			cols := map[string]string{
@@ -215,11 +215,11 @@ var migrations = []migration{
 		},
 	},
 	{
-		// Hosts and assets get the same operator-owned record, which is how a
-		// machine that is out of scope gets parked in one gesture instead of
-		// service by service. Both tables are done here in one entry because
-		// they are one feature: an asset is skipped by skipping its hosts, so
-		// a database with the columns on only one of them would be broken.
+		// Hosts and assets get the same operator-owned record, which is how a machine
+		// that is out of scope gets parked in one gesture instead of service by service.
+		// Both tables are done here in one entry because they are one feature: an asset
+		// is skipped by skipping its hosts, so a database with the columns on only one of
+		// them would be broken.
 		name: "host and asset triage columns",
 		apply: func(ctx context.Context, tx *sql.Tx) error {
 			cols := map[string]string{
@@ -254,10 +254,9 @@ var migrations = []migration{
 	{
 		name: "service change history",
 		apply: func(ctx context.Context, tx *sql.Tx) error {
-			// Kept identical to the definition in schema.sql, which is what a
-			// fresh database gets. A service row holds only its latest merged
-			// description, so without this an upsert destroys the evidence
-			// that a version ever changed.
+			// Kept identical to the definition in schema.sql, which is what a fresh
+			// database gets. A service row holds only its latest merged description, so
+			// without this an upsert destroys the evidence that a version ever changed.
 			if _, err := tx.ExecContext(ctx, `
 				CREATE TABLE IF NOT EXISTS service_changes (
 				    id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -275,9 +274,9 @@ var migrations = []migration{
 				`CREATE INDEX IF NOT EXISTS idx_service_changes ON service_changes(mission_id, at)`); err != nil {
 				return err
 			}
-			// Stamp when the recording started. Everything scanned before
-			// this moment has no history, and a diff reaching back past it
-			// has to say so rather than report that nothing changed.
+			// Stamp when the recording started. Everything scanned before this moment has
+			// no history, and a diff reaching back past it has to say so rather than
+			// report that nothing changed.
 			_, err := tx.ExecContext(ctx,
 				`INSERT INTO settings (key, value) VALUES ('service_changes_since', ?)
 				 ON CONFLICT (key) DO NOTHING`,
@@ -286,12 +285,11 @@ var migrations = []migration{
 		},
 	},
 	{
-		// Addresses are stored as text, which cannot be ordered numerically
-		// and cannot express a subnet. Every table that carries an address
-		// gains a key derived from it (see internal/store/ipsort.go) that can
-		// do both, and the rows already stored are given theirs here: a
-		// database that has been in use for a week must come back sorted, not
-		// empty at the top of every listing.
+		// Addresses are stored as text, which cannot be ordered numerically and cannot
+		// express a subnet. Every table that carries an address gains a key derived from
+		// it (see internal/store/ipsort.go) that can do both, and the rows already stored
+		// are given theirs here: a database that has been in use for a week must come
+		// back sorted, not empty at the top of every listing.
 		name: "address sort key",
 		apply: func(ctx context.Context, tx *sql.Tx) error {
 			for _, table := range []string{"hosts", "services", "findings", "asset_ips"} {
@@ -322,11 +320,11 @@ var migrations = []migration{
 
 // backfillIPSort fills the new key for the rows a table already holds.
 //
-// The work is one UPDATE per distinct address rather than per row, because a
-// mission has thousands of services spread over hundreds of addresses. The
-// addresses are read into memory first: the update runs on the same single
-// writer connection as the query that found them, and SQLite will not have a
-// statement stepping over a table while another writes to it.
+// The work is one UPDATE per distinct address rather than per row, because a mission has
+// thousands of services spread over hundreds of addresses. The addresses are read into
+// memory first: the update runs on the same single writer connection as the query that
+// found them, and SQLite will not have a statement stepping over a table while another
+// writes to it.
 func backfillIPSort(ctx context.Context, tx *sql.Tx, table string) error {
 	rows, err := tx.QueryContext(ctx,
 		`SELECT DISTINCT ip FROM `+table+` WHERE ip_sort = '' AND ip <> ''`)
@@ -349,8 +347,8 @@ func backfillIPSort(ctx context.Context, tx *sql.Tx, table string) error {
 	for _, ip := range ips {
 		key := ipSortKey(ip)
 		if key == "" {
-			// Not an address we can place; leave the empty key rather than
-			// invent an order for it.
+			// Not an address we can place; leave the empty key rather than invent an
+			// order for it.
 			continue
 		}
 		if _, err := tx.ExecContext(ctx,
@@ -407,9 +405,8 @@ func (s *Store) txLocked(ctx context.Context, fn func(*sql.Tx) error) error {
 	return nil
 }
 
-// ---------------------------------------------------------------------------
-// small helpers
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- small
+// helpers ---------------------------------------------------------------------------
 
 // ms converts a time to unix milliseconds; the zero time becomes 0.
 func ms(t time.Time) int64 {
@@ -444,8 +441,8 @@ func toTimePtr(v sql.NullInt64) *time.Time {
 	return &t
 }
 
-// jsonEnc marshals v, returning "null"-safe defaults for empty containers so
-// the columns never hold NULL.
+// jsonEnc marshals v, returning "null"-safe defaults for empty containers so the columns
+// never hold NULL.
 func jsonEnc(v any) string {
 	if v == nil {
 		return "null"

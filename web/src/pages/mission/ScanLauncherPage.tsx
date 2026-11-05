@@ -12,7 +12,13 @@ import { useAuth } from '@/state/auth'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, CardBody, CardHeader, PageHeader } from '@/components/ui/Card'
 import { Button, LinkButton } from '@/components/ui/Button'
-import { Checkbox, SelectField, TextAreaField, TextField, Toggle } from '@/components/ui/Field'
+import {
+  Checkbox,
+  SelectField,
+  TextAreaField,
+  TextField,
+  Toggle,
+} from '@/components/ui/Field'
 import { EmptyState, InlineAlert, Skeleton } from '@/components/ui/Feedback'
 import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
@@ -119,7 +125,12 @@ function techniqueGroup(t: TechniqueInfo): string {
   return 'Protocol & baseline'
 }
 
-const GROUP_ORDER = ['Protocol & baseline', 'Source-port tricks', 'Routing', 'Layer-2 active']
+const GROUP_ORDER = [
+  'Protocol & baseline',
+  'Source-port tricks',
+  'Routing',
+  'Layer-2 active',
+]
 
 function splitList(value: string): string[] {
   return value
@@ -231,14 +242,18 @@ export default function ScanLauncherPage() {
       arr.push(t)
       groups.set(g, arr)
     }
-    return GROUP_ORDER.filter((g) => groups.has(g)).map((g) => [g, groups.get(g)!] as const)
+    return GROUP_ORDER.filter((g) => groups.has(g)).map(
+      (g) => [g, groups.get(g)!] as const,
+    )
   }, [techniques.data])
 
   const selectedTechniques = opts.techniques ?? []
   const toggleTechnique = (id: string, on: boolean) =>
     set(
       'techniques',
-      on ? [...new Set([...selectedTechniques, id])] : selectedTechniques.filter((t) => t !== id),
+      on
+        ? [...new Set([...selectedTechniques, id])]
+        : selectedTechniques.filter((t) => t !== id),
     )
 
   const sourceIds = opts.source_network_ids ?? []
@@ -260,11 +275,16 @@ export default function ScanLauncherPage() {
   // What this run would actually have to work with: the ticked networks, or
   // every other network when none is ticked.
   const reachableTargets = useMemo(() => {
-    const chosen = otherNetworks.filter((n) => sourceIds.length === 0 || sourceIds.includes(n.id))
+    const chosen = otherNetworks.filter(
+      (n) => sourceIds.length === 0 || sourceIds.includes(n.id),
+    )
     return chosen.reduce(
       (acc, n) => {
         const c = perNetwork[String(n.id)] ?? {}
-        return { hosts: acc.hosts + (c.hosts ?? 0), services: acc.services + (c.services ?? 0) }
+        return {
+          hosts: acc.hosts + (c.hosts ?? 0),
+          services: acc.services + (c.services ?? 0),
+        }
       },
       { hosts: 0, services: 0 },
     )
@@ -291,14 +311,8 @@ export default function ScanLauncherPage() {
       techniques: kind === 'segmentation' ? selectedTechniques : [],
       allow_l2_active: kind === 'segmentation' ? opts.allow_l2_active : false,
     }
-    if (
-      kind === 'discovery' &&
-      !payloadOptions.auto_targets &&
-      targets.length === 0
-    ) {
-      setError(
-        'With auto-targets off you must list at least one target CIDR or address.',
-      )
+    if (kind === 'discovery' && !payloadOptions.auto_targets && targets.length === 0) {
+      setError('With auto-targets off you must list at least one target CIDR or address.')
       return
     }
 
@@ -373,7 +387,7 @@ export default function ScanLauncherPage() {
     <PageContainer>
       <PageHeader
         title="New scan"
-        description="Results stream in from the first second - you never wait for the end of a scan to see what is on the wire."
+        description="Results stream in from the first second, so you never wait for the end of a scan to see what is on the wire."
         actions={
           <LinkButton to="../scans" variant="ghost">
             Cancel
@@ -407,7 +421,9 @@ export default function ScanLauncherPage() {
                     kind === k.id ? 'text-fg' : 'text-muted',
                   )}
                 >
-                  <span className={kind === k.id ? 'text-accent' : 'text-faint'}>{k.icon}</span>
+                  <span className={kind === k.id ? 'text-accent' : 'text-faint'}>
+                    {k.icon}
+                  </span>
                   {k.title}
                 </span>
                 <p className="mt-1.5 text-xs text-muted">{k.blurb}</p>
@@ -445,9 +461,13 @@ export default function ScanLauncherPage() {
               <div className="rounded-md border border-border bg-elevated px-3 py-2 text-xs">
                 <div className="text-muted">
                   Local{' '}
-                  <span className="font-mono text-fg">{selectedNetwork.local_ip || '-'}</span> ·
-                  gateway{' '}
-                  <span className="font-mono text-fg">{selectedNetwork.gateway || '-'}</span>
+                  <span className="font-mono text-fg">
+                    {selectedNetwork.local_ip || '-'}
+                  </span>{' '}
+                  · gateway{' '}
+                  <span className="font-mono text-fg">
+                    {selectedNetwork.gateway || '-'}
+                  </span>
                 </div>
                 <div className="mt-1 text-muted">
                   Prefixes{' '}
@@ -496,7 +516,12 @@ export default function ScanLauncherPage() {
                     {/* The server already provides a human title such as
                         "Low and slow"; capitalising every word mangles it. The
                         fallback is the bare id, so only that needs a capital. */}
-                    <span className={cn('text-sm font-semibold', !info?.title && 'capitalize')}>
+                    <span
+                      className={cn(
+                        'text-sm font-semibold',
+                        !info?.title && 'capitalize',
+                      )}
+                    >
                       {info?.title ?? id}
                     </span>
                     <p className="mt-1 text-xs text-muted">
@@ -666,7 +691,7 @@ export default function ScanLauncherPage() {
                   }
                   hint={
                     opts.checks
-                      ? "The only check family that authenticates. A short, capped list of vendor defaults is tried, so nothing gets locked out - but these are real login attempts and they land in the target's logs. Off by default; agree it with the client."
+                      ? "The only check family that authenticates. A short, capped list of vendor defaults is tried, so nothing gets locked out, but these are real login attempts and they land in the target's logs. Off by default; agree it with the client."
                       : 'Turn on Light checks above to enable this: it is one of the checks, so it has nothing to run in.'
                   }
                 />
@@ -684,11 +709,11 @@ export default function ScanLauncherPage() {
             />
             <CardBody className="space-y-6">
               <InlineAlert tone="info">
-                Nothing is discovered and no address is scanned. The test replays the hosts and
-                services <strong>already inventoried</strong> on the networks you pick, from
-                where you are plugged in now, and records what answers. Scan each VLAN once from
-                inside it, then come here from each position in turn: one run per direction
-                fills that row of the matrix.
+                Nothing is discovered and no address is scanned. The test replays the
+                hosts and services <strong>already inventoried</strong> on the networks
+                you pick, from where you are plugged in now, and records what answers.
+                Scan each VLAN once from inside it, then come here from each position in
+                turn: one run per direction fills that row of the matrix.
               </InlineAlert>
 
               <div>
@@ -698,8 +723,8 @@ export default function ScanLauncherPage() {
                 </p>
                 {otherNetworks.length === 0 ? (
                   <InlineAlert tone="warn">
-                    This mission has only one network. Add the other VLAN and discover it from
-                    inside before testing segmentation.
+                    This mission has only one network. Add the other VLAN and discover it
+                    from inside before testing segmentation.
                   </InlineAlert>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -713,7 +738,10 @@ export default function ScanLauncherPage() {
                             <span className="flex flex-wrap items-center gap-1.5">
                               {n.name}
                               {empty ? (
-                                <Badge tone="warn" title="Nothing has been discovered here yet">
+                                <Badge
+                                  tone="warn"
+                                  title="Nothing has been discovered here yet"
+                                >
                                   nothing to replay
                                 </Badge>
                               ) : (
@@ -768,7 +796,8 @@ export default function ScanLauncherPage() {
                   <Skeleton className="h-20" />
                 ) : groupedTechniques.length === 0 ? (
                   <p className="text-xs text-muted">
-                    The technique catalog is unavailable; the server will use its default set.
+                    The technique catalog is unavailable; the server will use its default
+                    set.
                   </p>
                 ) : (
                   <div className="space-y-4">
@@ -779,7 +808,9 @@ export default function ScanLauncherPage() {
                           key={group}
                           className={cn(
                             'rounded-md border p-3',
-                            l2Group ? 'border-warn/50 bg-warn/5' : 'border-border bg-elevated/50',
+                            l2Group
+                              ? 'border-warn/50 bg-warn/5'
+                              : 'border-border bg-elevated/50',
                           )}
                         >
                           <div className="mb-2 flex items-center gap-2">
@@ -816,11 +847,15 @@ export default function ScanLauncherPage() {
                                 label="Allow layer-2 active techniques"
                                 hint={
                                   <>
-                                    These techniques <strong>send DTP frames, create 802.1Q
-                                    sub-interfaces or double-tagged packets</strong>. They can
-                                    flap the switch port, trigger port-security or BPDU guard and
-                                    cut your own link. Agree it with the client first, and never
-                                    run them on production access ports without a window.
+                                    These techniques{' '}
+                                    <strong>
+                                      send DTP frames, create 802.1Q sub-interfaces or
+                                      double-tagged packets
+                                    </strong>
+                                    . They can flap the switch port, trigger port-security
+                                    or BPDU guard and cut your own link. Agree it with the
+                                    client first, and never run them on production access
+                                    ports without a window.
                                   </>
                                 }
                               />
@@ -865,9 +900,9 @@ export default function ScanLauncherPage() {
 
               {opts.allow_l2_active && l2Selected.length > 0 && (
                 <InlineAlert tone="warn" title="Layer-2 active techniques are armed">
-                  {l2Selected.map((t) => t.title || t.id).join(', ')}. NETY restores every route
-                  and sub-interface it creates, including on cancellation - but the switch may
-                  still react. Make sure you can physically reach the port.
+                  {l2Selected.map((t) => t.title || t.id).join(', ')}. NETY restores every
+                  route and sub-interface it creates, including on cancellation, but the
+                  switch may still react. Make sure you can physically reach the port.
                 </InlineAlert>
               )}
 
@@ -914,14 +949,16 @@ export default function ScanLauncherPage() {
             />
             <CardBody className="space-y-5">
               <InlineAlert tone="info">
-                Nothing is discovered and no port is scanned. The scan walks the inventory this
-                network already has and runs the phases you pick below. Run it when the mapping
-                was done with the checks switched off, or to pick up checks added since.
+                Nothing is discovered and no port is scanned. The scan walks the inventory
+                this network already has and runs the phases you pick below. Run it when
+                the mapping was done with the checks switched off, or to pick up checks
+                added since.
                 <br />
                 <br />
-                Running it twice changes nothing twice: hosts, services and findings are keyed on
-                what identifies them, so a second pass refreshes the rows that are there instead
-                of adding more, and it leaves your statuses and notes alone.
+                Running it twice changes nothing twice: hosts, services and findings are
+                keyed on what identifies them, so a second pass refreshes the rows that
+                are there instead of adding more, and it leaves your statuses and notes
+                alone.
               </InlineAlert>
 
               <fieldset className="grid gap-3 sm:grid-cols-3">
@@ -963,7 +1000,7 @@ export default function ScanLauncherPage() {
                   }
                   hint={
                     opts.checks
-                      ? "The only check family that authenticates. A short, capped list of vendor defaults is tried, so nothing gets locked out - but these are real login attempts and they land in the target's logs. Off by default; agree it with the client."
+                      ? "The only check family that authenticates. A short, capped list of vendor defaults is tried, so nothing gets locked out, but these are real login attempts and they land in the target's logs. Off by default; agree it with the client."
                       : 'Turn on Checks above to enable this: it is one of the checks, so it has nothing to run in.'
                   }
                 />
@@ -998,9 +1035,9 @@ export default function ScanLauncherPage() {
             />
             <CardBody className="space-y-3">
               <InlineAlert tone="info">
-                A passive probe sends nothing. It listens for about a minute and updates the
-                network's L2 panel with the neighbours, the native and voice VLANs, the tags seen
-                on the wire and whether the port offers trunk negotiation.
+                A passive probe sends nothing. It listens for about a minute and updates
+                the network's L2 panel with the neighbours, the native and voice VLANs,
+                the tags seen on the wire and whether the port offers trunk negotiation.
               </InlineAlert>
               <Toggle
                 danger

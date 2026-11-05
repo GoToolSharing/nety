@@ -23,17 +23,17 @@ func init() {
 	})
 }
 
-// snmpWriteCommunities are the strings vendors and runbooks use when they
-// want a read-write community. "private" is not in the list on purpose:
-// snmp-default-community already tries it and already raises it as a
-// read-write finding, and repeating it here would report the same string
-// twice in one report. The list stays this small deliberately; it is not a
-// wordlist and turning it into one would be credential guessing.
+// snmpWriteCommunities are the strings vendors and runbooks use when they want a
+// read-write community. "private" is not in the list on purpose: snmp-default-community
+// already tries it and already raises it as a read-write finding, and repeating it here
+// would report the same string twice in one report. The list stays this small
+// deliberately; it is not a wordlist and turning it into one would be credential
+// guessing.
 var snmpWriteCommunities = []string{"write", "manager"}
 
-// runSNMPWriteCommunity issues a GET of the system group with each candidate.
-// No SET is ever sent, so nothing on the device is changed and the check
-// cannot be the reason a device's configuration moves.
+// runSNMPWriteCommunity issues a GET of the system group with each candidate. No SET is
+// ever sent, so nothing on the device is changed and the check cannot be the reason a
+// device's configuration moves.
 func runSNMPWriteCommunity(ctx context.Context, t *Target) []model.Finding {
 	var lines []string
 	for _, comm := range snmpWriteCommunities {

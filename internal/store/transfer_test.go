@@ -10,9 +10,9 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// seedMission fills a mission with one of everything that has to survive a
-// round trip, including the parts no report ever shows: a paused scan's work
-// units, its log, and an operator's note against a service.
+// seedMission fills a mission with one of everything that has to survive a round trip,
+// including the parts no report ever shows: a paused scan's work units, its log, and an
+// operator's note against a service.
 func seedMission(t *testing.T, s *Store, name string) (model.Mission, model.User) {
 	t.Helper()
 	ctx := context.Background()
@@ -86,8 +86,8 @@ func seedMission(t *testing.T, s *Store, name string) (model.Mission, model.User
 		t.Fatal(err)
 	}
 
-	// The operator's own pass, which is the part a re-scan must not erase and
-	// a restore must bring back with its author.
+	// The operator's own pass, which is the part a re-scan must not erase and a restore
+	// must bring back with its author.
 	note := "tested by hand, relay confirmed"
 	status := model.TriageFlagged
 	if _, err := s.SetServiceTriage(ctx, sv.ID, &status, &note, op.ID); err != nil {
@@ -96,8 +96,8 @@ func seedMission(t *testing.T, s *Store, name string) (model.Mission, model.User
 	return mis, op
 }
 
-// A mission exported from one installation and restored on another has to come
-// back whole, down to who wrote which note.
+// A mission exported from one installation and restored on another has to come back
+// whole, down to who wrote which note.
 func TestMissionSurvivesAnExportAndImport(t *testing.T) {
 	ctx := context.Background()
 	src := testStore(t)
@@ -108,8 +108,8 @@ func TestMissionSurvivesAnExportAndImport(t *testing.T) {
 		t.Fatalf("export: %v", err)
 	}
 
-	// Through the wire, so the test exercises what a file actually carries
-	// rather than the in-memory values.
+	// Through the wire, so the test exercises what a file actually carries rather than
+	// the in-memory values.
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(bundle); err != nil {
 		t.Fatal(err)
@@ -121,8 +121,7 @@ func TestMissionSurvivesAnExportAndImport(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// A different installation: different ids, and the operator does not
-	// exist here.
+	// A different installation: different ids, and the operator does not exist here.
 	dst := testStore(t)
 	admin, err := dst.CreateUser(ctx, model.User{Username: "admin", Role: model.RoleAdmin})
 	if err != nil {
@@ -251,8 +250,8 @@ func TestMissionSurvivesAnExportAndImport(t *testing.T) {
 	}
 }
 
-// Without the option, an account this installation does not have is reported
-// rather than invented, and nothing else breaks.
+// Without the option, an account this installation does not have is reported rather than
+// invented, and nothing else breaks.
 func TestImportLeavesUnknownAuthorsUnattributed(t *testing.T) {
 	ctx := context.Background()
 	src := testStore(t)
@@ -282,8 +281,8 @@ func TestImportLeavesUnknownAuthorsUnattributed(t *testing.T) {
 	}
 }
 
-// A file that was truncated or edited is refused, rather than restored as an
-// engagement that is quietly missing part of itself.
+// A file that was truncated or edited is refused, rather than restored as an engagement
+// that is quietly missing part of itself.
 func TestImportRefusesADamagedBundle(t *testing.T) {
 	ctx := context.Background()
 	src := testStore(t)
@@ -320,8 +319,8 @@ func TestImportRefusesAFutureFormat(t *testing.T) {
 	}
 }
 
-// Two restores of the same bundle make two missions, because a restore never
-// reconciles itself with an engagement that is already there.
+// Two restores of the same bundle make two missions, because a restore never reconciles
+// itself with an engagement that is already there.
 func TestImportingTwiceMakesTwoMissions(t *testing.T) {
 	ctx := context.Background()
 	src := testStore(t)
@@ -353,8 +352,8 @@ func TestImportingTwiceMakesTwoMissions(t *testing.T) {
 	}
 }
 
-// An export is a point in time, so what it holds must not change underneath
-// the person who took it.
+// An export is a point in time, so what it holds must not change underneath the person
+// who took it.
 func TestExportIsIndependentOfLaterChanges(t *testing.T) {
 	ctx := context.Background()
 	src := testStore(t)

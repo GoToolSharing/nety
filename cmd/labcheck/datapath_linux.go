@@ -21,17 +21,16 @@ import (
 
 // The 802.1Q data path check.
 //
-// The segmentation engine's dot1q-subif technique does two things: it asks the
-// switch for a trunk, and then it talks to another VLAN through a tagged
-// sub-interface. The first half needs a real switch. The second half does not,
-// and it is the half that carries the result into the client's matrix - so it
-// is worth proving properly rather than assuming.
+// The segmentation engine's dot1q-subif technique does two things: it asks the switch for
+// a trunk, and then it talks to another VLAN through a tagged sub-interface. The first
+// half needs a real switch. The second half does not, and it is the half that carries the
+// result into the client's matrix, so it is worth proving properly rather than assuming.
 //
-// This builds the data path with no switch at all: a veth pair with one end in
-// a second network namespace, an 802.1Q sub-interface on each end, and a
-// listener on the far side. Frames really are tagged, really leave the kernel's
-// networking stack on one side and really arrive on the other, and NETY's own
-// port scanner is the thing that finds the listener.
+// This builds the data path with no switch at all: a veth pair with one end in a second
+// network namespace, an 802.1Q sub-interface on each end, and a listener on the far side.
+// Frames really are tagged, really leave the kernel's networking stack on one side and
+// really arrive on the other, and NETY's own port scanner is the thing that finds the
+// listener.
 
 const (
 	dpVLAN   = 1234
@@ -41,8 +40,8 @@ const (
 )
 
 func runVLANDataPathCheck(hostVeth, peerVeth string) error {
-	// Everything below is torn down in reverse order by the deferred closers,
-	// so a failure half way through still leaves the machine clean.
+	// Everything below is torn down in reverse order by the deferred closers, so a
+	// failure half way through still leaves the machine clean.
 	var closers []func()
 	defer func() {
 		for i := len(closers) - 1; i >= 0; i-- {
@@ -81,8 +80,8 @@ func runVLANDataPathCheck(hostVeth, peerVeth string) error {
 		return fmt.Errorf("bring %s up: %w", hostVeth, err)
 	}
 
-	// Host side: this is exactly what the dot1q-subif technique does once a
-	// trunk exists - a tagged sub-interface with an address in the far VLAN.
+	// Host side: this is exactly what the dot1q-subif technique does once a trunk exists
+	// - a tagged sub-interface with an address in the far VLAN.
 	hostSub, err := netif.AddVLAN(hostVeth, dpVLAN)
 	if err != nil {
 		return fmt.Errorf("sub-interface on %s: %w", hostVeth, err)
@@ -93,9 +92,9 @@ func runVLANDataPathCheck(hostVeth, peerVeth string) error {
 	}
 	ok("tagged sub-interface %s up with %s (VLAN %d)", hostSub, hostPrefix, dpVLAN)
 
-	// Far side, configured from inside the peer namespace, including the
-	// listener: a socket belongs to the namespace it was created in, so it
-	// keeps answering once we switch back.
+	// Far side, configured from inside the peer namespace, including the listener: a
+	// socket belongs to the namespace it was created in, so it keeps answering once we
+	// switch back.
 	listener, err := setupPeer(peerNS, origNS, peerVeth)
 	if err != nil {
 		return fmt.Errorf("configure the peer: %w", err)
@@ -126,7 +125,7 @@ func runVLANDataPathCheck(hostVeth, peerVeth string) error {
 	ok("NETY's port scanner found %s:%d through the sub-interface", peerAddr, dpPort)
 
 	// 3. A tagged frame NETY builds itself is accepted by a real 802.1Q
-	//    decoder - the frame builder the double-tag technique relies on.
+	//    decoder, the frame builder the double-tag technique relies on.
 	hostAddr := netip.MustParsePrefix(dpHostIP).Addr()
 	if err := checkTaggedFrameAccepted(hostVeth, dpVLAN, hostAddr, peerAddr); err != nil {
 		return fmt.Errorf("tagged frame: %w", err)

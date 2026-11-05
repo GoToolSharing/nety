@@ -89,7 +89,7 @@
   }
 
   body {
-    @apply bg-bg text-fg font-sans antialiased;
+    @apply bg-bg font-sans text-fg antialiased;
     font-size: 14px;
     line-height: 1.5;
     text-rendering: optimizeLegibility;
@@ -158,9 +158,7 @@
   }
 
   .input-base {
-    @apply w-full rounded-md border border-border bg-elevated px-3 py-2 text-sm text-fg
-      placeholder:text-faint focus:border-accent focus:outline-none
-      focus-visible:outline-2 focus-visible:outline-accent;
+    @apply w-full rounded-md border border-border bg-elevated px-3 py-2 text-sm text-fg placeholder:text-faint focus:border-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-accent;
   }
 
   /* Horizontal scroll instead of a broken layout on narrow laptop screens. */
@@ -185,8 +183,7 @@
     @apply w-full border-collapse text-sm;
   }
   .data-table thead th {
-    @apply sticky top-0 z-10 whitespace-nowrap border-b border-border bg-surface px-3 py-2
-      text-left text-xs font-semibold uppercase tracking-wide text-muted;
+    @apply sticky top-0 z-10 whitespace-nowrap border-b border-border bg-surface px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted;
   }
   .data-table tbody td {
     @apply whitespace-nowrap border-b border-border/60 px-3 py-2 align-middle;

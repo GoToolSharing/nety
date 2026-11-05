@@ -14,8 +14,7 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// ---------------------------------------------------------------------------
-// VNC / RFB
+// --------------------------------------------------------------------------- VNC / RFB
 // ---------------------------------------------------------------------------
 
 // rfbServer speaks the RFB 3.8 handshake and offers the given security types.
@@ -85,8 +84,7 @@ func TestVNCRejectsNonRFB(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// X11
+// --------------------------------------------------------------------------- X11
 // ---------------------------------------------------------------------------
 
 // x11SetupReply builds a Success (status 1) connection setup reply.
@@ -164,13 +162,13 @@ func TestX11ParseSetupHostileInput(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// The probes must never write anything that changes state
+// --------------------------------------------------------------------------- The probes
+// must never write anything that changes state
 // ---------------------------------------------------------------------------
 
-// TestProbesAreReadOnly records every byte the checks send to a service that
-// answers nothing, and asserts none of them carries a write-shaped command.
-// It is a coarse net, but it catches a destructive command added by accident.
+// TestProbesAreReadOnly records every byte the checks send to a service that answers
+// nothing, and asserts none of them carries a write-shaped command. It is a coarse net,
+// but it catches a destructive command added by accident.
 func TestProbesAreReadOnly(t *testing.T) {
 	var (
 		mu   sync.Mutex
@@ -191,8 +189,8 @@ func TestProbesAreReadOnly(t *testing.T) {
 		}
 	})
 
-	// The server never answers, so every check runs to its own timeout:
-	// keep that short and run them in parallel.
+	// The server never answers, so every check runs to its own timeout: keep that short
+	// and run them in parallel.
 	var wg sync.WaitGroup
 	for _, ch := range allChecks() {
 		if ch.Info.Intrusive {

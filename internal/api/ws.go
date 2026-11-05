@@ -13,9 +13,9 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// handleEvents upgrades to a WebSocket and streams the live events of a
-// mission: this is what makes results appear in the UI while a scan runs
-// (requirement R1), instead of waiting for it to finish.
+// handleEvents upgrades to a WebSocket and streams the live events of a mission: this is
+// what makes results appear in the UI while a scan runs (requirement R1), instead of
+// waiting for it to finish.
 func (a *API) handleEvents(w http.ResponseWriter, r *http.Request, u model.User) {
 	m, ok := a.requireMission(w, r, u)
 	if !ok {
@@ -23,8 +23,8 @@ func (a *API) handleEvents(w http.ResponseWriter, r *http.Request, u model.User)
 	}
 
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		// The SPA is served from the same origin as the API; a browser cannot
-		// forge the Origin header, so same-origin is the whole check we need.
+		// The SPA is served from the same origin as the API; a browser cannot forge the
+		// Origin header, so same-origin is the whole check we need.
 		OriginPatterns:  []string{},
 		CompressionMode: websocket.CompressionContextTakeover,
 	})
@@ -34,16 +34,16 @@ func (a *API) handleEvents(w http.ResponseWriter, r *http.Request, u model.User)
 	}
 	defer conn.CloseNow()
 
-	// The connection outlives the request context in Go's http server only if
-	// we detach it: derive our own, cancelled when the client goes away.
+	// The connection outlives the request context in Go's http server only if we detach
+	// it: derive our own, cancelled when the client goes away.
 	ctx, cancel := context.WithCancel(context.WithoutCancel(r.Context()))
 	defer cancel()
 
 	sub := a.Bus.Subscribe(m.ID, 1024)
 	defer sub.Close()
 
-	// A reader goroutine: we do not expect client messages, but reading is how
-	// close frames and pongs are processed.
+	// A reader goroutine: we do not expect client messages, but reading is how close
+	// frames and pongs are processed.
 	go func() {
 		defer cancel()
 		for {
@@ -82,8 +82,8 @@ func (a *API) handleEvents(w http.ResponseWriter, r *http.Request, u model.User)
 			if err := writeJSON(ctx, conn, ev); err != nil {
 				return
 			}
-			// If this client fell behind, the bus dropped events for it. Say so,
-			// so the UI refetches instead of showing a half-updated table.
+			// If this client fell behind, the bus dropped events for it. Say so, so the
+			// UI refetches instead of showing a half-updated table.
 			if dropped := sub.Dropped(); dropped > lastDropped {
 				lastDropped = dropped
 				_ = writeJSON(ctx, conn, model.Event{
@@ -108,8 +108,8 @@ func (a *API) handleEvents(w http.ResponseWriter, r *http.Request, u model.User)
 	}
 }
 
-// writeJSON sends one event with a write deadline, so a stalled client cannot
-// block the publisher forever.
+// writeJSON sends one event with a write deadline, so a stalled client cannot block the
+// publisher forever.
 func writeJSON(ctx context.Context, conn *websocket.Conn, ev model.Event) error {
 	wctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()

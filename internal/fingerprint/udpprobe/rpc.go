@@ -2,8 +2,7 @@ package udpprobe
 
 import "strconv"
 
-// rpcXID is the fixed, synthetic ONC-RPC transaction id, echoed verbatim in
-// the reply.
+// rpcXID is the fixed, synthetic ONC-RPC transaction id, echoed verbatim in the reply.
 const rpcXID uint32 = 0x4e455459 // "NETY"
 
 const (
@@ -12,10 +11,9 @@ const (
 	maxRPCEntries  = 256
 )
 
-// rpcDumpPayload is a portmapper (PMAPPROC_DUMP, program 100000 version 2,
-// procedure 4) call with AUTH_NULL credentials. It takes no arguments and
-// returns the whole registration table, which is far more useful than GETPORT
-// and just as cheap.
+// rpcDumpPayload is a portmapper (PMAPPROC_DUMP, program 100000 version 2, procedure 4)
+// call with AUTH_NULL credentials. It takes no arguments and returns the whole
+// registration table, which is far more useful than GETPORT and just as cheap.
 func rpcDumpPayload() []byte {
 	b := make([]byte, 0, 40)
 	put32 := func(v uint32) {

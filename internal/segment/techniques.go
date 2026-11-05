@@ -7,9 +7,9 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// The technique catalogue. Each entry answers one question an auditor asks
-// about a segmentation boundary, and the Description is shown verbatim in the
-// UI next to the checkbox that enables it.
+// The technique catalogue. Each entry answers one question an auditor asks about a
+// segmentation boundary, and the Description is shown verbatim in the UI next to the
+// checkbox that enables it.
 var techniqueCatalog = []engine.TechniqueInfo{
 	{
 		ID:          model.TechDirect,
@@ -123,9 +123,8 @@ func (t *Tester) Techniques() []engine.TechniqueInfo {
 	return out
 }
 
-// DefaultTechniques are the techniques enabled when SegmentOptions.Techniques
-// is empty: the ones that are safe on any engagement and answer most of the
-// question on their own.
+// DefaultTechniques are the techniques enabled when SegmentOptions.Techniques is empty:
+// the ones that are safe on any engagement and answer most of the question on their own.
 func DefaultTechniques() []string {
 	var out []string
 	for _, t := range techniqueCatalog {
@@ -178,8 +177,8 @@ func isL2Active(id string) bool { return techniqueByID[id].L2Active }
 // isOneWay reports whether id can only ever produce model.ReachSent.
 func isOneWay(id string) bool { return techniqueByID[id].OneWay }
 
-// needsExclusiveAccess reports whether a technique changes system state and
-// must therefore run on its own, never alongside another technique.
+// needsExclusiveAccess reports whether a technique changes system state and must
+// therefore run on its own, never alongside another technique.
 func needsExclusiveAccess(id string) bool {
 	switch id {
 	case model.TechGatewayRoute, model.TechAltGateway,

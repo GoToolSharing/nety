@@ -81,8 +81,8 @@ func mongoEncode(d mongoDoc) []byte {
 
 var errMongoBSON = errors.New("mongodb: malformed BSON")
 
-// mongoDecode decodes one BSON document into a map. Arrays are decoded as
-// []any. Depth is bounded.
+// mongoDecode decodes one BSON document into a map. Arrays are decoded as []any. Depth is
+// bounded.
 func mongoDecode(b []byte, depth int) (map[string]any, int, error) {
 	if depth > 16 || len(b) < 5 {
 		return nil, 0, errMongoBSON

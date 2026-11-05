@@ -3,9 +3,9 @@
 // Command gen builds the MAC-vendor database embedded by package oui.
 //
 // It downloads the IEEE MA-L / MA-M / MA-S registries (CSV) and, when they are
-// unreachable, falls back to Wireshark's tab-separated "manuf" file. The result
-// is written as a gzip-compressed binary blob (see "Wire format" below) that
-// package oui embeds and decodes lazily.
+// unreachable, falls back to Wireshark's tab-separated "manuf" file. The result is
+// written as a gzip-compressed binary blob (see "Wire format" below) that package oui
+// embeds and decodes lazily.
 //
 // Usage, from the repository root:
 //
@@ -29,8 +29,8 @@
 //	    uvarint  xC  prefix keys, ascending, delta-encoded (first is absolute)
 //	    uvarint  xC  index into the name table, in the same order
 //
-// A key is the prefix's hex digits read as a big-endian integer: 0x00505 6 for
-// the MA-L 00:50:56, 0x0055DA1 for the MA-M 00:55:DA:1, and so on.
+// A key is the prefix's hex digits read as a big-endian integer: 0x00505 6 for the MA-L
+// 00:50:56, 0x0055DA1 for the MA-M 00:55:DA:1, and so on.
 package main
 
 import (
@@ -62,8 +62,8 @@ const (
 	userAgent  = "nety-oui-gen/1.0 (+https://github.com/GoToolSharing/nety)"
 )
 
-// ieeeSources are the three public IEEE registry exports. oui.csv is the only
-// mandatory one: without it we consider the IEEE source failed.
+// ieeeSources are the three public IEEE registry exports. oui.csv is the only mandatory
+// one: without it we consider the IEEE source failed.
 var ieeeSources = []struct {
 	url      string
 	required bool
@@ -76,9 +76,9 @@ var ieeeSources = []struct {
 
 const manufURL = "https://www.wireshark.org/download/automated/data/manuf"
 
-// placeholders are registry entries that name the block administrator rather
-// than a real vendor. Keeping them would shadow the more specific MA-M / MA-S
-// assignments carved out of the same MA-L range, so they are dropped.
+// placeholders are registry entries that name the block administrator rather than a real
+// vendor. Keeping them would shadow the more specific MA-M / MA-S assignments carved out
+// of the same MA-L range, so they are dropped.
 var placeholders = map[string]bool{
 	"ieee registration authority":     true,
 	"private":                         true,
@@ -149,8 +149,8 @@ func main() {
 		"names", names, "gzip_bytes", len(blob))
 }
 
-// loadIEEE fills entries from the IEEE CSV registries. It reports whether the
-// mandatory MA-L export was retrieved and parsed.
+// loadIEEE fills entries from the IEEE CSV registries. It reports whether the mandatory
+// MA-L export was retrieved and parsed.
 func loadIEEE(ctx context.Context, log *slog.Logger, entries map[string]string) bool {
 	ok := false
 	for _, src := range ieeeSources {
@@ -200,8 +200,8 @@ func fetch(ctx context.Context, url string) ([]byte, error) {
 	return body, nil
 }
 
-// parseIEEECSV parses an IEEE registry export, whose columns are
-// Registry, Assignment, Organization Name, Organization Address.
+// parseIEEECSV parses an IEEE registry export, whose columns are Registry, Assignment,
+// Organization Name, Organization Address.
 func parseIEEECSV(body []byte, entries map[string]string) (int, error) {
 	r := csv.NewReader(bytes.NewReader(body))
 	r.FieldsPerRecord = -1
@@ -247,8 +247,8 @@ func parseIEEECSV(body []byte, entries map[string]string) (int, error) {
 //	00:00:0C<TAB>Cisco<TAB>Cisco Systems, Inc
 //	00:1B:C5:00:00:00/36<TAB>Converging<TAB>Converging Systems Inc.
 //
-// The third column (long name) is preferred; the short name is used when the
-// long one is absent.
+// The third column (long name) is preferred; the short name is used when the long one is
+// absent.
 func parseManuf(body []byte, entries map[string]string) int {
 	sc := bufio.NewScanner(bytes.NewReader(body))
 	sc.Buffer(make([]byte, 64<<10), 1<<20)
@@ -262,8 +262,8 @@ func parseManuf(body []byte, entries map[string]string) int {
 		if len(f) < 2 {
 			continue
 		}
-		// The prefix column is space-padded to a fixed width, so both halves
-		// of "00:55:DA:00/28   " need trimming.
+		// The prefix column is space-padded to a fixed width, so both halves of
+		// "00:55:DA:00/28 " need trimming.
 		prefix, bits := strings.TrimSpace(f[0]), 24
 		if i := strings.IndexByte(prefix, '/'); i >= 0 {
 			v, err := strconv.Atoi(strings.TrimSpace(prefix[i+1:]))
@@ -298,8 +298,8 @@ func parseManuf(body []byte, entries map[string]string) int {
 	return n
 }
 
-// normPrefix validates an assignment string and returns it as uppercase hex of
-// 6, 7 or 9 digits (24, 28 or 36 bits).
+// normPrefix validates an assignment string and returns it as uppercase hex of 6, 7 or 9
+// digits (24, 28 or 36 bits).
 func normPrefix(s string) (string, bool) {
 	s = strings.ToUpper(strings.TrimSpace(s))
 	s = strings.NewReplacer(":", "", "-", "", ".", "", " ", "").Replace(s)
@@ -315,9 +315,8 @@ func normPrefix(s string) (string, bool) {
 	return s, true
 }
 
-// cleanVendor collapses whitespace, drops control characters and strips the
-// quoting some registry rows carry. Names are otherwise kept verbatim so they
-// stay recognisable.
+// cleanVendor collapses whitespace, drops control characters and strips the quoting some
+// registry rows carry. Names are otherwise kept verbatim so they stay recognisable.
 func cleanVendor(v string) string {
 	v = strings.Map(func(r rune) rune {
 		if r == '\t' || r == '\n' || r == '\r' {
@@ -342,11 +341,11 @@ type entry struct {
 	name uint32
 }
 
-// encode serialises entries into the gzip'd wire format and reports the number
-// of distinct vendor names.
+// encode serialises entries into the gzip'd wire format and reports the number of
+// distinct vendor names.
 func encode(entries map[string]string) (blob []byte, names int, err error) {
-	// Intern vendor names, most frequent first so the common ones get small
-	// varint indices.
+	// Intern vendor names, most frequent first so the common ones get small varint
+	// indices.
 	count := map[string]int{}
 	for _, v := range entries {
 		count[v]++

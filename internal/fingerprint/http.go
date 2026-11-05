@@ -97,8 +97,8 @@ func newRequest(ctx context.Context, u string) (*http.Request, error) {
 	return req, nil
 }
 
-// probeHTTP sends GET / and analyses the response. It returns an error when
-// the service does not speak HTTP.
+// probeHTTP sends GET / and analyses the response. It returns an error when the service
+// does not speak HTTP.
 func (d *dialer) probeHTTP(ctx context.Context, useTLS bool) (*httpResult, error) {
 	client := d.httpClient()
 	defer client.CloseIdleConnections()
@@ -152,8 +152,8 @@ func rawHead(resp *http.Response) []byte {
 	for _, k := range keys {
 		for _, v := range resp.Header[k] {
 			if k == "Set-Cookie" {
-				// Never keep a session value: the cookie NAME is the only
-				// part worth reporting.
+				// Never keep a session value: the cookie NAME is the only part worth
+				// reporting.
 				name, _, _ := strings.Cut(v, "=")
 				fmt.Fprintf(&b, "%s: %s=<redacted>\r\n", k, strings.TrimSpace(name))
 				continue
@@ -342,8 +342,7 @@ func (d *dialer) fetchFavicon(ctx context.Context, client *http.Client, base *ur
 	return nil
 }
 
-// serverProduct maps a Server header to nmap-style product/version/info/OS
-// and CPEs.
+// serverProduct maps a Server header to nmap-style product/version/info/OS and CPEs.
 type serverProduct struct {
 	Product, Version, Extra, OS string
 	CPEs                        []string

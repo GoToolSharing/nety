@@ -153,8 +153,8 @@ func mysqlNativeScramble(scramble []byte, password string) []byte {
 	return h3
 }
 
-// mysqlLogin attempts one login and reports success. err is non-nil when
-// the outcome is unknown (protocol error, TLS required, ...).
+// mysqlLogin attempts one login and reports success. err is non-nil when the outcome is
+// unknown (protocol error, TLS required, ...).
 func mysqlLogin(c net.Conn, user, password string) (ok bool, version string, detail string, err error) {
 	p, _, err := mysqlReadPacket(c)
 	if err != nil {

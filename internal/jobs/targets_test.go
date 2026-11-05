@@ -151,19 +151,18 @@ func TestCountAddresses(t *testing.T) {
 	if n != 256+65536 || !exact {
 		t.Fatalf("got %d exact=%v", n, exact)
 	}
-	// A huge IPv6 prefix saturates, and says so rather than passing the cap
-	// off as a real count.
+	// A huge IPv6 prefix saturates, and says so rather than passing the cap off as a real
+	// count.
 	v6, _ := ParseTargets([]string{"2001:db8::/32"})
 	if n, exact := CountAddresses(v6, 1000); n != 1000 || exact {
 		t.Fatalf("expected a saturated inexact count, got %d exact=%v", n, exact)
 	}
 }
 
-// TestCheckScanSizeRefusesTheImpossible is the guard that was missing when a
-// scan took the server down: auto-detect put the interface's link-local
-// fe80::/64 in the scope, the planner tried to enumerate 2^64 addresses, and
-// the process was killed while building work units. The operator saw an
-// unexplained restart.
+// TestCheckScanSizeRefusesTheImpossible is the guard that was missing when a scan took
+// the server down: auto-detect put the interface's link-local fe80::/64 in the scope, the
+// planner tried to enumerate 2^64 addresses, and the process was killed while building
+// work units. The operator saw an unexplained restart.
 func TestCheckScanSizeRefusesTheImpossible(t *testing.T) {
 	for _, spec := range []string{"fe80::/64", "2001:db8::/32", "::/0"} {
 		p, err := ParseTargets([]string{spec})
@@ -196,8 +195,8 @@ func TestCheckScanSizeRefusesTheImpossible(t *testing.T) {
 	}
 }
 
-// Even called directly with a space it should never have been given, chunking
-// must stop rather than allocate until the process dies.
+// Even called directly with a space it should never have been given, chunking must stop
+// rather than allocate until the process dies.
 func TestChunkAddressesIsBounded(t *testing.T) {
 	p, _ := ParseTargets([]string{"2001:db8::/64"})
 	var total int64

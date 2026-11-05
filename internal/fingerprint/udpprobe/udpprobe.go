@@ -1,19 +1,19 @@
 // Package udpprobe builds UDP service probes and decodes their responses.
 //
-// The package is pure: it produces payload bytes and parses response bytes. It
-// performs no I/O at all - sockets, deadlines, retries and context handling are
-// the caller's business. That makes every decoder trivially unit-testable and
-// keeps hostile input confined to pure functions.
+// The package is pure: it produces payload bytes and parses response bytes. It performs
+// no I/O at all: sockets, deadlines, retries and context handling are the caller's
+// business. That makes every decoder trivially unit-testable and keeps hostile input
+// confined to pure functions.
 //
-// Every decoder is written defensively: it bounds-checks each slice access,
-// caps every loop, refuses absurd lengths and never allocates from an
-// attacker-supplied length without a cap. Feeding random or truncated bytes to
-// Decode or DecodeAny must never panic.
+// Every decoder is written defensively: it bounds-checks each slice access, caps every
+// loop, refuses absurd lengths and never allocates from an attacker-supplied length
+// without a cap. Feeding random or truncated bytes to Decode or DecodeAny must never
+// panic.
 //
-// Where a probe carries a transaction or message identifier the payload uses a
-// fixed, obviously synthetic value which the matching decoder verifies. A
-// verified identifier is what justifies a confidence of 90; a structurally
-// plausible but unverifiable answer scores around 60.
+// Where a probe carries a transaction or message identifier the payload uses a fixed,
+// obviously synthetic value which the matching decoder verifies. A verified identifier is
+// what justifies a confidence of 90; a structurally plausible but unverifiable answer
+// scores around 60.
 package udpprobe
 
 // Probe is one UDP payload to send to a service.
@@ -35,8 +35,8 @@ type Result struct {
 	Confidence int               // 0..100
 }
 
-// decoder interprets a response body. It returns nil when resp does not look
-// like a valid answer to the probe it belongs to.
+// decoder interprets a response body. It returns nil when resp does not look like a valid
+// answer to the probe it belongs to.
 type decoder func(resp []byte) *Result
 
 type probeDef struct {
@@ -74,10 +74,9 @@ var registry = []probeDef{
 	{name: "ipmi-rmcp", ports: []uint16{623, 664}, payload: ipmiPayload(), decode: decodeIPMI},
 	{name: "sip-options", ports: []uint16{5060, 5061}, payload: sipPayload(), decode: decodeSIP},
 	{name: "rpc-null", ports: []uint16{111}, payload: rpcDumpPayload(), decode: decodeRPC},
-	// Tail: sent to anything we have no specific probe for. A bare empty
-	// datagram is enough to elicit an ICMP port-unreachable (closed) or, on a
-	// chatty service, a banner. It has no decoder of its own - use DecodeAny on
-	// whatever comes back.
+	// Tail: sent to anything we have no specific probe for. A bare empty datagram is
+	// enough to elicit an ICMP port-unreachable (closed) or, on a chatty service, a
+	// banner. It has no decoder of its own, so use DecodeAny on whatever comes back.
 	{name: "generic-udp", ports: nil, payload: []byte{}, decode: nil},
 }
 
@@ -102,8 +101,8 @@ func toProbe(p *probeDef) Probe {
 	return Probe{Name: p.name, Payload: clonePayload(p.payload), Ports: cloneU16(p.ports)}
 }
 
-// For returns the probes worth sending to a UDP port, best first: the
-// port-specific ones, then a small generic tail. It never returns nil.
+// For returns the probes worth sending to a UDP port, best first: the port-specific ones,
+// then a small generic tail. It never returns nil.
 func For(port uint16) []Probe {
 	out := make([]Probe, 0, 4)
 	for i := range registry {
@@ -140,9 +139,9 @@ func Names() []string {
 	return out
 }
 
-// Decode interprets resp as the answer to the probe named probeName. It
-// returns nil when resp does not look like a valid answer to that probe, when
-// probeName is unknown, or when the probe has no decoder (generic-udp).
+// Decode interprets resp as the answer to the probe named probeName. It returns nil when
+// resp does not look like a valid answer to that probe, when probeName is unknown, or
+// when the probe has no decoder (generic-udp).
 func Decode(probeName string, resp []byte) *Result {
 	if len(resp) == 0 {
 		return nil
@@ -159,11 +158,10 @@ func Decode(probeName string, resp []byte) *Result {
 	return nil
 }
 
-// DecodeAny tries every decoder that plausibly applies to port and returns the
-// best result, or nil. Used when we do not know which probe got the answer.
-// Decoders bound to the port are tried first; if none of them is confident the
-// remaining decoders get a chance, so a service answering on an unusual port is
-// still identified.
+// DecodeAny tries every decoder that plausibly applies to port and returns the best
+// result, or nil. Used when we do not know which probe got the answer. Decoders bound to
+// the port are tried first; if none of them is confident the remaining decoders get a
+// chance, so a service answering on an unusual port is still identified.
 func DecodeAny(port uint16, resp []byte) *Result {
 	if len(resp) == 0 {
 		return nil
@@ -198,9 +196,9 @@ func DecodeAny(port uint16, resp []byte) *Result {
 	return best
 }
 
-// runDecoder is the last line of defence: decoders are written not to panic,
-// but a response from the wire is hostile input and a panic here would take the
-// whole scan down. Recovering costs nothing on the happy path.
+// runDecoder is the last line of defence: decoders are written not to panic, but a
+// response from the wire is hostile input and a panic here would take the whole scan
+// down. Recovering costs nothing on the happy path.
 func runDecoder(d decoder, resp []byte) (res *Result) {
 	defer func() {
 		if r := recover(); r != nil {

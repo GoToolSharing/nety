@@ -7,10 +7,10 @@ import (
 	"github.com/GoToolSharing/nety/internal/model"
 )
 
-// An export is usually a deliverable. What the operator decided against has no
-// business in it, and what it leaves out it has to be able to name: a
-// spreadsheet that is quietly shorter than the mission is how a client ends up
-// asking about a finding nobody meant to send.
+// An export is usually a deliverable. What the operator decided against has no business
+// in it, and what it leaves out it has to be able to name: a spreadsheet that is quietly
+// shorter than the mission is how a client ends up asking about a finding nobody meant to
+// send.
 
 func TestExportLeavesOutWhatWasSetAside(t *testing.T) {
 	ctx := context.Background()
@@ -22,8 +22,8 @@ func TestExportLeavesOutWhatWasSetAside(t *testing.T) {
 	gone, _, _, _ := parked(t, s, m.ID, "10.0.0.6")
 	skip(t, s, gone.ID)
 
-	// And, on the machine that stays, one finding called a false positive and
-	// one service skipped on its own.
+	// And, on the machine that stays, one finding called a false positive and one service
+	// skipped on its own.
 	fp, err := s.UpsertFinding(ctx, model.Finding{
 		MissionID: m.ID, NetworkID: 1, HostID: keep.ID, IP: keep.IP,
 		CheckID: "tls-weak-cipher", Title: "Weak TLS cipher", Severity: model.SevLow,
@@ -98,8 +98,8 @@ func TestExportLeavesOutWhatWasSetAside(t *testing.T) {
 	}
 }
 
-// A mission with nothing set aside must not grow a disclaimer it does not
-// need, in either direction.
+// A mission with nothing set aside must not grow a disclaimer it does not need, in either
+// direction.
 func TestExportSaysNothingWhenNothingWasSetAside(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -119,8 +119,8 @@ func TestExportSaysNothingWhenNothingWasSetAside(t *testing.T) {
 	}
 }
 
-// Skipping the machine, rather than the address, has to reach the export the
-// same way: the skip cascades onto its hosts, and the export follows.
+// Skipping the machine, rather than the address, has to reach the export the same way:
+// the skip cascades onto its hosts, and the export follows.
 func TestExportFollowsASkippedMachine(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -156,10 +156,9 @@ func TestExportFollowsASkippedMachine(t *testing.T) {
 	}
 }
 
-// The second switch. A finding still at "to do" is a check result nobody has
-// read, which is not a verdict to put in front of a client. A service is
-// inventory and goes in whatever its status: the deliverable's list of open
-// ports has to be the whole list.
+// The second switch. A finding still at "to do" is a check result nobody has read, which
+// is not a verdict to put in front of a client. A service is inventory and goes in
+// whatever its status: the deliverable's list of open ports has to be the whole list.
 func TestExportLeavesOutUnreviewedFindingsButNeverServices(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -189,8 +188,8 @@ func TestExportLeavesOutUnreviewedFindingsButNeverServices(t *testing.T) {
 		t.Fatalf("unreviewed findings: got %d, want 1", out.Omitted.Unreviewed.Findings)
 	}
 
-	// The service was never triaged, and it is still there. This is the whole
-	// point of keeping the two switches apart.
+	// The service was never triaged, and it is still there. This is the whole point of
+	// keeping the two switches apart.
 	if len(out.Services) != 1 || out.Services[0].ID != service.ID {
 		t.Fatalf("a service is inventory and must not be filtered on its status, got %+v",
 			out.Services)
@@ -217,8 +216,8 @@ func TestExportLeavesOutUnreviewedFindingsButNeverServices(t *testing.T) {
 	_ = finding
 }
 
-// The two reasons are counted apart, because they do not mean the same thing
-// to whoever opens the file: one is a decision, the other is its absence.
+// The two reasons are counted apart, because they do not mean the same thing to whoever
+// opens the file: one is a decision, the other is its absence.
 func TestExportCountsTheTwoReasonsApart(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)

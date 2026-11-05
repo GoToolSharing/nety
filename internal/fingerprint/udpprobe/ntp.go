@@ -6,14 +6,14 @@ import (
 	"time"
 )
 
-// ntpXmt is the fixed, synthetic transmit timestamp placed in the client
-// packet. A server copies it verbatim into the Originate Timestamp field of its
-// reply, which is exactly the transaction id we verify. The value is a valid
-// NTP timestamp (2021-06-10-ish) whose fraction spells "NETY".
+// ntpXmt is the fixed, synthetic transmit timestamp placed in the client packet. A server
+// copies it verbatim into the Originate Timestamp field of its reply, which is exactly
+// the transaction id we verify. The value is a valid NTP timestamp (2021-06-10-ish) whose
+// fraction spells "NETY".
 var ntpXmt = [8]byte{0xe4, 0x6b, 0xa1, 0x50, 0x4e, 0x45, 0x54, 0x59}
 
-// ntpCtlSeq is the fixed sequence number of the mode-6 control request, echoed
-// by the server in its response.
+// ntpCtlSeq is the fixed sequence number of the mode-6 control request, echoed by the
+// server in its response.
 const ntpCtlSeq uint16 = 0x4e45
 
 // ntpEpochOffset converts an NTP era-0 timestamp to Unix seconds.
@@ -30,9 +30,9 @@ func ntpClientPayload() []byte {
 	return b
 }
 
-// ntpReadvarPayload is an NTPv2 mode-6 control message, opcode 2 (READVAR),
-// association id 0 - the system variables of the daemon, which include the
-// "version", "system" and "processor" strings.
+// ntpReadvarPayload is an NTPv2 mode-6 control message, opcode 2 (READVAR), association
+// id 0, the system variables of the daemon, which include the "version", "system" and
+// "processor" strings.
 func ntpReadvarPayload() []byte {
 	b := make([]byte, 12)
 	b[0] = 0x16 // LI=0, VN=2, Mode=6 (control)
@@ -137,8 +137,8 @@ func ntpShort(b []byte) string {
 	return strconv.FormatFloat(float64(v)/65536.0, 'f', 6, 64)
 }
 
-// ntpRefID renders the reference identifier: four ASCII characters for stratum
-// 0 and 1, an IPv4 address otherwise.
+// ntpRefID renders the reference identifier: four ASCII characters for stratum 0 and 1,
+// an IPv4 address otherwise.
 func ntpRefID(b []byte, stratum int) string {
 	if len(b) < 4 {
 		return ""
@@ -153,8 +153,8 @@ func ntpRefID(b []byte, stratum int) string {
 	return itoa(int(b[0])) + "." + itoa(int(b[1])) + "." + itoa(int(b[2])) + "." + itoa(int(b[3]))
 }
 
-// ntpTimestamp renders a 64-bit NTP timestamp as RFC 3339 UTC. It returns ""
-// for a zero timestamp and handles the era-1 wrap (dates past 2036).
+// ntpTimestamp renders a 64-bit NTP timestamp as RFC 3339 UTC. It returns "" for a zero
+// timestamp and handles the era-1 wrap (dates past 2036).
 func ntpTimestamp(b []byte) string {
 	if len(b) < 8 {
 		return ""
@@ -251,8 +251,8 @@ func decodeNTPReadvar(resp []byte) *Result {
 	return r
 }
 
-// ntpVersionFingerprint parses an ntpd "version" variable, e.g.
-// "ntpd 4.2.8p15@1.3728-o Wed Sep 23 11:46:38 UTC 2020 (1)".
+// ntpVersionFingerprint parses an ntpd "version" variable, e.g. "ntpd 4.2.8p15@1.3728-o
+// Wed Sep 23 11:46:38 UTC 2020 (1)".
 func ntpVersionFingerprint(v string, r *Result) {
 	switch {
 	case containsFold(v, "ntpd"):
@@ -281,8 +281,8 @@ func ntpVersionFingerprint(v string, r *Result) {
 
 const maxNTPVars = 64
 
-// parseNTPVars splits a mode-6 variable list: comma separated name=value pairs
-// where values may be quoted. Bounded at maxNTPVars entries.
+// parseNTPVars splits a mode-6 variable list: comma separated name=value pairs where
+// values may be quoted. Bounded at maxNTPVars entries.
 func parseNTPVars(b []byte) map[string]string {
 	out := make(map[string]string, 16)
 	s := string(b)

@@ -8,19 +8,18 @@ import (
 	"time"
 )
 
-// Minimal pure-Go BOOTP/DHCP (RFC 2131) message codec. It is used both by the
-// raw-socket client (dhcp_linux.go) and by the lease-file parser, since
-// dhcpcd stores the raw ACK packet on disk.
+// Minimal pure-Go BOOTP/DHCP (RFC 2131) message codec. It is used both by the raw-socket
+// client (dhcp_linux.go) and by the lease-file parser, since dhcpcd stores the raw ACK
+// packet on disk.
 
 // DHCPConfig tunes DHCPAcquire.
 type DHCPConfig struct {
-	// Timeout is the overall budget for the DISCOVER/REQUEST exchange
-	// (default 8s).
+	// Timeout is the overall budget for the DISCOVER/REQUEST exchange (default 8s).
 	Timeout time.Duration
 	// Retries is the number of DISCOVER attempts (default 3).
 	Retries int
-	// ClientMAC overrides the source MAC (default: the interface's own MAC).
-	// Spoofing it is sometimes needed when the client VLAN filters by MAC.
+	// ClientMAC overrides the source MAC (default: the interface's own MAC). Spoofing it
+	// is sometimes needed when the client VLAN filters by MAC.
 	ClientMAC net.HardwareAddr
 	// Hostname is sent as option 12.
 	Hostname string
@@ -177,8 +176,8 @@ func (m *DHCPMessage) optUint32(code uint8) (uint32, bool) {
 	return binary.BigEndian.Uint32(v[:4]), true
 }
 
-// Lease derives a Lease from an OFFER/ACK. now is used to turn the relative
-// lease timers into absolute instants.
+// Lease derives a Lease from an OFFER/ACK. now is used to turn the relative lease timers
+// into absolute instants.
 func (m *DHCPMessage) Lease(iface string, now time.Time) Lease {
 	l := Lease{Interface: iface, Address: m.YIAddr.Unmap()}
 	if !l.Address.IsValid() || l.Address.IsUnspecified() {
@@ -354,8 +353,7 @@ func ParseDHCPMessage(b []byte) (*DHCPMessage, error) {
 	return m, nil
 }
 
-// Marshal encodes the message. Options longer than 255 bytes are split per
-// RFC 3396.
+// Marshal encodes the message. Options longer than 255 bytes are split per RFC 3396.
 func (m *DHCPMessage) Marshal() []byte {
 	b := make([]byte, 240, 548)
 	b[0] = m.Op
@@ -435,8 +433,8 @@ func NewDHCPRequest(xid uint32, mac net.HardwareAddr, hostname string, requested
 	return m
 }
 
-// NewDHCPRelease builds the RELEASE that gives a lease back when NETY is done
-// with a temporary sub-interface.
+// NewDHCPRelease builds the RELEASE that gives a lease back when NETY is done with a
+// temporary sub-interface.
 func NewDHCPRelease(xid uint32, mac net.HardwareAddr, client, server netip.Addr) *DHCPMessage {
 	m := baseRequest(xid, mac, "")
 	m.CIAddr = client

@@ -81,7 +81,7 @@ export function Stat({
   return (
     <div className={cn('card px-4 py-3', className)}>
       <div className="panel-title">{label}</div>
-      <div className={cn('mt-1 text-2xl font-semibold tabular', toneClass)}>
+      <div className={cn('tabular mt-1 text-2xl font-semibold', toneClass)}>
         {typeof value === 'number' ? formatNumber(value) : value}
       </div>
       {sub && <div className="mt-0.5 text-xs text-muted">{sub}</div>}
@@ -104,9 +104,13 @@ export function PageHeader({
     <div className={cn('flex flex-wrap items-end justify-between gap-3', className)}>
       <div className="min-w-0">
         <h1 className="text-xl font-semibold tracking-tight text-fg">{title}</h1>
-        {description && <p className="mt-1 max-w-3xl text-sm text-muted">{description}</p>}
+        {description && (
+          <p className="mt-1 max-w-3xl text-sm text-muted">{description}</p>
+        )}
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+      {actions && (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+      )}
     </div>
   )
 }
@@ -124,7 +128,9 @@ export function KeyValue({
   className?: string
 }) {
   return (
-    <div className={cn('grid grid-cols-[minmax(0,160px)_1fr] gap-3 py-1 text-sm', className)}>
+    <div
+      className={cn('grid grid-cols-[minmax(0,160px)_1fr] gap-3 py-1 text-sm', className)}
+    >
       <dt className="text-xs text-muted">{label}</dt>
       <dd className={cn('min-w-0 break-words text-fg', mono && 'font-mono text-[12px]')}>
         {children}

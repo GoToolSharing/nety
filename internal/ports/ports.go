@@ -1,6 +1,5 @@
-// Package ports parses port specifications ("top100", "22,80,8000-8100",
-// "all" ...) and ships curated top-N port lists and a well-known port to
-// service-name table.
+// Package ports parses port specifications ("top100", "22,80,8000-8100", "all" ...) and
+// ships curated top-N port lists and a well-known port to service-name table.
 package ports
 
 import (
@@ -26,8 +25,8 @@ const MaxPort = 65535
 //	8000-8100            -> inclusive range
 //	-1024 / 60000-       -> open ranges (1-1024 / 60000-65535)
 //
-// proto selects the protocol of the top-N lists (TCP when empty).
-// Port 0 is rejected. An empty spec is an error.
+// proto selects the protocol of the top-N lists (TCP when empty). Port 0 is rejected. An
+// empty spec is an error.
 func Parse(spec string, proto model.Protocol) ([]uint16, error) {
 	spec = strings.TrimSpace(spec)
 	if spec == "" {
@@ -53,8 +52,8 @@ func Parse(spec string, proto model.Protocol) ([]uint16, error) {
 	return out, nil
 }
 
-// MustParse is Parse that panics on error; intended for constant specs in
-// tests and package-level defaults.
+// MustParse is Parse that panics on error; intended for constant specs in tests and
+// package-level defaults.
 func MustParse(spec string, proto model.Protocol) []uint16 {
 	p, err := Parse(spec, proto)
 	if err != nil {
@@ -88,8 +87,8 @@ func addToken(set *bitset, tok string, proto model.Protocol) error {
 		}
 		return nil
 	}
-	// Optional "t:"/"u:" prefixes are accepted for convenience and only
-	// honoured when they match proto (nmap style "T:22,U:53").
+	// Optional "t:"/"u:" prefixes are accepted for convenience and only honoured when
+	// they match proto (nmap style "T:22,U:53").
 	if len(tok) > 2 && tok[1] == ':' {
 		switch tok[0] {
 		case 't':
@@ -178,16 +177,16 @@ func (b *bitset) list() []uint16 {
 	return out
 }
 
-// TopTCP returns the n most common TCP ports, sorted ascending. n larger than
-// the curated list (1000) is capped.
+// TopTCP returns the n most common TCP ports, sorted ascending. n larger than the curated
+// list (1000) is capped.
 func TopTCP(n int) []uint16 { return topN(tcpByFrequency(), n) }
 
-// TopUDP returns the n most common UDP ports, sorted ascending. n larger than
-// the curated list (100) is capped.
+// TopUDP returns the n most common UDP ports, sorted ascending. n larger than the curated
+// list (100) is capped.
 func TopUDP(n int) []uint16 { return topN(udpByFrequency(), n) }
 
-// TopTCPOrdered returns the n most common TCP ports in frequency order (most
-// common first), useful for scanners that want to probe likely ports first.
+// TopTCPOrdered returns the n most common TCP ports in frequency order (most common
+// first), useful for scanners that want to probe likely ports first.
 func TopTCPOrdered(n int) []uint16 { return headCopy(tcpByFrequency(), n) }
 
 // TopUDPOrdered is TopTCPOrdered for UDP.

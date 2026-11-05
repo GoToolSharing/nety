@@ -42,7 +42,15 @@ const SERVER_MAX = 5000
  * server knows (see serviceSorts in internal/store/results.go): the sort runs
  * in SQL over the whole listing, not over the fifty rows on screen.
  */
-type SortKey = 'ip' | 'port' | 'state' | 'service' | 'product' | 'status' | 'network' | 'last_seen'
+type SortKey =
+  | 'ip'
+  | 'port'
+  | 'state'
+  | 'service'
+  | 'product'
+  | 'status'
+  | 'network'
+  | 'last_seen'
 
 export default function ServicesPage() {
   const missionId = useMissionId()
@@ -108,7 +116,17 @@ export default function ServicesPage() {
       limit: PAGE_SIZE,
       offset,
     }),
-    [debouncedQuery, ip, networkId, protocol, debouncedPort, triage, showSkipped, sort, offset],
+    [
+      debouncedQuery,
+      ip,
+      networkId,
+      protocol,
+      debouncedPort,
+      triage,
+      showSkipped,
+      sort,
+      offset,
+    ],
   )
 
   const services = useServices(missionId, params)
@@ -153,7 +171,11 @@ export default function ServicesPage() {
   const selectEverythingMatching = useCallback(async () => {
     setSelectingAll(true)
     try {
-      const page = await api.services(missionId, { ...params, limit: SERVER_MAX, offset: 0 })
+      const page = await api.services(missionId, {
+        ...params,
+        limit: SERVER_MAX,
+        offset: 0,
+      })
       setSelected(new Set(page.items.map((s) => s.id)))
       if (page.has_more) {
         toast.error(
@@ -184,7 +206,9 @@ export default function ServicesPage() {
         }
         setSelected(new Set())
         refresh()
-        toast.success(`${formatNumber(updated)} services marked ${status.replace('_', ' ')}`)
+        toast.success(
+          `${formatNumber(updated)} services marked ${status.replace('_', ' ')}`,
+        )
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Could not update the selection')
       }
@@ -204,7 +228,8 @@ export default function ServicesPage() {
   const allOnPageSelected = items.length > 0 && selectedOnPage === items.length
   // Offered only while the selection is still just this page: once it covers
   // the whole filter there is nothing left to extend.
-  const canSelectBeyondPage = allOnPageSelected && hasMore && selected.size <= items.length
+  const canSelectBeyondPage =
+    allOnPageSelected && hasMore && selected.size <= items.length
 
   return (
     <PageContainer wide>
@@ -360,7 +385,7 @@ export default function ServicesPage() {
             description={
               query || address || networkId || protocol || port
                 ? 'Relax the filters: the search covers the service name, product, version and banner, and the address box takes a single address or a CIDR prefix.'
-                : 'Run a discovery scan with service detection enabled - services appear here as each port is fingerprinted.'
+                : 'Run a discovery scan with service detection enabled: services appear here as each port is fingerprinted.'
             }
             action={
               !query && (
@@ -383,7 +408,9 @@ export default function ServicesPage() {
                         total={items.length}
                         selected={selectedOnPage}
                         onChange={(selectAll) =>
-                          setSelected(selectAll ? new Set(items.map((s) => s.id)) : new Set())
+                          setSelected(
+                            selectAll ? new Set(items.map((s) => s.id)) : new Set(),
+                          )
                         }
                       />
                     </th>
@@ -396,8 +423,18 @@ export default function ServicesPage() {
                     />
                     <SortHeader column="ip" label="Address" sort={sort} onSort={onSort} />
                     <SortHeader column="port" label="Port" sort={sort} onSort={onSort} />
-                    <SortHeader column="state" label="State" sort={sort} onSort={onSort} />
-                    <SortHeader column="service" label="Service" sort={sort} onSort={onSort} />
+                    <SortHeader
+                      column="state"
+                      label="State"
+                      sort={sort}
+                      onSort={onSort}
+                    />
+                    <SortHeader
+                      column="service"
+                      label="Service"
+                      sort={sort}
+                      onSort={onSort}
+                    />
                     <SortHeader
                       column="product"
                       label="Product / version"
@@ -405,8 +442,18 @@ export default function ServicesPage() {
                       onSort={onSort}
                     />
                     <th>Details</th>
-                    <SortHeader column="network" label="Network" sort={sort} onSort={onSort} />
-                    <SortHeader column="last_seen" label="Last seen" sort={sort} onSort={onSort} />
+                    <SortHeader
+                      column="network"
+                      label="Network"
+                      sort={sort}
+                      onSort={onSort}
+                    />
+                    <SortHeader
+                      column="last_seen"
+                      label="Last seen"
+                      sort={sort}
+                      onSort={onSort}
+                    />
                   </tr>
                 </thead>
                 <tbody>
@@ -470,21 +517,27 @@ export default function ServicesPage() {
                               {s.tunnel && <Badge tone="info">{s.tunnel}</Badge>}
                             </span>
                           </td>
-                          <td className="max-w-[240px] truncate text-muted" title={describe(s)}>
+                          <td
+                            className="max-w-[240px] truncate text-muted"
+                            title={describe(s)}
+                          >
                             {describe(s) || '-'}
                           </td>
-                          <td className="max-w-[280px] truncate text-xs text-muted" title={s.triage?.note || undefined}>
+                          <td
+                            className="max-w-[280px] truncate text-xs text-muted"
+                            title={s.triage?.note || undefined}
+                          >
                             {s.triage?.note
                               ? s.triage.note
                               : s.http?.title
-                              ? s.http.title
-                              : s.tls?.subject_cn
-                                ? `CN=${s.tls.subject_cn}`
-                                : s.ssh?.banner
-                                  ? s.ssh.banner
-                                  : s.banner
-                                    ? s.banner.slice(0, 60)
-                                    : '-'}
+                                ? s.http.title
+                                : s.tls?.subject_cn
+                                  ? `CN=${s.tls.subject_cn}`
+                                  : s.ssh?.banner
+                                    ? s.ssh.banner
+                                    : s.banner
+                                      ? s.banner.slice(0, 60)
+                                      : '-'}
                           </td>
                           <td className="text-muted">
                             {netName.get(s.network_id) ?? s.network_id}

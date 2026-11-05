@@ -6,7 +6,11 @@ import { InlineAlert, Skeleton } from '@/components/ui/Feedback'
 import { Mono } from '@/components/common'
 import { TrunkIcon } from '@/components/icons'
 import { TechniqueDetail, TechniqueFlags } from '@/components/TechniqueDetail'
-import { techniqueAnchor, useTechniqueGuides, type TechniqueGuide } from '@/lib/techniques'
+import {
+  techniqueAnchor,
+  useTechniqueGuides,
+  type TechniqueGuide,
+} from '@/lib/techniques'
 
 function TechniqueEntry({ t }: { t: TechniqueGuide }) {
   return (
@@ -70,8 +74,8 @@ export default function HelpPage() {
           <div>
             <div className="font-medium text-warn">Closed (routed)</div>
             <p className="mt-0.5 text-muted">
-              The packet reached the host, which refused it. Nothing blocked the crossing: the
-              port simply is not listening.
+              The packet reached the host, which refused it. Nothing blocked the crossing:
+              the port simply is not listening.
             </p>
           </div>
           <div>
@@ -113,10 +117,10 @@ export default function HelpPage() {
               >
                 These techniques change the state of the switch port: they create tagged
                 sub-interfaces, negotiate a trunk or emit double-tagged frames. On a badly
-                configured switch that can flap the port, trip port security or raise an alert
-                in the monitoring. Enable them only with the client informed, during an agreed
-                window, by ticking “Allow active L2 techniques” when launching a segmentation
-                scan.
+                configured switch that can flap the port, trip port security or raise an
+                alert in the monitoring. Enable them only with the client informed, during
+                an agreed window, by ticking “Allow active L2 techniques” when launching a
+                segmentation scan.
               </InlineAlert>
             </div>
             {layer2.map((t) => (
@@ -127,9 +131,9 @@ export default function HelpPage() {
       )}
 
       <p className="mt-4 text-xs text-faint">
-        The placeholders in the commands above are the ones NETY fills in itself: the interface
-        you declared on the network, the target address and port from the service inventory, and
-        the VLAN id of the target network.
+        The placeholders in the commands above are the ones NETY fills in itself: the
+        interface you declared on the network, the target address and port from the
+        service inventory, and the VLAN id of the target network.
       </p>
     </PageContainer>
   )

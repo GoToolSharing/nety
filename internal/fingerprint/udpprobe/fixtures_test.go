@@ -6,12 +6,11 @@ import (
 	"testing"
 )
 
-// Response fixtures. The binary ones are handcrafted packets written as
-// annotated hex; the text ones are literal protocol responses. Nothing here
-// touches the network.
+// Response fixtures. The binary ones are handcrafted packets written as annotated hex;
+// the text ones are literal protocol responses. Nothing here touches the network.
 
-// mustHex decodes a hex fixture, ignoring whitespace and "//" comments so the
-// fixtures can be annotated inline.
+// mustHex decodes a hex fixture, ignoring whitespace and "//" comments so the fixtures
+// can be annotated inline.
 func mustHex(t testing.TB, s string) []byte {
 	t.Helper()
 	var sb strings.Builder

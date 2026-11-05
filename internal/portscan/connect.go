@@ -26,8 +26,8 @@ const (
 	dialRetry                      // timeout or local transient error: retry later
 )
 
-// connectScan runs a full TCP connect() scan with a bounded worker pool,
-// randomized (host x port) order and rate limiting.
+// connectScan runs a full TCP connect() scan with a bounded worker pool, randomized (host
+// x port) order and rate limiting.
 func (s *Scanner) connectScan(ctx context.Context, j *job) error {
 	timeout := j.opts.Timeout
 	if timeout <= 0 {
@@ -42,8 +42,8 @@ func (s *Scanner) connectScan(ctx context.Context, j *job) error {
 	if uint64(workers) > n {
 		workers = int(n)
 	}
-	// Little's law: in-flight attempts ~ rate x mean attempt duration; no
-	// point keeping far more goroutines than that.
+	// Little's law: in-flight attempts ~ rate x mean attempt duration; no point keeping
+	// far more goroutines than that.
 	if w := rate * int(timeout/time.Millisecond) / 1000; w > 0 && w < workers {
 		workers = max(w, 16)
 		if uint64(workers) > n {
@@ -140,8 +140,8 @@ func (cd *connDialer) probe(ctx context.Context, host netip.Addr, port uint16) d
 	c, err := d.DialContext(dctx, "tcp", net.JoinHostPort(host.String(), strconv.Itoa(int(port))))
 	if err == nil {
 		if tc, ok := c.(*net.TCPConn); ok {
-			// RST on close: no TIME_WAIT (lets a fixed source port be reused
-			// immediately and keeps the local socket table small).
+			// RST on close: no TIME_WAIT (lets a fixed source port be reused immediately
+			// and keeps the local socket table small).
 			_ = tc.SetLinger(0)
 		}
 		_ = c.Close()

@@ -7,8 +7,8 @@
 //   - building AUTHENTICATE (type 3) messages, anonymous or NTLMv2,
 //   - minimal SPNEGO (RFC 4178) wrapping used by SMB, HTTP Negotiate, etc.
 //
-// Every parser is written for hostile input: all offsets are bounds checked and
-// no function panics on malformed data.
+// Every parser is written for hostile input: all offsets are bounds checked and no
+// function panics on malformed data.
 package ntlm
 
 import (
@@ -54,9 +54,9 @@ const (
 	Flag56                      uint32 = 0x80000000
 )
 
-// DefaultNegotiateFlags are the flags sent in NEGOTIATE messages. They request
-// the target name, target info and version so the CHALLENGE leaks as much
-// identity information as possible.
+// DefaultNegotiateFlags are the flags sent in NEGOTIATE messages. They request the target
+// name, target info and version so the CHALLENGE leaks as much identity information as
+// possible.
 const DefaultNegotiateFlags = FlagUnicode | FlagOEM | FlagRequestTarget | FlagNTLM |
 	FlagAlwaysSign | FlagExtendedSessionSecurity | FlagTargetInfo | FlagVersion |
 	Flag128 | Flag56
@@ -119,9 +119,9 @@ type Challenge struct {
 // NegotiateMessage builds a NEGOTIATE (type 1) message with DefaultNegotiateFlags.
 func NegotiateMessage() []byte { return NegotiateMessageFlags(DefaultNegotiateFlags) }
 
-// NegotiateMessageFlags builds a NEGOTIATE message with custom flags. When
-// FlagVersion is set, a Windows 10 style version block is included (servers
-// ignore it, it only makes the message look like a stock client).
+// NegotiateMessageFlags builds a NEGOTIATE message with custom flags. When FlagVersion is
+// set, a Windows 10 style version block is included (servers ignore it, it only makes the
+// message look like a stock client).
 func NegotiateMessageFlags(flags uint32) []byte {
 	b := make([]byte, 40)
 	copy(b, Signature)
@@ -141,8 +141,8 @@ func NegotiateMessageFlags(flags uint32) []byte {
 	return b
 }
 
-// secBuf reads a security buffer descriptor (len, maxlen, offset) at off and
-// returns the referenced bytes, bounds checked.
+// secBuf reads a security buffer descriptor (len, maxlen, offset) at off and returns the
+// referenced bytes, bounds checked.
 func secBuf(msg []byte, off int) ([]byte, bool) {
 	if off+8 > len(msg) {
 		return nil, false
@@ -183,8 +183,8 @@ func ParseChallenge(msg []byte) (*Challenge, error) {
 			c.TargetName = sanitize(string(tn))
 		}
 	}
-	// Payload start: the smallest non-zero offset among the buffers tells us
-	// whether the optional TargetInfo / Version fields are present.
+	// Payload start: the smallest non-zero offset among the buffers tells us whether the
+	// optional TargetInfo / Version fields are present.
 	payloadStart := len(msg)
 	if l := binary.LittleEndian.Uint16(msg[12:]); l > 0 {
 		if o := int(binary.LittleEndian.Uint32(msg[16:])); o < payloadStart {
@@ -246,8 +246,8 @@ type AVPair struct {
 	Value []byte
 }
 
-// ParseAVPairs decodes an AV pair list, stopping at MsvAvEOL or at the first
-// malformed entry.
+// ParseAVPairs decodes an AV pair list, stopping at MsvAvEOL or at the first malformed
+// entry.
 func ParseAVPairs(b []byte) []AVPair {
 	var out []AVPair
 	for len(b) >= 4 && len(out) < 64 {
@@ -265,8 +265,8 @@ func ParseAVPairs(b []byte) []AVPair {
 	return out
 }
 
-// FindChallenge locates and parses an NTLMSSP CHALLENGE message anywhere in
-// buf (e.g. inside SPNEGO, CredSSP, or an SMB security blob).
+// FindChallenge locates and parses an NTLMSSP CHALLENGE message anywhere in buf (e.g.
+// inside SPNEGO, CredSSP, or an SMB security blob).
 func FindChallenge(buf []byte) (*Challenge, error) {
 	var lastErr error = ErrNoChallenge
 	rest := buf
@@ -286,8 +286,8 @@ func FindChallenge(buf []byte) (*Challenge, error) {
 	}
 }
 
-// FiletimeToTime converts a Windows FILETIME (100ns since 1601) to time.Time.
-// Returns the zero time for 0 or absurd values.
+// FiletimeToTime converts a Windows FILETIME (100ns since 1601) to time.Time. Returns the
+// zero time for 0 or absurd values.
 func FiletimeToTime(ft uint64) time.Time {
 	const epochDiff = 116444736000000000 // 1601 -> 1970 in 100ns
 	if ft <= epochDiff || ft > epochDiff+uint64(400*365*24*3600)*10000000 {
@@ -344,8 +344,8 @@ func sanitize(s string) string {
 // AUTHENTICATE messages
 // ---------------------------------------------------------------------------
 
-// AnonymousAuthenticate builds an anonymous AUTHENTICATE message (null session,
-// MS-NLMP 3.1.5.1.2: empty NT response, LM response Z(1)).
+// AnonymousAuthenticate builds an anonymous AUTHENTICATE message (null session, MS-NLMP
+// 3.1.5.1.2: empty NT response, LM response Z(1)).
 func AnonymousAuthenticate(ch *Challenge) []byte {
 	flags := FlagUnicode | FlagNTLM | FlagAnonymous | FlagAlwaysSign | FlagExtendedSessionSecurity | Flag128 | Flag56 | FlagVersion
 	if ch != nil && ch.Flags&FlagTargetInfo != 0 {
@@ -395,9 +395,9 @@ func hmacMD5(key []byte, parts ...[]byte) []byte {
 	return m.Sum(nil)
 }
 
-// AuthenticateWith is Authenticate with an explicit client challenge and
-// timestamp (deterministic, used by tests). The server timestamp from the
-// CHALLENGE is preferred when present (as Windows does).
+// AuthenticateWith is Authenticate with an explicit client challenge and timestamp
+// (deterministic, used by tests). The server timestamp from the CHALLENGE is preferred
+// when present (as Windows does).
 func AuthenticateWith(ch *Challenge, cred Credentials, clientChallenge [8]byte, now time.Time) (AuthResult, error) {
 	if ch == nil {
 		return AuthResult{}, errors.New("ntlm: nil challenge")

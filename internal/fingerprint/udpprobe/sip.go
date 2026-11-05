@@ -2,10 +2,9 @@ package udpprobe
 
 import "strings"
 
-// Fixed, obviously synthetic SIP identities. The Call-ID is echoed by every
-// conformant UA in its response, which is the transaction id we verify. No part
-// of this looks like a real user or a real domain: "invalid" is the reserved
-// never-resolvable TLD of RFC 2606.
+// Fixed, obviously synthetic SIP identities. The Call-ID is echoed by every conformant UA
+// in its response, which is the transaction id we verify. No part of this looks like a
+// real user or a real domain: "invalid" is the reserved never-resolvable TLD of RFC 2606.
 const (
 	sipCallID = "nety-probe-0000000000@probe.invalid"
 	sipBranch = "z9hG4bK-nety-probe-00000001"
@@ -13,9 +12,9 @@ const (
 	sipURI    = "sip:nety-probe@probe.invalid"
 )
 
-// sipPayload is a SIP OPTIONS request. Servers answer it with 200 OK (or
-// 404/405/483), and the response headers carry the product banner, the
-// supported methods and the extensions.
+// sipPayload is a SIP OPTIONS request. Servers answer it with 200 OK (or 404/405/483),
+// and the response headers carry the product banner, the supported methods and the
+// extensions.
 func sipPayload() []byte {
 	req := "OPTIONS " + sipURI + " SIP/2.0\r\n" +
 		"Via: SIP/2.0/UDP probe.invalid:5060;branch=" + sipBranch + ";rport\r\n" +
@@ -32,8 +31,8 @@ func sipPayload() []byte {
 	return []byte(req)
 }
 
-// decodeSIP reads a SIP response (or an inbound request, which some gateways
-// send instead).
+// decodeSIP reads a SIP response (or an inbound request, which some gateways send
+// instead).
 func decodeSIP(resp []byte) *Result {
 	if len(resp) < 12 {
 		return nil
