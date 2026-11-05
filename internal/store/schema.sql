@@ -156,11 +156,18 @@ CREATE TABLE IF NOT EXISTS asset_ips (
     mission_id INTEGER NOT NULL,
     network_id INTEGER NOT NULL,
     ip         TEXT    NOT NULL,
+    -- Sortable key derived from ip (see internal/store/ipsort.go), so a
+    -- listing can order addresses numerically and select a whole subnet with
+    -- a range. Filled on every write beside the address it comes from.
+    ip_sort    TEXT    NOT NULL DEFAULT '',
     first_seen INTEGER NOT NULL,
     last_seen  INTEGER NOT NULL,
     PRIMARY KEY (asset_id, network_id, ip)
 );
 CREATE INDEX IF NOT EXISTS idx_asset_ips_lookup ON asset_ips(mission_id, ip);
+-- idx_asset_ips_sort is created by the migration, not here, for the same
+-- reason as idx_services_triage below: this file also runs against databases
+-- that predate the column.
 
 CREATE TABLE IF NOT EXISTS hosts (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -168,6 +175,8 @@ CREATE TABLE IF NOT EXISTS hosts (
     network_id    INTEGER NOT NULL,
     asset_id      INTEGER NOT NULL DEFAULT 0,
     ip            TEXT    NOT NULL,
+    -- Sortable key derived from ip, as on asset_ips above.
+    ip_sort       TEXT    NOT NULL DEFAULT '',
     mac           TEXT    NOT NULL DEFAULT '',
     vendor        TEXT    NOT NULL DEFAULT '',
     hostname      TEXT    NOT NULL DEFAULT '',
@@ -190,8 +199,8 @@ CREATE TABLE IF NOT EXISTS hosts (
 );
 CREATE INDEX IF NOT EXISTS idx_hosts_mission ON hosts(mission_id, network_id);
 CREATE INDEX IF NOT EXISTS idx_hosts_asset ON hosts(asset_id);
--- idx_hosts_triage is created by the migration, not here, for the same reason
--- as idx_services_triage below.
+-- idx_hosts_triage and idx_hosts_ip_sort are created by the migration, not
+-- here, for the same reason as idx_services_triage below.
 
 CREATE TABLE IF NOT EXISTS services (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -199,6 +208,8 @@ CREATE TABLE IF NOT EXISTS services (
     network_id   INTEGER NOT NULL,
     host_id      INTEGER NOT NULL,
     ip           TEXT    NOT NULL,
+    -- Sortable key derived from ip, as on asset_ips above.
+    ip_sort      TEXT    NOT NULL DEFAULT '',
     port         INTEGER NOT NULL,
     protocol     TEXT    NOT NULL,
     state        TEXT    NOT NULL DEFAULT 'open',
@@ -231,7 +242,8 @@ CREATE TABLE IF NOT EXISTS services (
 CREATE INDEX IF NOT EXISTS idx_services_mission ON services(mission_id, network_id);
 CREATE INDEX IF NOT EXISTS idx_services_host ON services(host_id);
 CREATE INDEX IF NOT EXISTS idx_services_port ON services(mission_id, port);
--- idx_services_triage is created by the migration, not here. This file runs
+-- idx_services_triage and idx_services_ip_sort are created by the migration,
+-- not here. This file runs
 -- against existing databases too, where the triage columns do not exist yet
 -- (migrations run after it), and indexing a missing column fails the startup.
 
@@ -262,6 +274,8 @@ CREATE TABLE IF NOT EXISTS findings (
     host_id      INTEGER NOT NULL DEFAULT 0,
     service_id   INTEGER NOT NULL DEFAULT 0,
     ip           TEXT    NOT NULL,
+    -- Sortable key derived from ip, as on asset_ips above.
+    ip_sort      TEXT    NOT NULL DEFAULT '',
     port         INTEGER NOT NULL DEFAULT 0,
     protocol     TEXT    NOT NULL DEFAULT '',
     check_id     TEXT    NOT NULL,
@@ -283,9 +297,9 @@ CREATE TABLE IF NOT EXISTS findings (
     UNIQUE (mission_id, network_id, ip, port, protocol, check_id)
 );
 CREATE INDEX IF NOT EXISTS idx_findings_mission ON findings(mission_id, severity);
--- idx_findings_triage is created by the migration, not here, for the same
--- reason as idx_services_triage above: this file also runs against databases
--- that predate the triage columns.
+-- idx_findings_triage and idx_findings_ip_sort are created by the migration,
+-- not here, for the same reason as idx_services_triage above: this file also
+-- runs against databases that predate those columns.
 
 CREATE TABLE IF NOT EXISTS reach_results (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,

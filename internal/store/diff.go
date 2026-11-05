@@ -569,44 +569,19 @@ func severityRank(s model.Severity) int {
 	}
 }
 
-// ipLess orders IPv4 numerically and leaves anything else lexicographic, so a
-// diff reads in address order and never panics on a malformed value.
+// ipLess orders addresses numerically and leaves anything that is not one
+// lexicographic, so a diff reads in address order and never panics on a
+// malformed value.
+//
+// It sorts on the same key the tables carry in their ip_sort column, so an
+// in-memory listing and a SQL one agree on what order a set of addresses is
+// in.
 func ipLess(a, b string) bool {
-	ka, oka := ipSortKey(a)
-	kb, okb := ipSortKey(b)
-	if oka && okb {
+	ka, kb := ipSortKey(a), ipSortKey(b)
+	if ka != "" && kb != "" {
 		return ka < kb
 	}
 	return a < b
-}
-
-func ipSortKey(s string) (uint32, bool) {
-	var (
-		v     uint32
-		octet int
-		n     int
-		digit bool
-	)
-	for i := 0; i <= len(s); i++ {
-		if i == len(s) || s[i] == '.' {
-			if !digit || n > 255 {
-				return 0, false
-			}
-			v = v<<8 | uint32(n)
-			octet++
-			n, digit = 0, false
-			continue
-		}
-		if s[i] < '0' || s[i] > '9' {
-			return 0, false
-		}
-		n = n*10 + int(s[i]-'0')
-		digit = true
-		if n > 255 {
-			return 0, false
-		}
-	}
-	return v, octet == 4
 }
 
 // recordedChange is one field a scan replaced on a service.

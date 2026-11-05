@@ -64,11 +64,11 @@ func (s *Store) UpsertHost(ctx context.Context, h model.Host) (model.Host, error
 		switch {
 		case errors.Is(err, ErrNotFound):
 			res, err := tx.ExecContext(ctx, `
-				INSERT INTO hosts (mission_id, network_id, asset_id, ip, mac, vendor,
+				INSERT INTO hosts (mission_id, network_id, asset_id, ip, ip_sort, mac, vendor,
 				    hostname, hostnames, domain, os, ttl, discovered_by,
 				    first_seen, last_seen, last_scan_id)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				h.MissionID, h.NetworkID, h.AssetID, h.IP, h.MAC, h.Vendor,
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				h.MissionID, h.NetworkID, h.AssetID, h.IP, ipSortKey(h.IP), h.MAC, h.Vendor,
 				h.Hostname, jsonList(h.Hostnames), h.Domain, h.OS, h.TTL,
 				jsonList(h.DiscoveredBy), ms(h.FirstSeen), ms(h.LastSeen), h.LastScanID)
 			if err != nil {
@@ -227,16 +227,55 @@ func inheritAssetTriageTx(ctx context.Context, tx *sql.Tx, h *model.Host) error 
 	return nil
 }
 
+// HostFilter narrows a host listing.
+//
+// Unlike the services, the hosts of a mission are never paged, so there is no
+// limit here: the filter exists for the address box and the sortable headers
+// above the table.
+type HostFilter struct {
+	MissionID int64
+	NetworkID int64 // 0 = all
+	// Address narrows to one address or to one subnet.
+	Address AddressFilter
+	// Sort names the column to order by, from hostSorts; anything else falls
+	// back to the default order. Desc reverses it.
+	Sort string
+	Desc bool
+}
+
+// hostSorts is the allowlist of columns the hosts table can be ordered by,
+// keyed by the name the API accepts.
+var hostSorts = map[string][]string{
+	"ip":        {"ip_sort"},
+	"hostname":  {"hostname"},
+	"mac":       {"mac", "vendor"},
+	"os":        {"os"},
+	"status":    {"triage_status"},
+	"network":   {networkName("hosts")},
+	"last_seen": {"last_seen"},
+}
+
+var defaultHostOrder = []string{"network_id"}
+
 // ListHosts returns the hosts of a mission, optionally restricted to one
-// network (networkID 0 = all).
+// network (networkID 0 = all), in the default order.
 func (s *Store) ListHosts(ctx context.Context, missionID, networkID int64) ([]model.Host, error) {
+	return s.ListHostsFiltered(ctx, HostFilter{MissionID: missionID, NetworkID: networkID})
+}
+
+// ListHostsFiltered returns the hosts matching the filter.
+func (s *Store) ListHostsFiltered(ctx context.Context, f HostFilter) ([]model.Host, error) {
 	q := `SELECT ` + hostCols + ` FROM hosts WHERE mission_id = ?`
-	args := []any{missionID}
-	if networkID != 0 {
+	args := []any{f.MissionID}
+	if f.NetworkID != 0 {
 		q += ` AND network_id = ?`
-		args = append(args, networkID)
+		args = append(args, f.NetworkID)
 	}
-	q += ` ORDER BY network_id, id`
+	if clause, vals := f.Address.where("ip", "ip_sort"); clause != "" {
+		q += clause
+		args = append(args, vals...)
+	}
+	q += orderBy(hostSorts, f.Sort, f.Desc, defaultHostOrder, "hosts.id")
 	rows, err := s.r.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("store: list hosts: %w", err)
@@ -313,12 +352,12 @@ func (s *Store) UpsertService(ctx context.Context, sv model.Service) (model.Serv
 		existing, err := scanService(row)
 		if errors.Is(err, sql.ErrNoRows) {
 			res, err := tx.ExecContext(ctx, `
-				INSERT INTO services (mission_id, network_id, host_id, ip, port, protocol,
+				INSERT INTO services (mission_id, network_id, host_id, ip, ip_sort, port, protocol,
 				    state, reason, name, product, version, extra_info, os_type, cpes,
 				    tunnel, banner, tls, http, ssh, extra, confidence, method,
 				    first_seen, last_seen, last_scan_id)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				sv.MissionID, sv.NetworkID, sv.HostID, sv.IP, sv.Port, string(sv.Protocol),
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				sv.MissionID, sv.NetworkID, sv.HostID, sv.IP, ipSortKey(sv.IP), sv.Port, string(sv.Protocol),
 				string(sv.State), sv.Reason, sv.Name, sv.Product, sv.Version, sv.ExtraInfo,
 				sv.OSType, jsonList(sv.CPEs), sv.Tunnel, sv.Banner,
 				jsonEncPtr(sv.TLS, sv.TLS == nil), jsonEncPtr(sv.HTTP, sv.HTTP == nil),
@@ -475,6 +514,14 @@ type ServiceFilter struct {
 	Protocol   model.Protocol
 	Search     string // substring over ip, name, product, version, banner, hostname
 	OnlyWithID bool   // only services already fingerprinted
+	// Address narrows to one address or to one subnet. It is what an operator
+	// means when they want "this machine" or "that VLAN" out of a table that
+	// runs to thousands of rows.
+	Address AddressFilter
+	// Sort names the column to order by, from serviceSorts; anything else
+	// falls back to the default order. Desc reverses it.
+	Sort string
+	Desc bool
 	// Triage narrows to one or more triage statuses, which is how the
 	// services screen shows "what is left to look at".
 	Triage []model.TriageStatus
@@ -498,6 +545,35 @@ func notOnASkippedHost(column string) string {
 	return ` AND NOT EXISTS (SELECT 1 FROM hosts WHERE hosts.id = ` + column +
 		` AND hosts.triage_status = '` + string(model.TriageSkipped) + `')`
 }
+
+// networkName orders by the name of a row's network rather than its id. The
+// row carries the id and the operator reads the name, so sorting on the id
+// would group the right rows together in the wrong order.
+func networkName(table string) string {
+	return `(SELECT name FROM networks WHERE networks.id = ` + table + `.network_id)`
+}
+
+// serviceSorts is the allowlist of columns the services table can be ordered
+// by, keyed by the name the API accepts. A caller's string is never anything
+// but a lookup key here, so it cannot reach the query.
+var serviceSorts = map[string][]string{
+	// Sorting by address keeps the ports of a machine together and in order:
+	// a column of one address repeated with its ports shuffled is not what
+	// "sort by address" means to anyone reading it.
+	"ip":        {"ip_sort", "port"},
+	"port":      {"port", "protocol"},
+	"service":   {"name"},
+	"product":   {"product", "version"},
+	"state":     {"state"},
+	"status":    {"triage_status"},
+	"network":   {networkName("services")},
+	"last_seen": {"last_seen"},
+}
+
+// defaultServiceOrder is the order a listing comes back in when nothing asked
+// for another one: by address then by port, which is how an operator reads a
+// network.
+var defaultServiceOrder = []string{"network_id", "ip_sort", "port"}
 
 // ListServices returns services matching the filter.
 func (s *Store) ListServices(ctx context.Context, f ServiceFilter) ([]model.Service, error) {
@@ -525,6 +601,10 @@ func (s *Store) ListServices(ctx context.Context, f ServiceFilter) ([]model.Serv
 		like := "%" + q + "%"
 		args = append(args, like, like, like, like, like)
 	}
+	if clause, vals := f.Address.where("ip", "ip_sort"); clause != "" {
+		sb.WriteString(clause)
+		args = append(args, vals...)
+	}
 	if f.OnlyWithID {
 		sb.WriteString(` AND name <> ''`)
 	}
@@ -537,7 +617,7 @@ func (s *Store) ListServices(ctx context.Context, f ServiceFilter) ([]model.Serv
 	if !f.IncludeSkippedHosts {
 		sb.WriteString(notOnASkippedHost("services.host_id"))
 	}
-	sb.WriteString(` ORDER BY network_id, ip, port`)
+	sb.WriteString(orderBy(serviceSorts, f.Sort, f.Desc, defaultServiceOrder, "services.id"))
 	if f.Limit > 0 {
 		sb.WriteString(` LIMIT ?`)
 		args = append(args, f.Limit)
@@ -629,12 +709,13 @@ func (s *Store) UpsertFinding(ctx context.Context, f model.Finding) (model.Findi
 	}
 	err := s.tx(ctx, func(tx *sql.Tx) error {
 		_, err := tx.ExecContext(ctx, `
-			INSERT INTO findings (mission_id, network_id, host_id, service_id, ip, port,
+			INSERT INTO findings (mission_id, network_id, host_id, service_id, ip, ip_sort, port,
 			    protocol, check_id, title, severity, description, evidence, remediation,
 			    refs, first_seen, last_seen, last_scan_id)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT (mission_id, network_id, ip, port, protocol, check_id) DO UPDATE SET
 			    host_id = excluded.host_id,
+			    ip_sort = excluded.ip_sort,
 			    service_id = excluded.service_id,
 			    title = excluded.title,
 			    severity = excluded.severity,
@@ -644,7 +725,7 @@ func (s *Store) UpsertFinding(ctx context.Context, f model.Finding) (model.Findi
 			    refs = excluded.refs,
 			    last_seen = excluded.last_seen,
 			    last_scan_id = excluded.last_scan_id`,
-			f.MissionID, f.NetworkID, f.HostID, f.ServiceID, f.IP, f.Port,
+			f.MissionID, f.NetworkID, f.HostID, f.ServiceID, f.IP, ipSortKey(f.IP), f.Port,
 			string(f.Protocol), f.CheckID, f.Title, string(f.Severity), f.Description,
 			f.Evidence, f.Remediation, jsonList(f.References),
 			ms(f.FirstSeen), ms(f.LastSeen), f.LastScanID)
@@ -688,6 +769,12 @@ type FindingFilter struct {
 	MissionID int64
 	NetworkID int64 // 0 = all
 	HostID    int64 // 0 = all
+	// Address narrows to one address or to one subnet, as on a service.
+	Address AddressFilter
+	// Sort names the column to order by, from findingSorts; anything else
+	// falls back to the default order. Desc reverses it.
+	Sort string
+	Desc bool
 	// Triage narrows to one or more triage statuses, which is how the findings
 	// screen shows "what is left to decide on".
 	Triage []model.TriageStatus
@@ -697,6 +784,28 @@ type FindingFilter struct {
 	// rows are hidden, never touched.
 	IncludeSkippedHosts bool
 }
+
+// severityOrder orders the severity column by weight instead of alphabetically,
+// so critical sorts above low rather than between high and medium.
+const severityOrder = `CASE severity
+	WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2
+	WHEN 'low' THEN 3 ELSE 4 END`
+
+// findingSorts is the allowlist of columns the findings table can be ordered
+// by, keyed by the name the API accepts.
+var findingSorts = map[string][]string{
+	"severity":  {severityOrder},
+	"ip":        {"ip_sort", "port"},
+	"check":     {"check_id"},
+	"title":     {"title"},
+	"status":    {"triage_status"},
+	"network":   {networkName("findings")},
+	"last_seen": {"last_seen"},
+}
+
+// defaultFindingOrder puts the worst first, which is the order the findings
+// screen is read in.
+var defaultFindingOrder = []string{severityOrder, "ip_sort", "port"}
 
 // ListFindings returns the findings matching the filter.
 func (s *Store) ListFindings(ctx context.Context, f FindingFilter) ([]model.Finding, error) {
@@ -710,6 +819,10 @@ func (s *Store) ListFindings(ctx context.Context, f FindingFilter) ([]model.Find
 		q += ` AND host_id = ?`
 		args = append(args, f.HostID)
 	}
+	if clause, vals := f.Address.where("ip", "ip_sort"); clause != "" {
+		q += clause
+		args = append(args, vals...)
+	}
 	if len(f.Triage) > 0 {
 		q += ` AND triage_status IN (?` + repeatComma(len(f.Triage)-1) + `)`
 		for _, t := range f.Triage {
@@ -719,10 +832,7 @@ func (s *Store) ListFindings(ctx context.Context, f FindingFilter) ([]model.Find
 	if !f.IncludeSkippedHosts {
 		q += notOnASkippedHost("findings.host_id")
 	}
-	// Severity is stored as text; order it by weight for the UI.
-	q += ` ORDER BY CASE severity
-	           WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2
-	           WHEN 'low' THEN 3 ELSE 4 END, ip, port`
+	q += orderBy(findingSorts, f.Sort, f.Desc, defaultFindingOrder, "findings.id")
 	rows, err := s.r.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("store: list findings: %w", err)

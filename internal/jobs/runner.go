@@ -205,9 +205,23 @@ func (r *Runner) Start(ctx context.Context, scanID int64) error {
 	}
 
 	r.mu.Lock()
-	if _, busy := r.active[scanID]; busy {
+	if ctl, busy := r.active[scanID]; busy {
 		r.mu.Unlock()
-		return errors.New("jobs: scan is already running")
+		// A scan writes its final status before the goroutine running it lets
+		// go, so a resume issued the moment a pause lands, which is exactly
+		// what pressing Pause then Resume does, used to be told the scan was
+		// still running. Give the previous run its moment to finish letting
+		// go rather than refusing an action that is perfectly legitimate.
+		select {
+		case <-ctl.done:
+		case <-time.After(handoverGrace):
+			return errors.New("jobs: scan is already running")
+		}
+		r.mu.Lock()
+		if _, busy := r.active[scanID]; busy {
+			r.mu.Unlock()
+			return errors.New("jobs: scan is already running")
+		}
 	}
 	select {
 	case r.sem <- struct{}{}:
@@ -253,6 +267,10 @@ func (r *Runner) Start(ctx context.Context, scanID int64) error {
 	}()
 	return nil
 }
+
+// handoverGrace is how long Start waits for a run that is winding down to let
+// go of a scan before it calls it busy.
+const handoverGrace = 5 * time.Second
 
 // Pause asks a running scan to stop claiming work. In-flight units finish and
 // everything else returns to the queue.

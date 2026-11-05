@@ -77,6 +77,17 @@ export function wsUrl(path: string): string {
 
 type Query = Record<string, string | number | boolean | undefined | null>
 
+/**
+ * The parameters every result listing shares: a network, an address or CIDR
+ * prefix, and the column the server orders by.
+ */
+export type ListParams = {
+  network_id?: number
+  ip?: string
+  sort?: string
+  dir?: 'asc' | 'desc'
+}
+
 function withQuery(path: string, query?: Query): string {
   if (!query) return path
   const parts: string[] = []
@@ -257,12 +268,12 @@ export const api = {
   checks: async () => list(await request<CheckInfo[] | null>('api/checks')),
 
   // --- results -------------------------------------------------------------
-  hosts: async (missionId: number, networkId?: number) =>
-    list(
-      await request<Host[] | null>(`api/missions/${missionId}/hosts`, {
-        query: { network_id: networkId },
-      }),
-    ),
+  /**
+   * `ip` takes one address or a CIDR prefix; `sort` and `dir` order the whole
+   * listing in SQL, not the rows that happen to be on screen.
+   */
+  hosts: async (missionId: number, params: ListParams = {}) =>
+    list(await request<Host[] | null>(`api/missions/${missionId}/hosts`, { query: params })),
   host: (id: number) => request<HostDetail>(`api/hosts/${id}`),
 
   /** Record a status, a note, or both on one address. */
@@ -278,8 +289,7 @@ export const api = {
 
   services: async (
     missionId: number,
-    params: {
-      network_id?: number
+    params: ListParams & {
       host_id?: number
       port?: number
       protocol?: string
@@ -321,8 +331,7 @@ export const api = {
 
   findings: async (
     missionId: number,
-    params: {
-      network_id?: number
+    params: ListParams & {
       host_id?: number
       triage?: string
       /** Show the findings of hosts the operator has skipped. */
@@ -342,8 +351,8 @@ export const api = {
       { method: 'POST', body: { finding_ids: findingIds, status } },
     ),
 
-  assets: async (missionId: number) =>
-    list(await request<Asset[] | null>(`api/missions/${missionId}/assets`)),
+  assets: async (missionId: number, params: ListParams = {}) =>
+    list(await request<Asset[] | null>(`api/missions/${missionId}/assets`, { query: params })),
   asset: (id: number) => request<Asset>(`api/assets/${id}`),
   patchAsset: (id: number, body: AssetPatch) =>
     request<Asset>(`api/assets/${id}`, { method: 'PATCH', body }),

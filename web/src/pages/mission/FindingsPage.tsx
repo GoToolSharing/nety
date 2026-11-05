@@ -2,13 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { qk, useFindings, useHosts, useNetworks, useTriageSummary } from '@/lib/queries'
-import { useMissionId } from '@/lib/hooks'
+import { useDebounced, useMissionId } from '@/lib/hooks'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, CardHeader, PageHeader } from '@/components/ui/Card'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/Feedback'
 import { Badge, SeverityBadge } from '@/components/ui/Badge'
 import { LinkButton } from '@/components/ui/Button'
-import { FilterChips, Mono, RelativeTime, SearchInput } from '@/components/common'
+import {
+  AddressFilterInput,
+  FilterChips,
+  Mono,
+  RelativeTime,
+  SearchInput,
+  SortButton,
+  useSort,
+} from '@/components/common'
 import {
   SKIPPED_ROW_CLASS,
   SkippedHostsBanner,
@@ -18,9 +26,25 @@ import {
 } from '@/components/Triage'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/cn'
-import { compareIP, formatNumber } from '@/lib/format'
+import { formatNumber, isAddressOrPrefix } from '@/lib/format'
 import { ChevronDownIcon, ChevronRightIcon, FindingIcon } from '@/components/icons'
 import { SEVERITIES, type Finding, type Severity, type TriageStatus } from '@/types/api'
+
+/**
+ * The columns the findings list can be sorted by. Each one is a key the
+ * server knows (see findingSorts in internal/store/results.go), severity
+ * included: it is ordered by rank there, so critical sorts above low instead
+ * of alphabetically between high and medium.
+ */
+type SortKey = 'severity' | 'ip' | 'check' | 'status' | 'last_seen'
+
+/** The column widths the header strip and the rows below it share. */
+const COL = {
+  status: 'w-[122px] shrink-0',
+  severity: 'w-[86px] shrink-0',
+  address: 'w-[136px] shrink-0',
+  lastSeen: 'w-[104px] shrink-0',
+}
 
 function FindingRow({
   finding,
@@ -69,12 +93,15 @@ function FindingRow({
           onChange={onSelect}
           className="mt-1 h-3.5 w-3.5 shrink-0 cursor-pointer accent-[rgb(var(--c-accent))]"
         />
-        <div className="w-[122px] shrink-0">
+        <div className={COL.status}>
           <TriageSelect
             value={finding.triage?.status}
             busy={busy}
             onChange={(status) => onTriage({ status })}
           />
+        </div>
+        <div className={COL.severity}>
+          <SeverityBadge severity={finding.severity} />
         </div>
         <button type="button" onClick={onToggle} className="min-w-0 flex-1 text-left">
           <span className="flex flex-wrap items-center gap-2">
@@ -84,14 +111,12 @@ function FindingRow({
             </Badge>
           </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-            <Mono>{finding.ip}</Mono>
+            <span>{networkName}</span>
             {finding.port ? (
               <span className="tabular">
                 {finding.port}/{finding.protocol ?? 'tcp'}
               </span>
             ) : null}
-            <span>{networkName}</span>
-            <RelativeTime value={finding.last_seen} />
             {finding.triage?.note && (
               <span className="truncate text-faint" title={finding.triage.note}>
                 {finding.triage.note}
@@ -99,6 +124,12 @@ function FindingRow({
             )}
           </span>
         </button>
+        <div className={cn(COL.address, 'pt-0.5')}>
+          <Mono className="text-muted">{finding.ip}</Mono>
+        </div>
+        <div className={cn(COL.lastSeen, 'pt-0.5 text-xs text-muted')}>
+          <RelativeTime value={finding.last_seen} />
+        </div>
       </div>
 
       {expanded && (
@@ -184,10 +215,18 @@ export default function FindingsPage() {
   // The findings of a skipped host are out of the way by default. This is the
   // operator asking to see them anyway.
   const [showSkipped, setShowSkipped] = useState(false)
+  const [address, setAddress] = useState('')
+  const { sort, onSort } = useSort<SortKey>('severity')
+  const debouncedAddress = useDebounced(address, 300)
+  // Half a typed subnet is not a filter yet, so it is not sent: the list
+  // keeps showing what it had instead of emptying at every keystroke.
   const findings = useFindings(missionId, {
     network_id: networkId || undefined,
+    ip: isAddressOrPrefix(debouncedAddress) ? debouncedAddress.trim() : undefined,
     triage: triage.length ? triage.join(',') : undefined,
     include_skipped: showSkipped || undefined,
+    sort: sort.key,
+    dir: sort.dir,
   })
   const [query, setQuery] = useState('')
   const [severity, setSeverity] = useState<Severity | 'all'>('all')
@@ -202,7 +241,7 @@ export default function FindingsPage() {
 
   // Only needed to recess the rows of a skipped host, so it is not fetched
   // until those rows are on screen.
-  const hosts = useHosts(missionId, networkId || undefined, showSkipped)
+  const hosts = useHosts(missionId, { network_id: networkId || undefined }, showSkipped)
   const skippedHosts = useMemo(() => {
     const ids = new Set<number>()
     for (const h of hosts.data ?? []) {
@@ -290,18 +329,6 @@ export default function FindingsPage() {
     })
   }, [all, query, severity])
 
-  const grouped = useMemo(() => {
-    return SEVERITIES.map((sev) => ({
-      severity: sev,
-      items: filtered
-        .filter((f) => f.severity === sev)
-        .sort((a, b) => {
-          const byCheck = a.check_id.localeCompare(b.check_id)
-          return byCheck !== 0 ? byCheck : compareIP(a.ip, b.ip)
-        }),
-    })).filter((g) => g.items.length > 0)
-  }, [filtered])
-
   const allSelected = filtered.length > 0 && filtered.every((f) => selected.has(f.id))
 
   const toggle = (id: number) =>
@@ -316,7 +343,7 @@ export default function FindingsPage() {
     <PageContainer>
       <PageHeader
         title="Findings"
-        description="Misconfigurations raised by the light checks, grouped by severity, with the remediation you can paste into the report."
+        description="Misconfigurations raised by the light checks, worst first, with the remediation you can paste into the report. Any column header reorders the whole list."
         actions={
           filtered.length > 0 && (
             <button
@@ -341,6 +368,7 @@ export default function FindingsPage() {
           placeholder="Title, check id, IP, evidence…"
           className="w-full max-w-sm"
         />
+        <AddressFilterInput value={address} onChange={setAddress} />
         <label className="flex items-center gap-2 text-xs text-muted">
           <span>Network</span>
           <select
@@ -445,19 +473,20 @@ export default function FindingsPage() {
               retry={() => void findings.refetch()}
             />
           </Card>
-        ) : grouped.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <Card>
             <EmptyState
               icon={<FindingIcon width={20} height={20} />}
               title={all.length === 0 ? 'No finding yet' : 'No finding matches those filters'}
               description={
-                all.length === 0 && triage.length === 0
+                all.length === 0 && triage.length === 0 && !address
                   ? 'The light checks run as part of a discovery scan when “Light checks” is enabled. They look for SMB signing, anonymous shares, default credentials, weak TLS, exposed management interfaces and similar quick wins.'
-                  : 'Clear the search, the status filter or pick another severity.'
+                  : 'Clear the search, widen the address filter, or pick another status or severity.'
               }
               action={
                 all.length === 0 &&
-                triage.length === 0 && (
+                triage.length === 0 &&
+                !address && (
                   <LinkButton to="../scans/new" variant="primary">
                     Launch a scan with checks
                   </LinkButton>
@@ -466,36 +495,76 @@ export default function FindingsPage() {
             />
           </Card>
         ) : (
-          grouped.map((group) => (
-            <Card key={group.severity}>
-              <CardHeader
-                title={
-                  <span className="flex items-center gap-2">
-                    <SeverityBadge severity={group.severity} />
-                    <span className="tabular text-muted">
-                      {formatNumber(group.items.length)}
-                    </span>
-                  </span>
-                }
+          <Card>
+            <CardHeader
+              title={
+                <span className="flex items-center gap-2">
+                  <span>Findings</span>
+                  <span className="tabular text-muted">{formatNumber(filtered.length)}</span>
+                </span>
+              }
+            />
+            {/* The header strip is what sorts the list. The order is worked
+                out by the server over every finding of the mission, so it is
+                the same whether one check fired or a thousand. */}
+            <div className="flex items-center gap-3 border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+              {/* Two spacers for the expand chevron and the checkbox, so the
+                  headers line up with the columns under them. */}
+              <span className="w-5 shrink-0" aria-hidden />
+              <span className="w-3.5 shrink-0" aria-hidden />
+              <SortButton
+                column="status"
+                label="Status"
+                sort={sort}
+                onSort={onSort}
+                className={COL.status}
               />
-              <div>
-                {group.items.map((f) => (
-                  <FindingRow
-                    key={f.id}
-                    finding={f}
-                    networkName={netName.get(f.network_id) ?? `network ${f.network_id}`}
-                    expanded={expanded.has(f.id)}
-                    onToggle={() => toggle(f.id)}
-                    selected={selected.has(f.id)}
-                    onSelect={() => toggleSelected(f.id)}
-                    onTriage={(body) => void setTriageOn(f, body)}
-                    busy={busy === f.id}
-                    recessed={skippedHosts.has(f.host_id)}
-                  />
-                ))}
-              </div>
-            </Card>
-          ))
+              <SortButton
+                column="severity"
+                label="Severity"
+                sort={sort}
+                onSort={onSort}
+                className={COL.severity}
+              />
+              <SortButton
+                column="check"
+                label="Finding"
+                sort={sort}
+                onSort={onSort}
+                className="min-w-0 flex-1"
+              />
+              <SortButton
+                column="ip"
+                label="Address"
+                sort={sort}
+                onSort={onSort}
+                className={COL.address}
+              />
+              <SortButton
+                column="last_seen"
+                label="Last seen"
+                sort={sort}
+                onSort={onSort}
+                className={COL.lastSeen}
+              />
+            </div>
+            <div>
+              {filtered.map((f) => (
+                <FindingRow
+                  key={f.id}
+                  finding={f}
+                  networkName={netName.get(f.network_id) ?? `network ${f.network_id}`}
+                  expanded={expanded.has(f.id)}
+                  onToggle={() => toggle(f.id)}
+                  selected={selected.has(f.id)}
+                  onSelect={() => toggleSelected(f.id)}
+                  onTriage={(body) => void setTriageOn(f, body)}
+                  busy={busy === f.id}
+                  recessed={skippedHosts.has(f.host_id)}
+                />
+              ))}
+            </div>
+          </Card>
         )}
       </div>
     </PageContainer>

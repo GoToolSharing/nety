@@ -1,8 +1,3 @@
-// COORDINATION NOTE (temporary, for parallel agents): packages internal/ports,
-// internal/rawnet, internal/discovery and internal/portscan are owned and being
-// completed by the ports/rawnet/discovery/portscan agent. Please do not add,
-// replace or delete files here; internal/fingerprint is left to you.
-
 // Package discovery implements host discovery: ARP/NDP sweeps on directly
 // connected segments, ICMP echo/timestamp, TCP SYN and ACK pings and UDP
 // probes with real protocol payloads (raw sockets, Linux), with an

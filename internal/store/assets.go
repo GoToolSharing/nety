@@ -131,8 +131,8 @@ func (s *Store) SaveAsset(ctx context.Context, a model.Asset) (model.Asset, erro
 		}
 
 		ipStmt, err := tx.PrepareContext(ctx, `
-			INSERT INTO asset_ips (asset_id, mission_id, network_id, ip, first_seen, last_seen)
-			VALUES (?, ?, ?, ?, ?, ?)
+			INSERT INTO asset_ips (asset_id, mission_id, network_id, ip, ip_sort, first_seen, last_seen)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT (asset_id, network_id, ip) DO UPDATE SET last_seen = excluded.last_seen`)
 		if err != nil {
 			return err
@@ -150,7 +150,7 @@ func (s *Store) SaveAsset(ctx context.Context, a model.Asset) (model.Asset, erro
 				last = now
 			}
 			if _, err := ipStmt.ExecContext(ctx, a.ID, a.MissionID, ip.NetworkID, ip.IP,
-				ms(first), ms(last)); err != nil {
+				ipSortKey(ip.IP), ms(first), ms(last)); err != nil {
 				return err
 			}
 		}
@@ -178,11 +178,59 @@ func (s *Store) Asset(ctx context.Context, id int64) (model.Asset, error) {
 	return a, nil
 }
 
-// ListAssets returns every asset of a mission with keys and IPs attached.
-// The correlator needs this full list to resolve an observation.
+// AssetFilter narrows an asset listing.
+type AssetFilter struct {
+	MissionID int64
+	// Address keeps only the machines that answer at that address, or
+	// somewhere in that subnet. An asset holds its addresses in asset_ips
+	// rather than on the row itself, so this is a test on those.
+	Address AddressFilter
+	// Sort names the column to order by, from assetSorts; anything else falls
+	// back to the default order. Desc reverses it.
+	Sort string
+	Desc bool
+}
+
+// assetAddressCount counts the addresses a machine has been seen at. It is
+// both a sortable column and the thing that makes a multi-homed machine worth
+// looking at first.
+const assetAddressCount = `(SELECT COUNT(*) FROM asset_ips WHERE asset_ips.asset_id = assets.id)`
+
+// assetSorts is the allowlist of columns the assets table can be ordered by,
+// keyed by the name the API accepts.
+var assetSorts = map[string][]string{
+	"label":     {"label"},
+	"kind":      {"kind"},
+	"os":        {"os"},
+	"domain":    {"domain"},
+	"ips":       {assetAddressCount},
+	"status":    {"triage_status"},
+	"last_seen": {"last_seen"},
+}
+
+var defaultAssetOrder = []string{"label"}
+
+// ListAssets returns every asset of a mission with keys and IPs attached, in
+// the default order. The correlator needs this full list to resolve an
+// observation.
 func (s *Store) ListAssets(ctx context.Context, missionID int64) ([]model.Asset, error) {
-	rows, err := s.r.QueryContext(ctx,
-		`SELECT `+assetCols+` FROM assets WHERE mission_id = ? ORDER BY label, id`, missionID)
+	return s.ListAssetsFiltered(ctx, AssetFilter{MissionID: missionID})
+}
+
+// ListAssetsFiltered returns the assets matching the filter, keys and IPs
+// attached.
+func (s *Store) ListAssetsFiltered(ctx context.Context, f AssetFilter) ([]model.Asset, error) {
+	q := `SELECT ` + assetCols + ` FROM assets WHERE mission_id = ?`
+	args := []any{f.MissionID}
+	if clause, vals := f.Address.where("asset_ips.ip", "asset_ips.ip_sort"); clause != "" {
+		// The condition starts with AND, which belongs to the outer query and
+		// not to the EXISTS, so it is spliced in rather than appended.
+		q += ` AND EXISTS (SELECT 1 FROM asset_ips WHERE asset_ips.asset_id = assets.id` +
+			clause + `)`
+		args = append(args, vals...)
+	}
+	q += orderBy(assetSorts, f.Sort, f.Desc, defaultAssetOrder, "assets.id")
+	rows, err := s.r.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("store: list assets: %w", err)
 	}
@@ -318,8 +366,8 @@ func (s *Store) MergeAssets(ctx context.Context, dstID, srcID int64) error {
 			return err
 		}
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO asset_ips (asset_id, mission_id, network_id, ip, first_seen, last_seen)
-			SELECT ?, mission_id, network_id, ip, first_seen, last_seen
+			INSERT INTO asset_ips (asset_id, mission_id, network_id, ip, ip_sort, first_seen, last_seen)
+			SELECT ?, mission_id, network_id, ip, ip_sort, first_seen, last_seen
 			FROM asset_ips WHERE asset_id = ?
 			ON CONFLICT (asset_id, network_id, ip) DO UPDATE SET
 			    last_seen = MAX(asset_ips.last_seen, excluded.last_seen)`,

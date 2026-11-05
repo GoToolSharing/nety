@@ -356,3 +356,111 @@ func TestUpgradeToServiceChangeHistory(t *testing.T) {
 		t.Fatalf("reopening after the upgrade: %v", err)
 	}
 }
+
+// A database at version 4 has every address it ever saw but no key to sort or
+// filter them by. The upgrade must add the column and fill it from the
+// addresses already stored, so the first listing after the upgrade comes back
+// in address order rather than all tied on an empty key.
+func TestUpgradeToTheAddressSortKey(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "v4.db")
+
+	st, err := Open(path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mis, err := st.CreateMission(ctx, model.Mission{Name: "before"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// .9 before .100 is the pair plain text order gets wrong.
+	for _, ip := range []string{"10.0.0.100", "10.0.0.9", "2001:db8::5"} {
+		if _, err := st.UpsertHost(ctx, model.Host{MissionID: mis.ID, NetworkID: 1, IP: ip}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := st.UpsertService(ctx, model.Service{
+			MissionID: mis.ID, NetworkID: 1, IP: ip, Port: 443,
+			Protocol: model.TCP, State: model.PortOpen,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := st.UpsertFinding(ctx, model.Finding{
+			MissionID: mis.ID, NetworkID: 1, IP: ip, Port: 443, Protocol: model.TCP,
+			CheckID: "weak-tls", Title: "weak tls", Severity: model.SevMedium,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := st.SaveAsset(ctx, model.Asset{
+		MissionID: mis.ID, Label: "srv-01",
+		IPs: []model.AssetIP{{IP: "10.0.0.9", NetworkID: 1}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	st.Close()
+
+	// Put it back as it was before the key existed.
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, table := range []string{"hosts", "services", "findings", "asset_ips"} {
+		for _, stmt := range []string{
+			`UPDATE ` + table + ` SET ip_sort = ''`,
+			`DROP INDEX IF EXISTS idx_` + table + `_ip_sort`,
+		} {
+			if _, err := raw.ExecContext(ctx, stmt); err != nil {
+				t.Fatalf("%s: %v", stmt, err)
+			}
+		}
+	}
+	if _, err := raw.ExecContext(ctx, `PRAGMA user_version = 4`); err != nil {
+		t.Fatal(err)
+	}
+	raw.Close()
+
+	st, err = Open(path, nil)
+	if err != nil {
+		t.Fatalf("upgrade: %v", err)
+	}
+	defer st.Close()
+
+	hosts, err := st.ListHostsFiltered(ctx, HostFilter{MissionID: mis.ID, Sort: "ip"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"10.0.0.9", "10.0.0.100", "2001:db8::5"}
+	if len(hosts) != len(want) {
+		t.Fatalf("the hosts did not survive the upgrade: %d", len(hosts))
+	}
+	for i, ip := range want {
+		if hosts[i].IP != ip {
+			t.Fatalf("backfilled order: got %s at %d, want %s", hosts[i].IP, i, ip)
+		}
+	}
+
+	// The filter works on every backfilled table, which is the proof that the
+	// key was written and not just the column added.
+	f, err := ParseAddressFilter("10.0.0.0/24")
+	if err != nil {
+		t.Fatal(err)
+	}
+	services, err := st.ListServices(ctx, ServiceFilter{MissionID: mis.ID, Address: f})
+	if err != nil || len(services) != 2 {
+		t.Fatalf("services after backfill: %d, %v", len(services), err)
+	}
+	findings, err := st.ListFindings(ctx, FindingFilter{MissionID: mis.ID, Address: f})
+	if err != nil || len(findings) != 2 {
+		t.Fatalf("findings after backfill: %d, %v", len(findings), err)
+	}
+	assets, err := st.ListAssetsFiltered(ctx, AssetFilter{MissionID: mis.ID, Address: f})
+	if err != nil || len(assets) != 1 {
+		t.Fatalf("assets after backfill: %d, %v", len(assets), err)
+	}
+
+	// Re-opening is a no-op, not a second migration.
+	st.Close()
+	if st, err = Open(path, nil); err != nil {
+		t.Fatalf("reopening after the upgrade: %v", err)
+	}
+}

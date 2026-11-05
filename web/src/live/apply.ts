@@ -86,8 +86,13 @@ function patchFiltered<T extends { id: number }>(
  * window on screen. Patch the lists whose filter it still matches, drop it
  * from the ones it no longer belongs to, and leave anything else to the
  * throttled refetch.
+ *
+ * It answers true when a list did not hold the finding at all. The server
+ * filters and orders these listings, so where a new row belongs is its answer
+ * to give, not something to guess by appending to the end of a sorted table.
  */
-function patchFindingLists(qc: QueryClient, missionId: number, f: Finding): void {
+function patchFindingLists(qc: QueryClient, missionId: number, f: Finding): boolean {
+  let unseen = false
   for (const query of qc.getQueryCache().findAll({ queryKey: qk.findingsRoot(missionId) })) {
     const params = (query.queryKey[2] ?? {}) as { network_id?: number; triage?: string }
     const data = query.state.data as Finding[] | undefined
@@ -102,8 +107,37 @@ function patchFindingLists(qc: QueryClient, missionId: number, f: Finding): void
       }
       continue
     }
+    if (!data.some((x) => x.id === f.id)) {
+      unseen = true
+      continue
+    }
     qc.setQueryData(query.queryKey, upsert(data, f))
   }
+  return unseen
+}
+
+/**
+ * Refresh the rows a cached listing already shows, and answer whether every
+ * listing had the row. A listing that does not hold it yet is left to the
+ * throttled refetch, for the same reason as the findings above: the server
+ * decides what belongs in a filtered, sorted listing and where.
+ */
+function patchListedRows<T extends { id: number }>(
+  qc: QueryClient,
+  root: QueryKey,
+  item: T,
+): boolean {
+  let unseen = false
+  for (const query of qc.getQueryCache().findAll({ queryKey: root })) {
+    const data = query.state.data as T[] | undefined
+    if (data === undefined) continue
+    if (!data.some((row) => row.id === item.id)) {
+      unseen = true
+      continue
+    }
+    qc.setQueryData(query.queryKey, upsert(data, item))
+  }
+  return unseen
 }
 
 /** Services are paginated server-side: patch rows already on screen and let a
@@ -229,7 +263,9 @@ export function applyEvent(ctx: ApplyContext, ev: LiveEvent): void {
     case 'host': {
       const host = ev.data as Host
       if (!host?.id) return
-      patchFiltered(qc, qk.hostsRoot(missionId), host, (f) => f === null || f === host.network_id)
+      if (patchListedRows(qc, qk.hostsRoot(missionId), host)) {
+        invalidator.schedule(qk.hostsRoot(missionId))
+      }
       if (scanId) store.addHost(scanId, host)
       invalidator.schedule(qk.summary(missionId))
       return
@@ -251,7 +287,9 @@ export function applyEvent(ctx: ApplyContext, ev: LiveEvent): void {
     case 'finding': {
       const f = ev.data as Finding
       if (!f?.id) return
-      patchFindingLists(qc, missionId, f)
+      if (patchFindingLists(qc, missionId, f)) {
+        invalidator.schedule(qk.findingsRoot(missionId))
+      }
       if (scanId) store.addFinding(scanId, f)
       invalidator.schedule(qk.summary(missionId))
       return
@@ -274,9 +312,9 @@ export function applyEvent(ctx: ApplyContext, ev: LiveEvent): void {
     case 'asset': {
       const a = ev.data as Asset
       if (!a?.id) return
-      qc.setQueryData(qk.assets(missionId), (old: Asset[] | undefined) =>
-        old ? upsert(old, a) : old,
-      )
+      if (patchListedRows(qc, qk.assetsRoot(missionId), a)) {
+        invalidator.schedule(qk.assetsRoot(missionId))
+      }
       qc.setQueryData(qk.asset(a.id), a)
       invalidator.schedule(qk.summary(missionId))
       return
@@ -301,7 +339,7 @@ export function resynchronise(qc: QueryClient, missionId: number): void {
     qk.hostsRoot(missionId),
     qk.servicesRoot(missionId),
     qk.findingsRoot(missionId),
-    qk.assets(missionId),
+    qk.assetsRoot(missionId),
     qk.reachRoot(missionId),
     qk.matrix(missionId),
     qk.triageSummaryRoot(missionId),

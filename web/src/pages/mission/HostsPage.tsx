@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { qk, useHost, useHosts, useNetworks } from '@/lib/queries'
-import { useMissionId } from '@/lib/hooks'
+import { useDebounced, useMissionId } from '@/lib/hooks'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, KeyValue, PageHeader } from '@/components/ui/Card'
 import { Drawer } from '@/components/ui/Modal'
@@ -11,6 +11,7 @@ import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/Feedback'
 import { Badge, PortStateBadge } from '@/components/ui/Badge'
 import { LinkButton } from '@/components/ui/Button'
 import {
+  AddressFilterInput,
   CopyButton,
   Mono,
   RelativeTime,
@@ -22,10 +23,15 @@ import ServiceDetail from '@/components/ServiceDetail'
 import { SKIPPED_ROW_CLASS, TriageNote, TriageSelect } from '@/components/Triage'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/cn'
-import { compareIP, formatNumber } from '@/lib/format'
+import { formatNumber, isAddressOrPrefix } from '@/lib/format'
 import { HostIcon } from '@/components/icons'
 import type { Host, Service, TriageStatus } from '@/types/api'
 
+/**
+ * The columns the hosts table can be sorted by. Each one is a key the server
+ * knows (see hostSorts in internal/store/results.go): the order is decided in
+ * SQL so it covers the whole listing.
+ */
 type SortKey = 'ip' | 'hostname' | 'os' | 'mac' | 'status' | 'network' | 'last_seen'
 
 function HostDrawer({
@@ -222,9 +228,18 @@ export default function HostsPage() {
   const missionId = useMissionId()
   const networks = useNetworks(missionId)
   const [networkId, setNetworkId] = useState<number>(0)
-  const hosts = useHosts(missionId, networkId || undefined)
   const [query, setQuery] = useState('')
+  const [address, setAddress] = useState('')
   const { sort, onSort } = useSort<SortKey>('ip')
+  const debouncedAddress = useDebounced(address, 300)
+  // Half a typed subnet is not a filter yet, so it is not sent: the table
+  // keeps showing what it had instead of emptying at every keystroke.
+  const hosts = useHosts(missionId, {
+    network_id: networkId || undefined,
+    ip: isAddressOrPrefix(debouncedAddress) ? debouncedAddress.trim() : undefined,
+    sort: sort.key,
+    dir: sort.dir,
+  })
   const [selected, setSelected] = useState<Host | null>(null)
   const [picked, setPicked] = useState<Set<number>>(new Set())
   const [busy, setBusy] = useState<number | null>(null)
@@ -290,39 +305,22 @@ export default function HostsPage() {
     return m
   }, [networks.data])
 
+  // The rows arrive filtered by address and already in the order the header
+  // asks for; the search box narrows what is on screen without going back to
+  // the server, because the hosts of a mission are not paged.
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const filtered = (hosts.data ?? []).filter((h) => {
-      if (!q) return true
-      return (
+    if (!q) return hosts.data ?? []
+    return (hosts.data ?? []).filter(
+      (h) =>
         h.ip.includes(q) ||
         (h.hostname ?? '').toLowerCase().includes(q) ||
         (h.mac ?? '').toLowerCase().includes(q) ||
         (h.vendor ?? '').toLowerCase().includes(q) ||
         (h.os ?? '').toLowerCase().includes(q) ||
-        (h.domain ?? '').toLowerCase().includes(q)
-      )
-    })
-    const dir = sort.dir === 'asc' ? 1 : -1
-    return filtered.sort((a, b) => {
-      switch (sort.key) {
-        case 'ip':
-          return dir * compareIP(a.ip, b.ip)
-        case 'hostname':
-          return dir * (a.hostname ?? '').localeCompare(b.hostname ?? '')
-        case 'os':
-          return dir * (a.os ?? '').localeCompare(b.os ?? '')
-        case 'mac':
-          return dir * (a.mac ?? '').localeCompare(b.mac ?? '')
-        case 'status':
-          return dir * (a.triage?.status ?? 'todo').localeCompare(b.triage?.status ?? 'todo')
-        case 'network':
-          return dir * (netName.get(a.network_id) ?? '').localeCompare(netName.get(b.network_id) ?? '')
-        case 'last_seen':
-          return dir * a.last_seen.localeCompare(b.last_seen)
-      }
-    })
-  }, [hosts.data, query, sort, netName])
+        (h.domain ?? '').toLowerCase().includes(q),
+    )
+  }, [hosts.data, query])
 
   return (
     <PageContainer wide>
@@ -338,6 +336,7 @@ export default function HostsPage() {
           placeholder="IP, hostname, MAC, vendor, OS…"
           className="w-full max-w-sm"
         />
+        <AddressFilterInput value={address} onChange={setAddress} />
         <label className="flex items-center gap-2 text-xs text-muted">
           <span>Network</span>
           <select
@@ -394,14 +393,17 @@ export default function HostsPage() {
         ) : rows.length === 0 ? (
           <EmptyState
             icon={<HostIcon width={20} height={20} />}
-            title={query ? 'No host matches that filter' : 'No host discovered yet'}
+            title={
+              query || address ? 'No host matches that filter' : 'No host discovered yet'
+            }
             description={
-              query
-                ? 'Clear the search or pick another network.'
+              query || address
+                ? 'Clear the search, widen the address filter or pick another network.'
                 : 'Launch a discovery scan on one of your networks - hosts appear here as soon as they answer, without waiting for the scan to finish.'
             }
             action={
-              !query && (
+              !query &&
+              !address && (
                 <LinkButton to="../scans/new" variant="primary">
                   Launch a discovery scan
                 </LinkButton>

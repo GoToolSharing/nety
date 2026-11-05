@@ -1,8 +1,3 @@
-// COORDINATION NOTE (temporary, for parallel agents): packages internal/ports,
-// internal/rawnet, internal/discovery and internal/portscan are owned and being
-// completed by the ports/rawnet/discovery/portscan agent. Please do not add,
-// replace or delete files here; internal/fingerprint is left to you.
-
 // Package rawnet holds the shared raw-packet plumbing used by the discovery
 // and port scanning engines: AF_PACKET sockets with classic BPF filters,
 // route / next-hop resolution, ARP / neighbour resolution, frame building

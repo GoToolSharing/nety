@@ -1,8 +1,3 @@
-// COORDINATION NOTE (temporary, for parallel agents): packages internal/ports,
-// internal/rawnet, internal/discovery and internal/portscan are owned and being
-// completed by the ports/rawnet/discovery/portscan agent. Please do not add,
-// replace or delete files here; internal/fingerprint is left to you.
-
 // Package portscan implements the port scanning engine: a stateless,
 // masscan-style raw SYN scanner (Linux), a portable TCP connect() scanner and
 // a UDP scanner sending protocol-specific payloads. Only open ports are

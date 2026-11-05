@@ -285,6 +285,80 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		// Addresses are stored as text, which cannot be ordered numerically
+		// and cannot express a subnet. Every table that carries an address
+		// gains a key derived from it (see internal/store/ipsort.go) that can
+		// do both, and the rows already stored are given theirs here: a
+		// database that has been in use for a week must come back sorted, not
+		// empty at the top of every listing.
+		name: "address sort key",
+		apply: func(ctx context.Context, tx *sql.Tx) error {
+			for _, table := range []string{"hosts", "services", "findings", "asset_ips"} {
+				existing, err := tableColumns(ctx, tx, table)
+				if err != nil {
+					return err
+				}
+				if !existing["ip_sort"] {
+					if _, err := tx.ExecContext(ctx, fmt.Sprintf(
+						`ALTER TABLE %s ADD COLUMN ip_sort TEXT NOT NULL DEFAULT ''`,
+						table)); err != nil {
+						return err
+					}
+				}
+				if err := backfillIPSort(ctx, tx, table); err != nil {
+					return err
+				}
+				if _, err := tx.ExecContext(ctx, fmt.Sprintf(
+					`CREATE INDEX IF NOT EXISTS idx_%s_ip_sort ON %s(mission_id, ip_sort)`,
+					table, table)); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	},
+}
+
+// backfillIPSort fills the new key for the rows a table already holds.
+//
+// The work is one UPDATE per distinct address rather than per row, because a
+// mission has thousands of services spread over hundreds of addresses. The
+// addresses are read into memory first: the update runs on the same single
+// writer connection as the query that found them, and SQLite will not have a
+// statement stepping over a table while another writes to it.
+func backfillIPSort(ctx context.Context, tx *sql.Tx, table string) error {
+	rows, err := tx.QueryContext(ctx,
+		`SELECT DISTINCT ip FROM `+table+` WHERE ip_sort = '' AND ip <> ''`)
+	if err != nil {
+		return err
+	}
+	var ips []string
+	for rows.Next() {
+		var ip string
+		if err := rows.Scan(&ip); err != nil {
+			rows.Close()
+			return err
+		}
+		ips = append(ips, ip)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, ip := range ips {
+		key := ipSortKey(ip)
+		if key == "" {
+			// Not an address we can place; leave the empty key rather than
+			// invent an order for it.
+			continue
+		}
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE `+table+` SET ip_sort = ? WHERE ip = ? AND ip_sort = ''`, key, ip); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // tableColumns lists the columns a table currently has.

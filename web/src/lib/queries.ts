@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { api, type ListParams } from '@/lib/api'
 import type {
   AssetPatch,
   MissionInput,
@@ -39,8 +39,8 @@ export const qk = {
   checks: ['checks'] as const,
 
   hostsRoot: (missionId: number) => ['hosts', missionId] as const,
-  hosts: (missionId: number, networkId?: number) =>
-    ['hosts', missionId, networkId ?? null] as const,
+  hosts: (missionId: number, params: Record<string, unknown> = {}) =>
+    ['hosts', missionId, params] as const,
   host: (id: number) => ['host', id] as const,
 
   servicesRoot: (missionId: number) => ['services', missionId] as const,
@@ -51,7 +51,9 @@ export const qk = {
   findings: (missionId: number, params: Record<string, unknown> = {}) =>
     ['findings', missionId, params] as const,
 
-  assets: (missionId: number) => ['assets', missionId] as const,
+  assetsRoot: (missionId: number) => ['assets', missionId] as const,
+  assets: (missionId: number, params: Record<string, unknown> = {}) =>
+    ['assets', missionId, params] as const,
   asset: (id: number) => ['asset', id] as const,
 
   matrix: (missionId: number) => ['matrix', missionId] as const,
@@ -258,14 +260,14 @@ export function useDeleteScan(missionId: number) {
 // ---------------------------------------------------------------------------
 
 /**
- * The hosts of a mission. `enabled` is there for the screens that only need
- * the list to know which addresses are skipped, and only once the operator
- * has asked to see those rows.
+ * The hosts of a mission, filtered and ordered by the server. `enabled` is
+ * there for the screens that only need the list to know which addresses are
+ * skipped, and only once the operator has asked to see those rows.
  */
-export const useHosts = (missionId: number, networkId?: number, enabled = true) =>
+export const useHosts = (missionId: number, params: ListParams = {}, enabled = true) =>
   useQuery({
-    queryKey: qk.hosts(missionId, networkId),
-    queryFn: () => api.hosts(missionId, networkId),
+    queryKey: qk.hosts(missionId, params),
+    queryFn: () => api.hosts(missionId, params),
     enabled: enabled && missionId > 0,
   })
 
@@ -274,8 +276,7 @@ export const useHost = (id: number) =>
 
 export const useServices = (
   missionId: number,
-  params: {
-    network_id?: number
+  params: ListParams & {
     host_id?: number
     port?: number
     protocol?: string
@@ -295,8 +296,7 @@ export const useServices = (
 
 export const useFindings = (
   missionId: number,
-  params: {
-    network_id?: number
+  params: ListParams & {
     host_id?: number
     triage?: string
     include_skipped?: boolean
@@ -309,11 +309,12 @@ export const useFindings = (
     placeholderData: (prev) => prev,
   })
 
-export const useAssets = (missionId: number) =>
+export const useAssets = (missionId: number, params: ListParams = {}) =>
   useQuery({
-    queryKey: qk.assets(missionId),
-    queryFn: () => api.assets(missionId),
+    queryKey: qk.assets(missionId, params),
+    queryFn: () => api.assets(missionId, params),
     enabled: missionId > 0,
+    placeholderData: (prev) => prev,
   })
 
 export function usePatchAsset(missionId: number) {
@@ -321,7 +322,7 @@ export function usePatchAsset(missionId: number) {
   return useMutation({
     mutationFn: ({ id, body }: { id: number; body: AssetPatch }) =>
       api.patchAsset(id, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.assets(missionId) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.assetsRoot(missionId) }),
   })
 }
 
@@ -331,7 +332,7 @@ export function useMergeAssets(missionId: number) {
     mutationFn: ({ id, source_id }: { id: number; source_id: number }) =>
       api.mergeAssets(id, source_id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.assets(missionId) })
+      qc.invalidateQueries({ queryKey: qk.assetsRoot(missionId) })
       qc.invalidateQueries({ queryKey: qk.hostsRoot(missionId) })
     },
   })

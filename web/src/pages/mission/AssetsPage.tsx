@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { qk, useAssets, useMergeAssets, useNetworks, usePatchAsset } from '@/lib/queries'
-import { useMissionId } from '@/lib/hooks'
+import { useDebounced, useMissionId } from '@/lib/hooks'
 import { useAuth } from '@/state/auth'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, KeyValue, PageHeader } from '@/components/ui/Card'
@@ -13,6 +13,7 @@ import { EmptyState, ErrorState, InlineAlert, TableSkeleton } from '@/components
 import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
 import {
+  AddressFilterInput,
   FilterChips,
   Mono,
   RelativeTime,
@@ -20,12 +21,22 @@ import {
   SortHeader,
   useSort,
 } from '@/components/common'
-import { compareIP, formatNumber, humanizeId } from '@/lib/format'
+import {
+  addressHistory,
+  formatNumber,
+  humanizeId,
+  isAddressOrPrefix,
+} from '@/lib/format'
 import { cn } from '@/lib/cn'
 import { SKIPPED_ROW_CLASS, TriageNote, TriageSelect } from '@/components/Triage'
 import { ASSET_KIND_LABELS, AssetKindIcon, AssetIcon, MergeIcon } from '@/components/icons'
 import { ASSET_KINDS, type Asset, type AssetKind, type TriageStatus } from '@/types/api'
 
+/**
+ * The columns the assets table can be sorted by. Each one is a key the server
+ * knows (see assetSorts in internal/store/assets.go): the order is decided in
+ * SQL so it covers the whole listing, address count included.
+ */
 type SortKey = 'label' | 'kind' | 'status' | 'os' | 'domain' | 'ips' | 'last_seen'
 
 /** How many addresses a machine is currently answering on. */
@@ -77,6 +88,9 @@ function AssetDrawer({
   }, [asset])
 
   if (!asset) return null
+
+  // Where the machine has been, oldest address it has left first.
+  const history = addressHistory(asset.ips)
 
   const dirty =
     label !== asset.label ||
@@ -184,42 +198,57 @@ function AssetDrawer({
 
         <section className="mt-4">
           <h3 className="panel-title mb-1.5">
-            Addresses ({(asset.ips ?? []).length}) - the same machine across VLANs
+            Address history ({(asset.ips ?? []).length}) - where this machine has been
           </h3>
+          {/* The one line first: an operator reading this pane wants to know
+              the machine moved before they want the dates it moved on. */}
+          {history.length > 0 && (
+            <p className="mb-1.5 text-sm text-fg/90">
+              {history.map((entry, i) => (
+                <span key={`${entry.ip}-${entry.network_id}`}>
+                  {i > 0 && <span className="text-faint">, </span>}
+                  <Mono className={cn('font-medium', !entry.current && 'text-muted')}>
+                    {entry.ip}
+                  </Mono>{' '}
+                  <span className="text-muted">{entry.label}</span>
+                </span>
+              ))}
+            </p>
+          )}
           <div className="table-scroll rounded-md border border-border">
             <table className="data-table">
               <thead>
                 <tr>
                   <th>IP</th>
                   <th>Network</th>
+                  <th>Held</th>
                   <th>First seen</th>
                   <th>Last seen</th>
                 </tr>
               </thead>
               <tbody>
-                {(asset.ips ?? []).length === 0 ? (
+                {history.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="text-center text-muted">
+                    <td colSpan={5} className="text-center text-muted">
                       No address recorded.
                     </td>
                   </tr>
                 ) : (
-                  [...(asset.ips ?? [])]
-                    .sort((a, b) => compareIP(a.ip, b.ip))
-                    .map((ip) => (
-                      <tr key={`${ip.ip}-${ip.network_id}`}>
-                        <td>
-                          <Mono className="font-medium">{ip.ip}</Mono>
-                        </td>
-                        <td className="text-muted">{networkName(ip.network_id)}</td>
-                        <td className="text-muted">
-                          <RelativeTime value={ip.first_seen} />
-                        </td>
-                        <td className="text-muted">
-                          <RelativeTime value={ip.last_seen} />
-                        </td>
-                      </tr>
-                    ))
+                  history.map((ip) => (
+                    <tr key={`${ip.ip}-${ip.network_id}`} className={cn(!ip.current && 'opacity-70')}>
+                      <td>
+                        <Mono className="font-medium">{ip.ip}</Mono>
+                      </td>
+                      <td className="text-muted">{networkName(ip.network_id)}</td>
+                      <td className="text-muted">{ip.label}</td>
+                      <td className="text-muted">
+                        <RelativeTime value={ip.first_seen} />
+                      </td>
+                      <td className="text-muted">
+                        <RelativeTime value={ip.last_seen} />
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -399,11 +428,19 @@ function AssetDrawer({
 
 export default function AssetsPage() {
   const missionId = useMissionId()
-  const assets = useAssets(missionId)
   const networks = useNetworks(missionId)
   const [query, setQuery] = useState('')
+  const [address, setAddress] = useState('')
   const [kindFilter, setKindFilter] = useState<AssetKind | 'all'>('all')
   const { sort, onSort } = useSort<SortKey>('label')
+  const debouncedAddress = useDebounced(address, 300)
+  // Half a typed subnet is not a filter yet, so it is not sent: the table
+  // keeps showing what it had instead of emptying at every keystroke.
+  const assets = useAssets(missionId, {
+    ip: isAddressOrPrefix(debouncedAddress) ? debouncedAddress.trim() : undefined,
+    sort: sort.key,
+    dir: sort.dir,
+  })
   const [selected, setSelected] = useState<Asset | null>(null)
   const [picked, setPicked] = useState<Set<number>>(new Set())
   const [busy, setBusy] = useState<number | null>(null)
@@ -414,7 +451,7 @@ export default function AssetsPage() {
   // Parking a machine parks its addresses, which changes every table keyed on
   // them, so the refresh is deliberately wide.
   const refresh = useCallback(() => {
-    void qc.invalidateQueries({ queryKey: qk.assets(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.assetsRoot(missionId) })
     void qc.invalidateQueries({ queryKey: qk.hostsRoot(missionId) })
     void qc.invalidateQueries({ queryKey: qk.servicesRoot(missionId) })
     void qc.invalidateQueries({ queryKey: qk.findingsRoot(missionId) })
@@ -477,9 +514,12 @@ export default function AssetsPage() {
     return c
   }, [all])
 
+  // The rows arrive filtered by address and already in the order the header
+  // asks for; the kind chips and the search box narrow what is on screen
+  // without going back to the server, because assets are not paged.
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const filtered = all.filter((a) => {
+    return all.filter((a) => {
       if (kindFilter !== 'all' && a.kind !== kindFilter) return false
       if (!q) return true
       return (
@@ -492,26 +532,7 @@ export default function AssetsPage() {
         (a.keys ?? []).some((k) => k.value.toLowerCase().includes(q))
       )
     })
-    const dir = sort.dir === 'asc' ? 1 : -1
-    return filtered.sort((a, b) => {
-      switch (sort.key) {
-        case 'label':
-          return dir * a.label.localeCompare(b.label)
-        case 'kind':
-          return dir * a.kind.localeCompare(b.kind)
-        case 'status':
-          return dir * (a.triage?.status ?? 'todo').localeCompare(b.triage?.status ?? 'todo')
-        case 'os':
-          return dir * (a.os ?? '').localeCompare(b.os ?? '')
-        case 'domain':
-          return dir * (a.domain ?? '').localeCompare(b.domain ?? '')
-        case 'ips':
-          return dir * ((a.ips ?? []).length - (b.ips ?? []).length)
-        case 'last_seen':
-          return dir * a.last_seen.localeCompare(b.last_seen)
-      }
-    })
-  }, [all, query, kindFilter, sort])
+  }, [all, query, kindFilter])
 
   const multiVlan = all.filter(
     (a) => new Set((a.ips ?? []).map((i) => i.network_id)).size > 1,
@@ -538,6 +559,7 @@ export default function AssetsPage() {
           placeholder="Label, hostname, IP, identity key…"
           className="w-full max-w-sm"
         />
+        <AddressFilterInput value={address} onChange={setAddress} />
         <span className="tabular text-xs text-faint">{formatNumber(rows.length)} assets</span>
       </div>
 
@@ -599,11 +621,13 @@ export default function AssetsPage() {
         ) : rows.length === 0 ? (
           <EmptyState
             icon={<AssetIcon width={20} height={20} />}
-            title={all.length === 0 ? 'No asset yet' : 'No asset matches those filters'}
+            title={
+              all.length === 0 && !address ? 'No asset yet' : 'No asset matches those filters'
+            }
             description={
-              all.length === 0
+              all.length === 0 && !address
                 ? 'Assets are built by the identity phase of a discovery scan: SMB server GUIDs, SSH host keys, TLS certificates, NetBIOS names and SNMP engine IDs are correlated into one machine.'
-                : 'Clear the search or pick another kind.'
+                : 'Clear the search, widen the address filter or pick another kind.'
             }
           />
         ) : (
@@ -695,15 +719,25 @@ export default function AssetsPage() {
                       <td className="text-muted">{a.domain || '-'}</td>
                       <td>
                         <span className="flex flex-wrap items-center gap-1">
-                          {(a.ips ?? []).slice(0, 3).map((ip) => (
-                            <span
-                              key={`${ip.ip}-${ip.network_id}`}
-                              title={`Seen on ${netName(ip.network_id)}`}
-                              className="inline-flex items-center gap-1 rounded border border-border bg-elevated px-1.5 py-0.5 font-mono text-[11px]"
-                            >
-                              {ip.ip}
-                            </span>
-                          ))}
+                          {/* Each address says since or until when the machine
+                              answered there, which is the whole point of
+                              correlating it into one machine: an address it
+                              left is history, not a second machine. */}
+                          {addressHistory(a.ips)
+                            .slice(0, 3)
+                            .map((ip) => (
+                              <span
+                                key={`${ip.ip}-${ip.network_id}`}
+                                title={`Seen on ${netName(ip.network_id)}`}
+                                className={cn(
+                                  'inline-flex items-center gap-1 rounded border border-border bg-elevated px-1.5 py-0.5 font-mono text-[11px]',
+                                  !ip.current && 'text-muted',
+                                )}
+                              >
+                                {ip.ip}
+                                <span className="font-sans text-faint">{ip.label}</span>
+                              </span>
+                            ))}
                           {(a.ips ?? []).length > 3 && (
                             <span className="text-xs text-faint">
                               +{(a.ips ?? []).length - 3}

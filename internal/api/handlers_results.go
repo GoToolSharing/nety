@@ -16,12 +16,44 @@ func (a *API) handleListHosts(w http.ResponseWriter, r *http.Request, u model.Us
 	if !ok {
 		return
 	}
-	hosts, err := a.Store.ListHosts(r.Context(), m.ID, queryInt64(r, "network_id"))
+	address, ok := a.addressQuery(w, r)
+	if !ok {
+		return
+	}
+	hosts, err := a.Store.ListHostsFiltered(r.Context(), store.HostFilter{
+		MissionID: m.ID,
+		NetworkID: queryInt64(r, "network_id"),
+		Address:   address,
+		Sort:      r.URL.Query().Get("sort"),
+		Desc:      sortDescending(r),
+	})
 	if err != nil {
 		a.failStore(w, err, "hosts")
 		return
 	}
 	a.ok(w, hosts)
+}
+
+// addressQuery reads the `ip` parameter shared by the result listings. It
+// takes a single address or a CIDR prefix, v4 or v6, and answers false once it
+// has already written the error response.
+//
+// A malformed value is refused here rather than quietly matching nothing: an
+// operator who mistypes a subnet should be told, not shown an empty table.
+func (a *API) addressQuery(w http.ResponseWriter, r *http.Request) (store.AddressFilter, bool) {
+	f, err := store.ParseAddressFilter(r.URL.Query().Get("ip"))
+	if err != nil {
+		a.fail(w, http.StatusBadRequest, "invalid", err.Error())
+		return store.AddressFilter{}, false
+	}
+	return f, true
+}
+
+// sortDescending reads the `dir` parameter shared by the result listings.
+// Anything but an explicit "desc" means ascending, which is what the first
+// click on a column header asks for.
+func sortDescending(r *http.Request) bool {
+	return strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("dir")), "desc")
 }
 
 func (a *API) handleGetHost(w http.ResponseWriter, r *http.Request, u model.User) {
@@ -70,6 +102,10 @@ func (a *API) handleListServices(w http.ResponseWriter, r *http.Request, u model
 		return
 	}
 	q := r.URL.Query()
+	address, ok := a.addressQuery(w, r)
+	if !ok {
+		return
+	}
 	filter := store.ServiceFilter{
 		MissionID:           m.ID,
 		NetworkID:           queryInt64(r, "network_id"),
@@ -77,6 +113,9 @@ func (a *API) handleListServices(w http.ResponseWriter, r *http.Request, u model
 		Port:                queryInt(r, "port", 0),
 		Protocol:            model.Protocol(strings.ToLower(q.Get("protocol"))),
 		Search:              q.Get("q"),
+		Address:             address,
+		Sort:                q.Get("sort"),
+		Desc:                sortDescending(r),
 		IncludeSkippedHosts: includeSkipped(r),
 		Limit:               queryInt(r, "limit", 0),
 		Offset:              queryInt(r, "offset", 0),
@@ -162,10 +201,17 @@ func (a *API) handleListFindings(w http.ResponseWriter, r *http.Request, u model
 	if !ok {
 		return
 	}
+	address, ok := a.addressQuery(w, r)
+	if !ok {
+		return
+	}
 	findings, err := a.Store.ListFindings(r.Context(), store.FindingFilter{
 		MissionID:           m.ID,
 		NetworkID:           queryInt64(r, "network_id"),
 		HostID:              queryInt64(r, "host_id"),
+		Address:             address,
+		Sort:                r.URL.Query().Get("sort"),
+		Desc:                sortDescending(r),
 		Triage:              statuses,
 		IncludeSkippedHosts: includeSkipped(r),
 	})
@@ -181,7 +227,16 @@ func (a *API) handleListAssets(w http.ResponseWriter, r *http.Request, u model.U
 	if !ok {
 		return
 	}
-	assets, err := a.Store.ListAssets(r.Context(), m.ID)
+	address, ok := a.addressQuery(w, r)
+	if !ok {
+		return
+	}
+	assets, err := a.Store.ListAssetsFiltered(r.Context(), store.AssetFilter{
+		MissionID: m.ID,
+		Address:   address,
+		Sort:      r.URL.Query().Get("sort"),
+		Desc:      sortDescending(r),
+	})
 	if err != nil {
 		a.failStore(w, err, "assets")
 		return

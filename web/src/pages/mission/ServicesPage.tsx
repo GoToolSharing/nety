@@ -8,7 +8,15 @@ import { Card, PageHeader } from '@/components/ui/Card'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/Feedback'
 import { Badge, PortStateBadge } from '@/components/ui/Badge'
 import { LinkButton } from '@/components/ui/Button'
-import { Mono, Pagination, RelativeTime, SearchInput } from '@/components/common'
+import {
+  AddressFilterInput,
+  Mono,
+  Pagination,
+  RelativeTime,
+  SearchInput,
+  SortHeader,
+  useSort,
+} from '@/components/common'
 import ServiceDetail from '@/components/ServiceDetail'
 import { formatNumber } from '@/lib/format'
 import { ChevronDownIcon, ChevronRightIcon, ServiceIcon } from '@/components/icons'
@@ -20,18 +28,28 @@ import {
 } from '@/components/Triage'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/cn'
+import { isAddressOrPrefix } from '@/lib/format'
 import type { Service, TriageStatus } from '@/types/api'
 
 const PAGE_SIZE = 50
+
+/**
+ * The columns the services table can be sorted by. Each one is a key the
+ * server knows (see serviceSorts in internal/store/results.go): the sort runs
+ * in SQL over the whole listing, not over the fifty rows on screen.
+ */
+type SortKey = 'ip' | 'port' | 'state' | 'service' | 'product' | 'status' | 'network' | 'last_seen'
 
 export default function ServicesPage() {
   const missionId = useMissionId()
   const networks = useNetworks(missionId)
 
   const [query, setQuery] = useState('')
+  const [address, setAddress] = useState('')
   const [networkId, setNetworkId] = useState(0)
   const [protocol, setProtocol] = useState('')
   const [port, setPort] = useState('')
+  const { sort, onSort } = useSort<SortKey>('ip')
   const [offset, setOffset] = useState(0)
   const [expanded, setExpanded] = useState<number | null>(null)
   const [triage, setTriage] = useState<TriageStatus[]>([])
@@ -48,7 +66,7 @@ export default function ServicesPage() {
 
   // Only needed to recess the rows of a skipped host, so it is not fetched
   // until those rows are on screen.
-  const hosts = useHosts(missionId, networkId || undefined, showSkipped)
+  const hosts = useHosts(missionId, { network_id: networkId || undefined }, showSkipped)
   const skippedHosts = useMemo(() => {
     const ids = new Set<number>()
     for (const h of hosts.data ?? []) {
@@ -59,25 +77,33 @@ export default function ServicesPage() {
 
   const debouncedQuery = useDebounced(query, 300)
   const debouncedPort = useDebounced(port, 300)
+  const debouncedAddress = useDebounced(address, 300)
+  // Half a typed subnet is not a filter yet, so it is not sent: the table
+  // keeps showing what it had instead of emptying at every keystroke.
+  const ip = isAddressOrPrefix(debouncedAddress) ? debouncedAddress.trim() : undefined
 
-  // Any filter change restarts the pagination window.
+  // Any filter change restarts the pagination window, and so does a sort: the
+  // rows of page three are not the same rows once the order changes.
   useEffect(() => {
     setOffset(0)
     setSelected(new Set())
-  }, [debouncedQuery, networkId, protocol, debouncedPort, triage, showSkipped])
+  }, [debouncedQuery, ip, networkId, protocol, debouncedPort, triage, showSkipped, sort])
 
   const params = useMemo(
     () => ({
       q: debouncedQuery.trim() || undefined,
+      ip,
       network_id: networkId || undefined,
       protocol: protocol || undefined,
       port: debouncedPort ? Number(debouncedPort) : undefined,
       triage: triage.length ? triage.join(',') : undefined,
       include_skipped: showSkipped || undefined,
+      sort: sort.key,
+      dir: sort.dir,
       limit: PAGE_SIZE,
       offset,
     }),
-    [debouncedQuery, networkId, protocol, debouncedPort, triage, showSkipped, offset],
+    [debouncedQuery, ip, networkId, protocol, debouncedPort, triage, showSkipped, sort, offset],
   )
 
   const services = useServices(missionId, params)
@@ -153,6 +179,7 @@ export default function ServicesPage() {
           placeholder="Search service, product, banner…"
           className="w-full max-w-sm"
         />
+        <AddressFilterInput value={address} onChange={setAddress} />
         <label className="flex items-center gap-2 text-xs text-muted">
           <span>Network</span>
           <select
@@ -263,13 +290,13 @@ export default function ServicesPage() {
           <EmptyState
             icon={<ServiceIcon width={20} height={20} />}
             title={
-              query || networkId || protocol || port
+              query || address || networkId || protocol || port
                 ? 'No service matches those filters'
                 : 'No service discovered yet'
             }
             description={
-              query || networkId || protocol || port
-                ? 'Relax the filters: the search covers the service name, product, version and banner.'
+              query || address || networkId || protocol || port
+                ? 'Relax the filters: the search covers the service name, product, version and banner, and the address box takes a single address or a CIDR prefix.'
                 : 'Run a discovery scan with service detection enabled - services appear here as each port is fingerprinted.'
             }
             action={
@@ -300,15 +327,26 @@ export default function ServicesPage() {
                         className="h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]"
                       />
                     </th>
-                    <th className="w-[122px]">Status</th>
-                    <th>Address</th>
-                    <th>Port</th>
-                    <th>State</th>
-                    <th>Service</th>
-                    <th>Product / version</th>
+                    <SortHeader
+                      column="status"
+                      label="Status"
+                      sort={sort}
+                      onSort={onSort}
+                      className="w-[122px]"
+                    />
+                    <SortHeader column="ip" label="Address" sort={sort} onSort={onSort} />
+                    <SortHeader column="port" label="Port" sort={sort} onSort={onSort} />
+                    <SortHeader column="state" label="State" sort={sort} onSort={onSort} />
+                    <SortHeader column="service" label="Service" sort={sort} onSort={onSort} />
+                    <SortHeader
+                      column="product"
+                      label="Product / version"
+                      sort={sort}
+                      onSort={onSort}
+                    />
                     <th>Details</th>
-                    <th>Network</th>
-                    <th>Last seen</th>
+                    <SortHeader column="network" label="Network" sort={sort} onSort={onSort} />
+                    <SortHeader column="last_seen" label="Last seen" sort={sort} onSort={onSort} />
                   </tr>
                 </thead>
                 <tbody>

@@ -136,16 +136,48 @@ of this in the response itself.
 
 ## Results
 
-`GET /api/missions/{id}/hosts?network_id=`
-`GET /api/missions/{id}/services?network_id=&host_id=&port=&protocol=&q=&triage=&limit=&offset=&include_skipped=`
+`GET /api/missions/{id}/hosts?network_id=&ip=&sort=&dir=`
+`GET /api/missions/{id}/services?network_id=&host_id=&port=&protocol=&q=&ip=&sort=&dir=&triage=&limit=&offset=&include_skipped=`
 (`triage` takes a comma separated list of statuses)
-`GET /api/missions/{id}/findings?network_id=&host_id=&triage=&include_skipped=`
-`GET /api/missions/{id}/assets`
+`GET /api/missions/{id}/findings?network_id=&host_id=&ip=&sort=&dir=&triage=&include_skipped=`
+`GET /api/missions/{id}/assets?ip=&sort=&dir=`
 `GET /api/assets/{id}` · `PATCH /api/assets/{id}` `{label?, notes?, tags?, kind?, status?, note?}`
 `POST /api/assets/{id}/merge` `{source_id}`
 `GET /api/hosts/{id}` - host plus its services, asset and findings
 `GET /api/missions/{id}/matrix?include_skipped=` - `{networks: [...], cells: [...], techniques: [...]}`
 `GET /api/missions/{id}/reach?source_network_id=&include_skipped=`
+
+**Filtering by address.** `ip` takes a single address or a CIDR prefix, IPv4
+or IPv6: `ip=10.20.0.7` is that one address, `ip=10.20.0.0/24` is the subnet
+and `ip=2001:db8::/32` the v6 one. A prefix written with host bits set is the
+subnet it names (`10.20.0.7/24` means `10.20.0.0/24`). On the assets listing it
+keeps the machines that answer at a matching address. Anything that is not an
+address or a prefix is refused with a 400 saying so, rather than quietly
+matching nothing.
+
+Addresses are stored as text, which can neither be ordered numerically nor cut
+on a bit boundary, so every table carrying one also carries `ip_sort`: the same
+address as a family tag plus fixed-width hex. A prefix is the range between the
+keys of its first and last address, and an address sort is `ORDER BY ip_sort`.
+The column is filled on every write and was backfilled by migration 5.
+
+**Sorting.** `sort` names a column and `dir` is `asc` (the default) or `desc`.
+The sort runs in SQL over the whole listing, not over the page that came back,
+and a stable tiebreaker on the primary key means paging through a sorted
+listing never repeats or skips a row. A `sort` the server does not know falls
+back to the listing's own order rather than failing, so an old bookmark still
+works.
+
+| Listing | `sort` accepts |
+|---|---|
+| hosts | `ip`, `hostname`, `mac`, `os`, `status`, `network`, `last_seen` |
+| services | `ip`, `port`, `service`, `product`, `state`, `status`, `network`, `last_seen` |
+| findings | `severity` (by rank, so `critical` is above `low`), `ip`, `check`, `title`, `status`, `network`, `last_seen` |
+| assets | `label`, `kind`, `os`, `domain`, `ips` (how many addresses), `status`, `last_seen` |
+
+**Exports are not filtered.** An export is the whole mission, so `ip`, `sort`
+and `dir` are not read by `/export`: a report must not quietly drop a machine
+because a screen filter was left on.
 
 **Skipped hosts.** By default the service, finding, reachability and matrix
 listings leave out the rows of a host whose triage status is `skipped`, and the

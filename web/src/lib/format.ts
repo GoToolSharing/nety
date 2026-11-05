@@ -137,6 +137,119 @@ export function compareIP(a: string, b: string): number {
   return ipSortKey(a).localeCompare(ipSortKey(b))
 }
 
+function isIPv4(s: string): boolean {
+  const parts = s.split('.')
+  return parts.length === 4 && parts.every((p) => /^\d{1,3}$/.test(p) && Number(p) <= 255)
+}
+
+function isIPv6(s: string): boolean {
+  // At most one "::" run; everything else is hextets, with an optional IPv4
+  // tail standing for the last two of them.
+  const halves = s.split('::')
+  if (halves.length > 2) return false
+  const compressed = halves.length === 2
+  const split = (part: string) => (part === '' ? [] : part.split(':'))
+  const groups = [...split(halves[0]), ...(compressed ? split(halves[1]) : [])]
+  if (groups.some((g) => g === '')) return false
+  const last = groups[groups.length - 1] ?? ''
+  const hasV4Tail = last.includes('.')
+  if (hasV4Tail && !isIPv4(last)) return false
+  const hextets = hasV4Tail ? groups.slice(0, -1) : groups
+  if (hextets.some((g) => !/^[0-9a-fA-F]{1,4}$/.test(g))) return false
+  // An IPv4 tail stands for two hextets, and the group holding it was already
+  // counted as one.
+  const count = groups.length + (hasV4Tail ? 1 : 0)
+  return compressed ? count <= 7 : count === 8
+}
+
+/**
+ * True when the text is a complete address or CIDR prefix, v4 or v6.
+ *
+ * The address filter is only sent once it passes this, so typing half a subnet
+ * does not blank the table with a 400 at every keystroke. The server parses it
+ * again and is the one that refuses what it cannot read.
+ */
+export function isAddressOrPrefix(value: string): boolean {
+  const v = value.trim()
+  if (!v) return false
+  const slash = v.indexOf('/')
+  const address = slash === -1 ? v : v.slice(0, slash)
+  const v6 = address.includes(':')
+  if (!(v6 ? isIPv6(address) : isIPv4(address))) return false
+  if (slash === -1) return true
+  const bits = v.slice(slash + 1)
+  return /^\d{1,3}$/.test(bits) && Number(bits) <= (v6 ? 128 : 32)
+}
+
+const dayMonthFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
+
+/** Short calendar date, for an address history: "3 Nov". */
+export function formatDay(value: string | null | undefined): string {
+  const d = parseDate(value)
+  return d ? dayMonthFmt.format(d) : '?'
+}
+
+/** What the history adds to one of a machine's addresses. */
+export interface AddressHistoryMark {
+  /** True while the machine is still answering there. */
+  current: boolean
+  /** "since 5 Nov" for an address it still has, "until 3 Nov" for one it left. */
+  label: string
+}
+
+/** The shape addressHistory needs of an address; anything else rides along. */
+interface SeenAddress {
+  ip: string
+  first_seen: string
+  last_seen: string
+}
+
+/**
+ * How far behind the machine's latest sighting an address may be and still
+ * count as current. A scan is a day's work and its phases do not all reach
+ * every address at the same minute, so anything seen in the same pass is "it
+ * is there now"; an address last seen before that is one the machine has left.
+ */
+const STILL_CURRENT_MS = 6 * 60 * 60 * 1000
+
+/**
+ * The address history of a machine: where it was, where it is, and since or
+ * until when. This is the payoff of the identity correlation, and the only
+ * place the operator sees that a machine moved rather than that a new one
+ * appeared.
+ *
+ * Addresses it has left come first, oldest departure first, then the ones it
+ * still answers on, so the list reads as a timeline.
+ */
+export function addressHistory<T extends SeenAddress>(
+  ips: T[] | null | undefined,
+): (T & AddressHistoryMark)[] {
+  const rows = ips ?? []
+  if (rows.length === 0) return []
+  const latest = Math.max(...rows.map((ip) => parseDate(ip.last_seen)?.getTime() ?? 0))
+  const entries = rows.map((ip) => {
+    const seen = parseDate(ip.last_seen)?.getTime() ?? 0
+    const current = latest - seen <= STILL_CURRENT_MS
+    return {
+      ...ip,
+      current,
+      label: current ? `since ${formatDay(ip.first_seen)}` : `until ${formatDay(ip.last_seen)}`,
+    }
+  })
+  return entries.sort((a, b) => {
+    if (a.current !== b.current) return a.current ? 1 : -1
+    const key = a.current ? 'first_seen' : 'last_seen'
+    return a[key].localeCompare(b[key])
+  })
+}
+
+/** The address history as one line: "10.20.0.7 until 3 Nov, 10.20.0.12 since 5 Nov". */
+export function formatAddressHistory(ips: SeenAddress[] | null | undefined): string {
+  return addressHistory(ips)
+    .map((e) => `${e.ip} ${e.label}`)
+    .join(', ')
+}
+
 /** Truncate for display without breaking the layout. */
 export function truncate(s: string, max: number): string {
   if (!s) return ''

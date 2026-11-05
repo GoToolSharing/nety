@@ -5,6 +5,7 @@ import {
   formatNumber,
   formatPercent,
   formatRelative,
+  isAddressOrPrefix,
 } from '@/lib/format'
 import { ChevronDownIcon, ChevronUpIcon, CopyIcon, CheckIcon, SearchIcon, XIcon } from '@/components/icons'
 
@@ -156,6 +157,60 @@ export function SearchInput({
 
 export type SortDirection = 'asc' | 'desc'
 
+export interface SortState<K extends string> {
+  key: K
+  dir: SortDirection
+}
+
+/**
+ * The clickable part of a sortable header. It lives on its own because the
+ * findings are a list of expandable cards rather than a table, and their
+ * header strip needs the same control without a <th> around it.
+ */
+export function SortButton<K extends string>({
+  column,
+  label,
+  sort,
+  onSort,
+  className,
+}: {
+  column: K
+  label: ReactNode
+  sort: SortState<K>
+  onSort: (key: K) => void
+  className?: string
+}) {
+  const active = sort.key === column
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(column)}
+      title={
+        active
+          ? `Sorted by ${String(column).replace('_', ' ')}, ${sort.dir === 'asc' ? 'ascending' : 'descending'}`
+          : undefined
+      }
+      className={cn(
+        // Browsers reset text-transform on form controls, so without this the
+        // sortable headers lose the uppercase of the plain <th>s beside them
+        // and the header row ends up in mixed case.
+        'inline-flex items-center gap-1 rounded [text-transform:inherit] [letter-spacing:inherit] hover:text-fg',
+        active && 'text-fg',
+        className,
+      )}
+    >
+      {label}
+      <span className={cn('text-[9px]', active ? 'opacity-100' : 'opacity-0')}>
+        {sort.dir === 'asc' ? (
+          <ChevronUpIcon width={11} height={11} />
+        ) : (
+          <ChevronDownIcon width={11} height={11} />
+        )}
+      </span>
+    </button>
+  )
+}
+
 export function SortHeader<K extends string>({
   column,
   label,
@@ -166,7 +221,7 @@ export function SortHeader<K extends string>({
 }: {
   column: K
   label: ReactNode
-  sort: { key: K; dir: SortDirection }
+  sort: SortState<K>
   onSort: (key: K) => void
   className?: string
   numeric?: boolean
@@ -178,40 +233,86 @@ export function SortHeader<K extends string>({
       className={className}
       aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
-      <button
-        type="button"
-        onClick={() => onSort(column)}
-        className={cn(
-          // Browsers reset text-transform on form controls, so without this
-          // the sortable headers lose the uppercase of the plain <th>s beside
-          // them and the header row ends up in mixed case.
-          'inline-flex items-center gap-1 rounded [text-transform:inherit] [letter-spacing:inherit] hover:text-fg',
-          active && 'text-fg',
-          numeric && 'justify-end',
-        )}
-      >
-        {label}
-        <span className={cn('text-[9px]', active ? 'opacity-100' : 'opacity-0')}>
-          {sort.dir === 'asc' ? (
-            <ChevronUpIcon width={11} height={11} />
-          ) : (
-            <ChevronDownIcon width={11} height={11} />
-          )}
-        </span>
-      </button>
+      <SortButton
+        column={column}
+        label={label}
+        sort={sort}
+        onSort={onSort}
+        className={cn(numeric && 'justify-end')}
+      />
     </th>
   )
 }
 
-/** Shared sorting state for the client-side tables. */
+/**
+ * Shared sorting state for a table, client-side or server-side: the pages
+ * that page their rows hand the key and the direction to the API, which sorts
+ * in SQL over the whole listing rather than over the page on screen.
+ *
+ * A click on a new column sorts ascending, a click on the one already sorted
+ * reverses it.
+ */
 export function useSort<K extends string>(initialKey: K, initialDir: SortDirection = 'asc') {
-  const [sort, setSort] = useState<{ key: K; dir: SortDirection }>({
-    key: initialKey,
-    dir: initialDir,
-  })
+  const [sort, setSort] = useState<SortState<K>>({ key: initialKey, dir: initialDir })
   const onSort = (key: K) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
   return { sort, onSort, setSort }
+}
+
+/**
+ * The address box that sits beside the search box on every result table. It
+ * takes one address or a whole subnet, which is how an operator narrows a
+ * listing to the machine or the VLAN they are working on.
+ *
+ * The value only reaches the server once it is a complete address or prefix,
+ * so half a subnet shows a hint instead of emptying the table.
+ */
+export function AddressFilterInput({
+  value,
+  onChange,
+  className,
+}: {
+  value: string
+  onChange: (v: string) => void
+  className?: string
+}) {
+  const incomplete = value.trim() !== '' && !isAddressOrPrefix(value)
+  return (
+    <label className={cn('flex items-center gap-2 text-xs text-muted', className)}>
+      <span>Address or CIDR</span>
+      <span className="relative">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && value) {
+              e.stopPropagation()
+              onChange('')
+            }
+          }}
+          placeholder="10.20.0.0/24"
+          aria-label="Filter by address or CIDR prefix"
+          aria-invalid={incomplete}
+          className={cn(
+            'input-base h-9 w-44 py-0 font-mono text-[12.5px]',
+            incomplete && 'border-warn',
+          )}
+        />
+        {value && (
+          <button
+            type="button"
+            aria-label="Clear the address filter"
+            onClick={() => onChange('')}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-faint hover:text-fg"
+          >
+            <XIcon width={13} height={13} />
+          </button>
+        )}
+      </span>
+      {incomplete && <span className="text-warn">not an address or prefix yet</span>}
+    </label>
+  )
 }
 
 /**
