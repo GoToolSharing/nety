@@ -77,34 +77,55 @@ func marshalUnits[T any](items []T) ([]json.RawMessage, error) {
 // plan creates the initial work units of a scan. It is idempotent: resuming a
 // scan that already has units adds nothing.
 func (r *Runner) plan(ctx context.Context, sc model.Scan) error {
-	phases, err := r.st.PhaseProgress(ctx, sc.ID)
-	if err != nil {
-		return err
-	}
-	if len(phases) > 0 {
-		return nil // already planned, this is a resume
-	}
-
 	net, err := r.st.Network(ctx, sc.NetworkID)
 	if err != nil && sc.NetworkID != 0 {
 		return fmt.Errorf("load network: %w", err)
 	}
 
+	// Each phase is planned on its own and only if it has no work yet.
+	//
+	// Checking "does this scan have any phase at all" instead would make
+	// planning all-or-nothing: a process that died after writing the L2 unit
+	// but before the discovery ones left a scan that resumed into a plan
+	// missing its main phase, ran the L2 recon, found nothing to do and
+	// reported itself completed. Per-phase, a resume finishes the plan.
+
 	// L2 recon of the switch port we are plugged into.
 	if r.eng.NetInspector != nil && net.Interface != "" {
-		units, err := marshalUnits([]l2Payload{{Interface: net.Interface, Seconds: 45}})
+		has, err := r.phaseHasWork(ctx, sc.ID, model.PhaseL2)
 		if err != nil {
 			return err
 		}
-		if _, err := r.st.AddWork(ctx, sc.ID, model.PhaseL2, units); err != nil {
-			return err
+		if !has {
+			units, err := marshalUnits([]l2Payload{{Interface: net.Interface, Seconds: 45}})
+			if err != nil {
+				return err
+			}
+			if _, err := r.st.AddWork(ctx, sc.ID, model.PhaseL2, units); err != nil {
+				return err
+			}
 		}
 	}
 
 	switch sc.Kind {
 	case model.ScanSegmentation:
+		has, err := r.phaseHasWork(ctx, sc.ID, model.PhaseSegment)
+		if err != nil || has {
+			return err
+		}
 		return r.planSegment(ctx, sc)
 	case model.ScanL2Probe:
+		return nil
+	}
+
+	// The scanning phases are fed by discovery, so once any of them exists the
+	// plan is under way and must not be rebuilt on top of itself.
+	started, err := r.phaseHasWork(ctx, sc.ID,
+		model.PhaseDiscovery, model.PhasePortsTCP, model.PhasePortsUDP)
+	if err != nil {
+		return err
+	}
+	if started {
 		return nil
 	}
 
@@ -174,6 +195,11 @@ func (r *Runner) addPortUnits(ctx context.Context, sc model.Scan, addrs []netip.
 	add := func(phase model.WorkPhase, portList []uint16, proto model.Protocol) error {
 		if len(portList) == 0 || len(addrs) == 0 {
 			return nil
+		}
+		// A crash between the TCP and the UDP call would otherwise duplicate
+		// the first one when the plan is finished on resume.
+		if has, err := r.phaseHasWork(ctx, sc.ID, phase); err != nil || has {
+			return err
 		}
 		hostsPerUnit := max(1, r.opts.PortChunk/len(portList))
 		var units []portsPayload

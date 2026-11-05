@@ -176,14 +176,31 @@ func (r *Runner) Start(ctx context.Context, scanID int64) error {
 	case model.ScanRunning:
 		return errors.New("jobs: scan is already running")
 	case model.ScanCompleted:
-		// Completed is not a dead end: "retry failed units" puts work back in
-		// the queue, and that work has to be runnable.
+		// Completed is not a dead end. "Retry failed units" puts work back in
+		// the queue, and a scan whose plan was cut short by a crash finished
+		// without ever doing the work it was asked for: planning again fills
+		// in the phases it is missing, and only then is there nothing to do.
 		pending, err := r.st.PendingWorkCount(ctx, sc.ID)
 		if err != nil {
 			return err
 		}
 		if pending == 0 {
-			return errors.New("jobs: scan is already completed")
+			if err := r.plan(ctx, sc); err != nil {
+				return fmt.Errorf("jobs: completing the plan: %w", err)
+			}
+			if pending, err = r.st.PendingWorkCount(ctx, sc.ID); err != nil {
+				return err
+			}
+			if pending == 0 {
+				return errors.New("jobs: scan is already completed")
+			}
+			r.log.Info("scan restarted with the phases its plan was missing",
+				"scan", sc.ID, "pending", pending)
+		}
+		// Leave the completed state behind here rather than in the goroutine,
+		// so the scan never reads as finished while it is being picked up.
+		if err := r.st.SetScanStatus(ctx, sc.ID, model.ScanQueued, ""); err != nil {
+			return err
 		}
 	}
 

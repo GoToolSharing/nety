@@ -79,6 +79,14 @@ func (s *Store) Scan(ctx context.Context, id int64) (model.Scan, error) {
 func resumable(sc model.Scan) bool {
 	switch sc.Status {
 	case model.ScanPaused, model.ScanFailed, model.ScanCancelled, model.ScanQueued:
+	case model.ScanCompleted:
+		// A scan normally stays finished. The exception is one that finished
+		// with an unfinished plan: a process killed while the phases were
+		// being written leaves a scan that ran whatever had made it to disk
+		// and then reported success. Every kind of scan plans either host
+		// discovery or segmentation, so a completed scan with neither did not
+		// do what it was asked, and planning it again fills in the gap.
+		return !hasPhase(sc, model.PhaseDiscovery) && !hasPhase(sc, model.PhaseSegment)
 	default:
 		return false
 	}
@@ -88,6 +96,15 @@ func resumable(sc model.Scan) bool {
 		}
 	}
 	return sc.Status == model.ScanQueued
+}
+
+func hasPhase(sc model.Scan, phase model.WorkPhase) bool {
+	for _, p := range sc.Phases {
+		if p.Phase == phase {
+			return true
+		}
+	}
+	return false
 }
 
 // ListScans returns the scans of a mission, newest first.

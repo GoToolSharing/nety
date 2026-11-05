@@ -57,7 +57,11 @@ export default function ScanControls({
   const canStart =
     scan.status === 'paused' ||
     (scan.status === 'queued' && !everStarted) ||
-    ((scan.status === 'failed' || scan.status === 'cancelled') && scan.resumable)
+    ((scan.status === 'failed' ||
+      scan.status === 'cancelled' ||
+      // A completed scan is only ever resumable when its plan was cut short.
+      scan.status === 'completed') &&
+      scan.resumable)
   const canPause = scan.status === 'running' || (scan.status === 'queued' && everStarted)
   const canStop =
     scan.status === 'running' || scan.status === 'queued' || scan.status === 'paused'
@@ -74,7 +78,11 @@ export default function ScanControls({
             icon={<PlayIcon />}
             onClick={() => void run('start')}
           >
-            {everStarted ? 'Resume' : 'Start scan'}
+            {scan.status === 'completed'
+              ? 'Finish scan'
+              : everStarted
+                ? 'Resume'
+                : 'Start scan'}
           </Button>
         )}
         {canPause && (
