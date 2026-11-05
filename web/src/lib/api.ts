@@ -13,6 +13,7 @@ import type {
   Mission,
   MissionInput,
   MissionMember,
+  MissionImportResult,
   MissionResetCounts,
   MissionSummary,
   Network,
@@ -108,7 +109,11 @@ interface RequestOptions {
 export async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const method = opts.method ?? 'GET'
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (opts.body !== undefined) headers['Content-Type'] = 'application/json'
+  // A FormData body carries its own content type, including the multipart
+  // boundary the browser generates, so setting one here would break the
+  // upload. Everything else is JSON.
+  const isForm = typeof FormData !== 'undefined' && opts.body instanceof FormData
+  if (opts.body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
   if (method !== 'GET' && method !== 'HEAD') {
     const token = csrfToken()
     if (token) headers['X-CSRF-Token'] = token
@@ -120,7 +125,12 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
       method,
       headers,
       credentials: 'same-origin',
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      body:
+        opts.body === undefined
+          ? undefined
+          : isForm
+            ? (opts.body as FormData)
+            : JSON.stringify(opts.body),
       signal: opts.signal,
     })
   } catch (err) {
@@ -387,6 +397,26 @@ export const api = {
   // --- exports -------------------------------------------------------------
   exportFormats: async () =>
     list(await request<ExportFormat[] | null>('api/export-formats')),
+  // The whole mission as one file: every row of every table it owns, which is
+  // what a backup has to be. The browser downloads it straight from the URL,
+  // since the session cookie travels with it.
+  bundleUrl: (missionId: number) => apiUrl(`api/missions/${missionId}/bundle`),
+
+  importBundle: async (
+    file: File,
+    opts: { name?: string; createUsers?: boolean } = {},
+  ): Promise<MissionImportResult> => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<MissionImportResult>(
+      withQuery('api/missions/import', {
+        name: opts.name || undefined,
+        create_users: opts.createUsers ? 'true' : undefined,
+      }),
+      { method: 'POST', body: form },
+    )
+  },
+
   exportUrl: (missionId: number, format: string, networkId?: number) =>
     apiUrl(
       withQuery(`api/missions/${missionId}/export`, {

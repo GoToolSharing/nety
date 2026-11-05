@@ -289,6 +289,14 @@ export const AuditIcon = (p: IconProps) => (
   </Icon>
 )
 
+export const ImportIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 15V3" />
+    <path d="m7 8 5-5 5 5" />
+    <path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+  </Icon>
+)
+
 export const SettingsIcon = (p: IconProps) => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="3" />

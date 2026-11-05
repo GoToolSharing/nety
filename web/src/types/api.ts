@@ -48,6 +48,17 @@ export interface MissionInput {
   archived?: boolean
 }
 
+/** What restoring a mission bundle produced. */
+export interface MissionImportResult {
+  mission_id: number
+  name: string
+  counts: Record<string, number> | null
+  users_created?: string[] | null
+  users_unmatched?: string[] | null
+  skipped_columns?: string[] | null
+  dropped_rows?: Record<string, number> | null
+}
+
 /** What a mission reset removed. */
 export interface MissionResetCounts {
   scans: number

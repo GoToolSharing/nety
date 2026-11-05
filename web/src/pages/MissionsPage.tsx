@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQueries } from '@tanstack/react-query'
+import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { qk, useCreateMission, useMissions, usePatchMission } from '@/lib/queries'
 import { useAuth } from '@/state/auth'
 import { useToast } from '@/components/ui/Toast'
-import { Button } from '@/components/ui/Button'
+import { Button, LinkButton } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { TextAreaField, TextField } from '@/components/ui/Field'
-import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/Feedback'
+import { Checkbox, TextAreaField, TextField } from '@/components/ui/Field'
+import { CardSkeleton, EmptyState, ErrorState, InlineAlert } from '@/components/ui/Feedback'
 import { PageHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { RelativeTime, SearchInput } from '@/components/common'
@@ -18,11 +18,12 @@ import {
   HostIcon,
   NetworkIcon,
   PlusIcon,
+  ImportIcon,
   ScanIcon,
   ServiceIcon,
 } from '@/components/icons'
 import { formatNumber } from '@/lib/format'
-import type { Mission, MissionSummary } from '@/types/api'
+import type { Mission, MissionImportResult, MissionSummary } from '@/types/api'
 
 function parseList(value: string): string[] {
   return value
@@ -252,13 +253,14 @@ function MissionCard({
 }
 
 export default function MissionsPage() {
-  const { canWrite } = useAuth()
+  const { canWrite, isAdmin } = useAuth()
   const toast = useToast()
   const missions = useMissions()
   const patch = usePatchMission()
   const [showArchived, setShowArchived] = useState(false)
   const [query, setQuery] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   const all = missions.data ?? []
 
@@ -315,11 +317,22 @@ export default function MissionsPage() {
           title="Missions"
           description="Every engagement is a mission: its networks, scans, results and exports live inside it."
           actions={
-            canWrite && (
-              <Button variant="primary" icon={<PlusIcon />} onClick={() => setCreateOpen(true)}>
-                New mission
-              </Button>
-            )
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Button
+                  variant="secondary"
+                  icon={<ImportIcon />}
+                  onClick={() => setImportOpen(true)}
+                >
+                  Restore a backup
+                </Button>
+              )}
+              {canWrite && (
+                <Button variant="primary" icon={<PlusIcon />} onClick={() => setCreateOpen(true)}>
+                  New mission
+                </Button>
+              )}
+            </div>
           }
         />
 
@@ -396,6 +409,129 @@ export default function MissionsPage() {
       </div>
 
       <CreateMissionModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      {importOpen && <RestoreMissionModal onClose={() => setImportOpen(false)} />}
     </div>
+  )
+}
+
+/**
+ * Restoring a mission someone exported, from this installation or another one.
+ *
+ * It always creates a new mission: a restore that reconciled itself with an
+ * engagement already here would be a very good way to lose evidence.
+ */
+function RestoreMissionModal({ onClose }: { onClose: () => void }) {
+  const [file, setFile] = useState<File | null>(null)
+  const [name, setName] = useState('')
+  const [createUsers, setCreateUsers] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState<MissionImportResult | null>(null)
+  const toast = useToast()
+  const qc = useQueryClient()
+
+  const run = async () => {
+    if (!file) return
+    setBusy(true)
+    setError('')
+    try {
+      const res = await api.importBundle(file, { name: name.trim(), createUsers })
+      setDone(res)
+      void qc.invalidateQueries({ queryKey: qk.missions })
+      toast.success(`${res.name} restored`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'The file could not be restored')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (done) {
+    const counts = done.counts ?? {}
+    return (
+      <Modal open title={`${done.name} restored`} onClose={onClose} size="md">
+        <p className="text-sm text-fg">
+          {formatNumber(counts.hosts ?? 0)} hosts, {formatNumber(counts.services ?? 0)} services,{' '}
+          {formatNumber(counts.findings ?? 0)} findings and {formatNumber(counts.scans ?? 0)} scans
+          came back.
+        </p>
+        {(done.users_created?.length ?? 0) > 0 && (
+          <p className="mt-3 text-xs text-muted">
+            Recreated so their work keeps its author, disabled and unable to sign in:{' '}
+            <strong className="text-fg">{done.users_created?.join(', ')}</strong>. Give them a
+            password from the users page if they are to work here.
+          </p>
+        )}
+        {(done.users_unmatched?.length ?? 0) > 0 && (
+          <p className="mt-3 text-xs text-warn">
+            No account here matches {done.users_unmatched?.join(', ')}, so their statuses and notes
+            came back without an author.
+          </p>
+        )}
+        {(done.skipped_columns?.length ?? 0) > 0 && (
+          <p className="mt-3 text-xs text-warn">
+            This build has no column for {done.skipped_columns?.join(', ')}, so that much was
+            dropped. The file was written by a newer NETY.
+          </p>
+        )}
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>
+            Close
+          </Button>
+          <LinkButton to={`/missions/${done.mission_id}`} variant="primary">
+            Open it
+          </LinkButton>
+        </div>
+      </Modal>
+    )
+  }
+
+  return (
+    <Modal open title="Restore a mission backup" onClose={onClose} size="md">
+      <InlineAlert tone="info">
+        This always creates a new mission. It never writes over one that is already here, so
+        restoring the same file twice gives you two copies rather than a merge.
+      </InlineAlert>
+
+      <div className="mt-4 space-y-4">
+        <div>
+          <span className="field-label">Backup file</span>
+          <input
+            type="file"
+            accept=".gz,.json,application/gzip,application/json"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="mt-1 block w-full text-xs text-muted file:mr-3 file:rounded-md file:border file:border-border file:bg-elevated file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-fg hover:file:bg-surface"
+          />
+          <p className="mt-1 text-[11px] text-faint">
+            The file Settings, Backup produced. Compressed or not, both work.
+          </p>
+        </div>
+
+        <TextField
+          label="Name it differently"
+          placeholder="Leave empty to keep the name it had"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+
+        <Checkbox
+          label="Recreate the accounts this server does not have"
+          hint="Disabled, with no password that can sign in. Without this, their statuses and notes come back with no author."
+          checked={createUsers}
+          onChange={(e) => setCreateUsers(e.target.checked)}
+        />
+      </div>
+
+      {error && <p className="mt-3 text-xs text-crit">{error}</p>}
+
+      <div className="mt-4 flex items-center justify-end gap-2">
+        <Button variant="ghost" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="primary" disabled={!file} loading={busy} onClick={() => void run()}>
+          Restore
+        </Button>
+      </div>
+    </Modal>
   )
 }

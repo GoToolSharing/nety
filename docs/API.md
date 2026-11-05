@@ -134,6 +134,39 @@ together with `first_seen` and the end time of the scan that stamped the row,
 which assumes a scan of a network covers the whole network. `caveats` says all
 of this in the response itself.
 
+## Moving a whole mission
+
+`GET /api/missions/{id}/bundle` (member)
+`POST /api/missions/import?name=&create_users=` (administrator)
+
+The other exports are readings of the results. This one is the results: every
+row of every table the mission owns, so an engagement can be taken off a
+machine that is about to be wiped and put back later. It carries the networks,
+the scans with their pending work units and their logs, the hosts, services,
+assets with every address each machine has held, the findings, the
+segmentation results, the service change history, and every triage status and
+note with its author.
+
+It does not carry the audit log, which belongs to the installation and whose
+entries can name work on another client, and it never carries a password hash.
+
+The download is gzipped JSON. It states the bundle format and the schema
+version it came from, and carries a SHA-256 of its own contents, so a
+truncated or edited file is refused rather than restored as a partial
+engagement. An import reads a compressed or an uncompressed file.
+
+Accounts are matched by username, the only name a person keeps across two
+databases. With `create_users`, the ones this installation does not have are
+recreated disabled and with no password that can sign in, so the work keeps
+its author without opening a way in. Without it, their statuses and notes come
+back unattributed and the response names them.
+
+An import always creates a new mission. It never merges into one that is
+already here, so restoring the same file twice gives two copies rather than a
+reconciliation nobody asked for. Whoever imported it is added to its members.
+The response says how many rows of each table came back, which accounts were
+recreated or not matched, and which columns this build had no place for.
+
 ## Results
 
 `GET /api/missions/{id}/hosts?network_id=&ip=&sort=&dir=`

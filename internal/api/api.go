@@ -100,6 +100,11 @@ func (a *API) routes() {
 	a.mux.Handle("PATCH /api/missions/{id}", write(a.handleUpdateMission))
 	a.mux.Handle("DELETE /api/missions/{id}", a.adminOnly(a.handleDeleteMission))
 	a.mux.Handle("POST /api/missions/{id}/reset", a.adminOnly(a.handleResetMission))
+	// A whole mission, out and back in. Taking one out is the same privilege
+	// as exporting its results, which a member already has. Bringing one in
+	// creates a mission and can recreate accounts, so it is an administrator's.
+	a.mux.Handle("GET /api/missions/{id}/bundle", auth(a.handleExportBundle))
+	a.mux.Handle("POST /api/missions/import", a.adminOnly(a.handleImportBundle))
 	a.mux.Handle("GET /api/missions/{id}/members", auth(a.handleGetMembers))
 	a.mux.Handle("PUT /api/missions/{id}/members", a.adminOnly(a.handleSetMembers))
 	a.mux.Handle("GET /api/missions/{id}/summary", auth(a.handleMissionSummary))

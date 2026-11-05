@@ -13,6 +13,7 @@ import { InlineAlert, Skeleton } from '@/components/ui/Feedback'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { formatNumber } from '@/lib/format'
+import { DownloadIcon } from '@/components/icons'
 
 function splitList(value: string): string[] {
   return value
@@ -158,6 +159,37 @@ export default function SettingsPage() {
                 </Button>
               </div>
             )}
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Backup"
+            description="The whole mission as one file, to put back on another installation."
+          />
+          <CardBody className="space-y-3">
+            <p className="text-xs text-muted">
+              Everything the mission owns travels: its networks, its scans with their pending
+              work units and their logs, its hosts, services, assets with the addresses each
+              machine has held, findings, segmentation results, and every status and note your
+              team wrote, with who wrote them. Not the audit log, which belongs to this server
+              and can name work on another client, and no password ever.
+            </p>
+            <p className="text-xs text-faint">
+              Restoring it always creates a new mission. It never merges into one that is
+              already here, so a restore cannot quietly reconcile two versions of the same
+              engagement. Administrators restore from the missions list.
+            </p>
+            <div>
+              <a
+                href={api.bundleUrl(missionId)}
+                download
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-elevated px-3 py-1.5 text-sm font-medium text-fg transition-colors hover:border-accent/60 hover:bg-surface"
+              >
+                <DownloadIcon width={15} height={15} className="text-faint" />
+                Download the mission
+              </a>
+            </div>
           </CardBody>
         </Card>
 
