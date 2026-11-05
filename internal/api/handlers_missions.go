@@ -197,6 +197,10 @@ func (a *API) handleMissionSummary(w http.ResponseWriter, r *http.Request, u mod
 		return
 	}
 	ctx := r.Context()
+	// The counters have to say the same thing as the screens they send the
+	// operator to, so a skipped host's services and findings are left out
+	// here as well unless the caller asks for them.
+	withSkipped := includeSkipped(r)
 	networks, err := a.Store.ListNetworks(ctx, m.ID)
 	if err != nil {
 		a.failStore(w, err, "networks")
@@ -207,12 +211,12 @@ func (a *API) handleMissionSummary(w http.ResponseWriter, r *http.Request, u mod
 		a.failStore(w, err, "hosts")
 		return
 	}
-	services, err := a.Store.ListServices(ctx, storeServiceFilter(m.ID, 0))
+	services, err := a.Store.ListServices(ctx, storeServiceFilter(m.ID, 0, withSkipped))
 	if err != nil {
 		a.failStore(w, err, "services")
 		return
 	}
-	findings, err := a.Store.ListFindings(ctx, storeFindingFilter(m.ID, 0))
+	findings, err := a.Store.ListFindings(ctx, storeFindingFilter(m.ID, 0, withSkipped))
 	if err != nil {
 		a.failStore(w, err, "findings")
 		return
@@ -222,7 +226,7 @@ func (a *API) handleMissionSummary(w http.ResponseWriter, r *http.Request, u mod
 		a.failStore(w, err, "assets")
 		return
 	}
-	matrix, err := a.Store.Matrix(ctx, m.ID)
+	matrix, err := a.Store.Matrix(ctx, m.ID, withSkipped)
 	if err != nil {
 		a.failStore(w, err, "matrix")
 		return

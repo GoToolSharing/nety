@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/GoToolSharing/nety/internal/model"
@@ -15,6 +16,7 @@ import (
 // file only stores and loads the result.
 
 const assetCols = `id, mission_id, label, hostname, domain, os, kind, tags, notes,
+	triage_status, triage_note, triage_by, triage_at,
 	first_seen, last_seen`
 
 func scanAssetRow(sc interface{ Scan(...any) error }) (model.Asset, error) {
@@ -22,13 +24,20 @@ func scanAssetRow(sc interface{ Scan(...any) error }) (model.Asset, error) {
 		a           model.Asset
 		tags        string
 		first, last int64
+		triageAt    sql.NullInt64
 	)
 	err := sc.Scan(&a.ID, &a.MissionID, &a.Label, &a.Hostname, &a.Domain, &a.OS,
-		&a.Kind, &tags, &a.Notes, &first, &last)
+		&a.Kind, &tags, &a.Notes,
+		&a.Triage.Status, &a.Triage.Note, &a.Triage.UpdatedBy, &triageAt,
+		&first, &last)
 	if err != nil {
 		return model.Asset{}, err
 	}
 	jsonDec(tags, &a.Tags)
+	a.Triage.UpdatedAt = toTimePtr(triageAt)
+	if a.Triage.Status == "" {
+		a.Triage.Status = model.TriageTodo
+	}
 	a.FirstSeen, a.LastSeen = toTime(first), toTime(last)
 	return a, nil
 }
@@ -36,6 +45,10 @@ func scanAssetRow(sc interface{ Scan(...any) error }) (model.Asset, error) {
 // SaveAsset inserts a new asset (ID == 0) or updates an existing one, together
 // with its keys and IPs. Keys and IPs are merged, never truncated: an asset
 // accumulates evidence across scans.
+//
+// The triage columns are absent from both statements on purpose: they belong
+// to the operator, so the correlator seeing the machine again refreshes what
+// it knows and leaves "do not touch this one" in place.
 func (s *Store) SaveAsset(ctx context.Context, a model.Asset) (model.Asset, error) {
 	now := time.Now().UTC()
 	if a.FirstSeen.IsZero() {
@@ -61,6 +74,9 @@ func (s *Store) SaveAsset(ctx context.Context, a model.Asset) (model.Asset, erro
 			if a.ID, err = res.LastInsertId(); err != nil {
 				return err
 			}
+			// The row carries the column default; mirror it on the value we
+			// hand back so callers never see an empty status.
+			a.Triage = model.Triage{Status: model.TriageTodo}
 		} else {
 			if _, err := tx.ExecContext(ctx, `
 				UPDATE assets SET label = ?, hostname = ?, domain = ?, os = ?, kind = ?,
@@ -69,6 +85,19 @@ func (s *Store) SaveAsset(ctx context.Context, a model.Asset) (model.Asset, erro
 				a.Label, a.Hostname, a.Domain, a.OS, string(a.Kind), jsonList(a.Tags),
 				a.Notes, ms(a.LastSeen), a.ID); err != nil {
 				return err
+			}
+			// Read the triage back rather than echoing what the caller passed
+			// in, which is blank on a scan: the asset it gets must say what
+			// the operator has already decided about this machine.
+			var triageAt sql.NullInt64
+			if err := tx.QueryRowContext(ctx,
+				`SELECT triage_status, triage_note, triage_by, triage_at FROM assets WHERE id = ?`, a.ID).
+				Scan(&a.Triage.Status, &a.Triage.Note, &a.Triage.UpdatedBy, &triageAt); err != nil {
+				return err
+			}
+			a.Triage.UpdatedAt = toTimePtr(triageAt)
+			if a.Triage.Status == "" {
+				a.Triage.Status = model.TriageTodo
 			}
 		}
 
@@ -312,6 +341,137 @@ func (s *Store) MergeAssets(ctx context.Context, dstID, srcID int64) error {
 }
 
 // ---------------------------------------------------------------------------
+// Asset triage
+// ---------------------------------------------------------------------------
+
+// SetAssetTriage records the operator's pass over a machine. Passing a nil
+// status or note leaves that field alone, as everywhere else.
+//
+// A status set here is also written to every host currently attached to the
+// asset, because an asset is a machine and a host is one of its addresses: the
+// operator saying "leave that workstation alone" means all of them, not the
+// one they happened to be looking at. The note stays on the asset, where it
+// was written.
+//
+// It returns the asset and how many hosts took the status with it, so the API
+// can say what it did.
+func (s *Store) SetAssetTriage(ctx context.Context, assetID int64, status *model.TriageStatus, note *string, userID int64) (model.Asset, int64, error) {
+	var (
+		out   model.Asset
+		hosts int64
+	)
+	err := s.tx(ctx, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx,
+			`UPDATE assets SET `+strings.Join(triageSets(status, note), ", ")+` WHERE id = ?`,
+			append(triageArgs(status, note, userID), assetID)...)
+		if err != nil {
+			return err
+		}
+		if err := affected(res); err != nil {
+			return err
+		}
+		if status != nil {
+			res, err := tx.ExecContext(ctx,
+				`UPDATE hosts SET triage_status = ?, triage_by = ?, triage_at = ? WHERE asset_id = ?`,
+				string(*status), userID, time.Now().UnixMilli(), assetID)
+			if err != nil {
+				return err
+			}
+			hosts, _ = res.RowsAffected()
+		}
+		row := tx.QueryRowContext(ctx, `SELECT `+assetCols+` FROM assets WHERE id = ?`, assetID)
+		out, err = scanAssetRow(row)
+		return err
+	})
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return model.Asset{}, 0, ErrNotFound
+		}
+		return model.Asset{}, 0, fmt.Errorf("store: set asset triage: %w", err)
+	}
+	if err := s.loadAssetDetails(ctx, []*model.Asset{&out}); err != nil {
+		return model.Asset{}, 0, err
+	}
+	return out, hosts, nil
+}
+
+// BulkSetAssetTriage applies one status to many machines at once, and to their
+// hosts with them. Only assets of the given mission are touched, so an id from
+// another mission cannot be slipped in.
+func (s *Store) BulkSetAssetTriage(ctx context.Context, missionID int64, ids []int64, status model.TriageStatus, userID int64) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	var n int64
+	err := s.tx(ctx, func(tx *sql.Tx) error {
+		assetStmt, err := tx.PrepareContext(ctx,
+			`UPDATE assets SET triage_status = ?, triage_by = ?, triage_at = ?
+			 WHERE id = ? AND mission_id = ?`)
+		if err != nil {
+			return err
+		}
+		defer assetStmt.Close()
+		hostStmt, err := tx.PrepareContext(ctx,
+			`UPDATE hosts SET triage_status = ?, triage_by = ?, triage_at = ?
+			 WHERE asset_id = ? AND mission_id = ?`)
+		if err != nil {
+			return err
+		}
+		defer hostStmt.Close()
+		now := time.Now().UnixMilli()
+		for _, id := range ids {
+			res, err := assetStmt.ExecContext(ctx, string(status), userID, now, id, missionID)
+			if err != nil {
+				return err
+			}
+			k, _ := res.RowsAffected()
+			if k == 0 {
+				// Not ours: leave its hosts alone as well.
+				continue
+			}
+			n += k
+			if _, err := hostStmt.ExecContext(ctx, string(status), userID, now, id, missionID); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, fmt.Errorf("store: bulk asset triage: %w", err)
+	}
+	return n, nil
+}
+
+// AssetTriageCounts reports how many machines sit in each status.
+func (s *Store) AssetTriageCounts(ctx context.Context, missionID int64) (map[model.TriageStatus]int, error) {
+	rows, err := s.r.QueryContext(ctx,
+		`SELECT triage_status, COUNT(*) FROM assets WHERE mission_id = ? GROUP BY triage_status`,
+		missionID)
+	if err != nil {
+		return nil, fmt.Errorf("store: asset triage counts: %w", err)
+	}
+	defer rows.Close()
+	out := map[model.TriageStatus]int{}
+	for _, st := range model.AllTriageStatuses {
+		out[st] = 0
+	}
+	for rows.Next() {
+		var (
+			status string
+			n      int
+		)
+		if err := rows.Scan(&status, &n); err != nil {
+			return nil, err
+		}
+		if status == "" {
+			status = string(model.TriageTodo)
+		}
+		out[model.TriageStatus(status)] += n
+	}
+	return out, rows.Err()
+}
+
+// ---------------------------------------------------------------------------
 // Audit log
 // ---------------------------------------------------------------------------
 
@@ -405,6 +565,11 @@ func (s *Store) SetSetting(ctx context.Context, key, value string) error {
 }
 
 // MissionData loads everything needed by the exporters in one go.
+//
+// Every listing here asks for the skipped hosts as well. An export is the
+// record of what was found, and a report that quietly drops a machine because
+// it was parked on screen is a report that lies; the triage columns travel
+// with the rows so a reader can see which ones were out of scope.
 func (s *Store) MissionData(ctx context.Context, missionID, networkID int64) (model.MissionData, error) {
 	var d model.MissionData
 	var err error
@@ -420,19 +585,23 @@ func (s *Store) MissionData(ctx context.Context, missionID, networkID int64) (mo
 	if d.Hosts, err = s.ListHosts(ctx, missionID, networkID); err != nil {
 		return d, err
 	}
-	if d.Services, err = s.ListServices(ctx, ServiceFilter{MissionID: missionID, NetworkID: networkID}); err != nil {
+	if d.Services, err = s.ListServices(ctx, ServiceFilter{
+		MissionID: missionID, NetworkID: networkID, IncludeSkippedHosts: true,
+	}); err != nil {
 		return d, err
 	}
 	if d.Assets, err = s.ListAssets(ctx, missionID); err != nil {
 		return d, err
 	}
-	if d.Findings, err = s.ListFindings(ctx, FindingFilter{MissionID: missionID, NetworkID: networkID}); err != nil {
+	if d.Findings, err = s.ListFindings(ctx, FindingFilter{
+		MissionID: missionID, NetworkID: networkID, IncludeSkippedHosts: true,
+	}); err != nil {
 		return d, err
 	}
-	if d.Reach, err = s.ListReach(ctx, missionID, 0); err != nil {
+	if d.Reach, err = s.ListReach(ctx, ReachFilter{MissionID: missionID, IncludeSkippedHosts: true}); err != nil {
 		return d, err
 	}
-	if d.Matrix, err = s.Matrix(ctx, missionID); err != nil {
+	if d.Matrix, err = s.Matrix(ctx, missionID, true); err != nil {
 		return d, err
 	}
 	if networkID != 0 {

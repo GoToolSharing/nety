@@ -56,8 +56,8 @@ host×port probes, one service to fingerprint, one reachability test).
 A scan reports what is exposed and which checks fired. Working out whether
 each service, and each finding, is actually a problem is manual, one at a
 time, and on a week-long engagement that pass has to survive everything else.
-So each service and each finding carries a `model.Triage` (status plus a
-free-text note) which:
+So each service, each finding, each host and each asset carries a
+`model.Triage` (status plus a free-text note) which:
 
 - is written only through the triage endpoints, never by `UpsertService` or
   `UpsertFinding`, so re-running a scan refreshes the observation and leaves
@@ -67,9 +67,25 @@ free-text note) which:
 - drives the progress readout and the status filter on the services and the
   findings screens.
 
-The two are deliberately identical, down to the endpoint shapes and the
-controls: moving from one screen to the other should not mean learning
-anything new.
+They are deliberately identical, down to the endpoint shapes and the controls:
+moving from one screen to the other should not mean learning anything new.
+
+### R3b - Skipping a machine is a filter, not a cascade
+
+There is always a machine that is out of scope: a client workstation, the
+pentester's own laptop, a device nobody may touch. It is parked by skipping its
+host, or its asset, and an asset applies the status to every host attached to
+it, including the ones the correlator attaches later (so an address change does
+not bring it back).
+
+What hangs off a skipped host is **hidden, never written to**. The service,
+finding and reachability listings exclude those rows in SQL (`NOT EXISTS`
+against `hosts`), and the counts that have to agree with them - the mission
+summary, the triage summary, the matrix cells - are filtered the same way. The
+operator may already have triaged some of those services by hand, and that work
+has to be exactly where they left it when the host goes back in scope. Rows
+with no host are never hidden, `include_skipped=true` turns the filter off, and
+exports never apply it: a deliverable carries everything that was found.
 
 ### R4 - No tooling installed on the operator's workstation
 All builds, tests and integration labs run in **Docker** (`Dockerfile`,

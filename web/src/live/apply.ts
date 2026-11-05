@@ -133,6 +133,8 @@ export interface ApplyContext {
 }
 
 const DROPPED_MARKER = 'events dropped'
+/** What the server says after a triage change that moves whole tables. */
+const TRIAGE_MARKER = 'triage updated'
 
 export function applyEvent(ctx: ApplyContext, ev: LiveEvent): void {
   const { qc, missionId, store, invalidator } = ctx
@@ -196,6 +198,25 @@ export function applyEvent(ctx: ApplyContext, ev: LiveEvent): void {
         line.message.toLowerCase().includes(DROPPED_MARKER)
       ) {
         ctx.onDropped()
+      } else if (
+        line.level === 'info' &&
+        typeof line.message === 'string' &&
+        line.message.toLowerCase().includes(TRIAGE_MARKER)
+      ) {
+        // Someone skipped a host or a machine, or triaged a batch. That moves
+        // rows in and out of tables wholesale rather than one at a time, so
+        // the only honest answer is to refetch the ones it touches.
+        for (const key of [
+          qk.hostsRoot(missionId),
+          qk.servicesRoot(missionId),
+          qk.findingsRoot(missionId),
+          qk.reachRoot(missionId),
+          qk.matrix(missionId),
+          qk.triageSummaryRoot(missionId),
+          qk.summary(missionId),
+        ]) {
+          invalidator.schedule(key)
+        }
       }
       store.addLog(scanId, {
         time: ev.time,
@@ -283,6 +304,7 @@ export function resynchronise(qc: QueryClient, missionId: number): void {
     qk.assets(missionId),
     qk.reachRoot(missionId),
     qk.matrix(missionId),
+    qk.triageSummaryRoot(missionId),
     qk.summary(missionId),
   ]
   for (const key of keys) void qc.invalidateQueries({ queryKey: key })

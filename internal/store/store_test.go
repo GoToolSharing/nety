@@ -277,7 +277,7 @@ func TestReachMatrix(t *testing.T) {
 	// Re-testing the same tuple replaces the previous verdict.
 	add(1, 2, "10.0.2.5", 3389, model.TechDirect, model.ReachOpen)
 
-	cells, err := s.Matrix(ctx, m.ID)
+	cells, err := s.Matrix(ctx, m.ID, false)
 	if err != nil {
 		t.Fatalf("matrix: %v", err)
 	}

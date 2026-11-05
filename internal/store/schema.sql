@@ -123,10 +123,20 @@ CREATE TABLE IF NOT EXISTS assets (
     kind       TEXT    NOT NULL DEFAULT 'unknown',
     tags       TEXT    NOT NULL DEFAULT '[]',
     notes      TEXT    NOT NULL DEFAULT '',
+    -- Operator triage of the machine itself. Setting it applies the same
+    -- status to every host attached to this asset, so a machine that is out of
+    -- scope is parked once rather than one address at a time.
+    triage_status TEXT    NOT NULL DEFAULT 'todo',
+    triage_note   TEXT    NOT NULL DEFAULT '',
+    triage_by     INTEGER NOT NULL DEFAULT 0,
+    triage_at     INTEGER,
     first_seen INTEGER NOT NULL,
     last_seen  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_assets_mission ON assets(mission_id);
+-- idx_assets_triage is created by the migration, not here, for the same reason
+-- as idx_services_triage below: this file also runs against databases that
+-- predate the triage columns.
 
 CREATE TABLE IF NOT EXISTS asset_keys (
     asset_id   INTEGER NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
@@ -166,6 +176,13 @@ CREATE TABLE IF NOT EXISTS hosts (
     os            TEXT    NOT NULL DEFAULT '',
     ttl           INTEGER NOT NULL DEFAULT 0,
     discovered_by TEXT    NOT NULL DEFAULT '[]',
+    -- Operator triage of this address. A skipped host is hidden from the
+    -- service, finding and segmentation listings rather than deleted, and its
+    -- own rows keep whatever the operator already recorded against them.
+    triage_status TEXT    NOT NULL DEFAULT 'todo',
+    triage_note   TEXT    NOT NULL DEFAULT '',
+    triage_by     INTEGER NOT NULL DEFAULT 0,
+    triage_at     INTEGER,
     first_seen    INTEGER NOT NULL,
     last_seen     INTEGER NOT NULL,
     last_scan_id  INTEGER NOT NULL DEFAULT 0,
@@ -173,6 +190,8 @@ CREATE TABLE IF NOT EXISTS hosts (
 );
 CREATE INDEX IF NOT EXISTS idx_hosts_mission ON hosts(mission_id, network_id);
 CREATE INDEX IF NOT EXISTS idx_hosts_asset ON hosts(asset_id);
+-- idx_hosts_triage is created by the migration, not here, for the same reason
+-- as idx_services_triage below.
 
 CREATE TABLE IF NOT EXISTS services (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,

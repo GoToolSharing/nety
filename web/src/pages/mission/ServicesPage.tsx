@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { qk, useNetworks, useServices } from '@/lib/queries'
+import { qk, useHosts, useNetworks, useServices, useTriageSummary } from '@/lib/queries'
 import { useDebounced, useMissionId } from '@/lib/hooks'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, PageHeader } from '@/components/ui/Card'
@@ -12,8 +12,14 @@ import { Mono, Pagination, RelativeTime, SearchInput } from '@/components/common
 import ServiceDetail from '@/components/ServiceDetail'
 import { formatNumber } from '@/lib/format'
 import { ChevronDownIcon, ChevronRightIcon, ServiceIcon } from '@/components/icons'
-import { TriageProgress, TriageSelect } from '@/components/Triage'
+import {
+  SKIPPED_ROW_CLASS,
+  SkippedHostsBanner,
+  TriageProgress,
+  TriageSelect,
+} from '@/components/Triage'
 import { useToast } from '@/components/ui/Toast'
+import { cn } from '@/lib/cn'
 import type { Service, TriageStatus } from '@/types/api'
 
 const PAGE_SIZE = 50
@@ -31,15 +37,25 @@ export default function ServicesPage() {
   const [triage, setTriage] = useState<TriageStatus[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [busy, setBusy] = useState<number | null>(null)
+  // The services of a skipped host are out of the way by default. This is the
+  // operator asking to see them anyway.
+  const [showSkipped, setShowSkipped] = useState(false)
 
   const qc = useQueryClient()
   const toast = useToast()
 
-  const summary = useQuery({
-    queryKey: ['triage-summary', missionId, networkId],
-    queryFn: () => api.triageSummary(missionId, networkId || undefined),
-    enabled: missionId > 0,
-  })
+  const summary = useTriageSummary(missionId, networkId)
+
+  // Only needed to recess the rows of a skipped host, so it is not fetched
+  // until those rows are on screen.
+  const hosts = useHosts(missionId, networkId || undefined, showSkipped)
+  const skippedHosts = useMemo(() => {
+    const ids = new Set<number>()
+    for (const h of hosts.data ?? []) {
+      if (h.triage?.status === 'skipped') ids.add(h.id)
+    }
+    return ids
+  }, [hosts.data])
 
   const debouncedQuery = useDebounced(query, 300)
   const debouncedPort = useDebounced(port, 300)
@@ -48,7 +64,7 @@ export default function ServicesPage() {
   useEffect(() => {
     setOffset(0)
     setSelected(new Set())
-  }, [debouncedQuery, networkId, protocol, debouncedPort, triage])
+  }, [debouncedQuery, networkId, protocol, debouncedPort, triage, showSkipped])
 
   const params = useMemo(
     () => ({
@@ -57,10 +73,11 @@ export default function ServicesPage() {
       protocol: protocol || undefined,
       port: debouncedPort ? Number(debouncedPort) : undefined,
       triage: triage.length ? triage.join(',') : undefined,
+      include_skipped: showSkipped || undefined,
       limit: PAGE_SIZE,
       offset,
     }),
-    [debouncedQuery, networkId, protocol, debouncedPort, triage, offset],
+    [debouncedQuery, networkId, protocol, debouncedPort, triage, showSkipped, offset],
   )
 
   const services = useServices(missionId, params)
@@ -76,8 +93,8 @@ export default function ServicesPage() {
   const describe = (s: Service) => [s.product, s.version].filter(Boolean).join(' ')
 
   const refresh = useCallback(() => {
-    void qc.invalidateQueries({ queryKey: ['services', missionId] })
-    void qc.invalidateQueries({ queryKey: ['triage-summary', missionId] })
+    void qc.invalidateQueries({ queryKey: qk.servicesRoot(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.triageSummaryRoot(missionId) })
     void qc.invalidateQueries({ queryKey: qk.summary(missionId) })
   }, [qc, missionId])
 
@@ -199,6 +216,14 @@ export default function ServicesPage() {
         </div>
       )}
 
+      <SkippedHostsBanner
+        hidden={summary.data?.hidden}
+        showing={showSkipped}
+        onToggle={() => setShowSkipped((v) => !v)}
+        noun="services"
+        className="mt-3"
+      />
+
       {selected.size > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent/5 px-3 py-2">
           <span className="text-xs font-medium text-fg">
@@ -292,7 +317,13 @@ export default function ServicesPage() {
                     return (
                       <Fragment key={s.id}>
                         <tr
-                          className="cursor-pointer"
+                          // A row only on screen because the operator asked to
+                          // see a skipped host is recessed, so it is never
+                          // mistaken for something still in scope.
+                          className={cn(
+                            'cursor-pointer',
+                            skippedHosts.has(s.host_id) && SKIPPED_ROW_CLASS,
+                          )}
                           onClick={() => setExpanded(open ? null : s.id)}
                         >
                           <td>

@@ -81,7 +81,7 @@ func TestUpgradeFromAPreTriageDatabase(t *testing.T) {
 	if _, err := s.SetServiceTriage(ctx, services[0].ID, &status, nil, 1); err != nil {
 		t.Fatalf("triage after migration: %v", err)
 	}
-	counts, err := s.TriageCounts(ctx, 1, 0)
+	counts, err := s.TriageCounts(ctx, 1, 0, false)
 	if err != nil || counts[model.TriageDone] != 1 {
 		t.Fatalf("counts after migration: %+v err=%v", counts, err)
 	}
@@ -164,9 +164,110 @@ func TestUpgradeFromAPreFindingTriageDatabase(t *testing.T) {
 	if _, err := s.SetFindingTriage(ctx, findings[0].ID, &status, nil, 1); err != nil {
 		t.Fatalf("triage after migration: %v", err)
 	}
-	counts, err := s.FindingTriageCounts(ctx, 1, 0)
+	counts, err := s.FindingTriageCounts(ctx, 1, 0, false)
 	if err != nil || counts[model.TriageFlagged] != 1 {
 		t.Fatalf("counts after migration: %+v err=%v", counts, err)
+	}
+
+	// Re-opening is a no-op, not a second migration.
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	again, err := Open(path, nil)
+	if err != nil {
+		t.Fatalf("reopening must be idempotent: %v", err)
+	}
+	defer again.Close()
+}
+
+// TestUpgradeFromAPreHostTriageDatabase is the same upgrade path one release
+// later again: a database that can triage services and findings but not hosts
+// or machines must open, keep what it has, and gain the new columns.
+func TestUpgradeFromAPreHostTriageDatabase(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "old.db")
+
+	// Hosts and assets as they looked before either could be skipped.
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, stmt := range []string{
+		`CREATE TABLE missions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+			client TEXT NOT NULL DEFAULT '', description TEXT NOT NULL DEFAULT '',
+			scope_cidrs TEXT NOT NULL DEFAULT '[]', exclude_cidrs TEXT NOT NULL DEFAULT '[]',
+			archived INTEGER NOT NULL DEFAULT 0, created_by INTEGER NOT NULL DEFAULT 0,
+			created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`,
+		`INSERT INTO missions (id, name, created_at, updated_at) VALUES (1, 'old mission', 1, 1)`,
+		`CREATE TABLE hosts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT, mission_id INTEGER NOT NULL,
+			network_id INTEGER NOT NULL, asset_id INTEGER NOT NULL DEFAULT 0,
+			ip TEXT NOT NULL, mac TEXT NOT NULL DEFAULT '',
+			vendor TEXT NOT NULL DEFAULT '', hostname TEXT NOT NULL DEFAULT '',
+			hostnames TEXT NOT NULL DEFAULT '[]', domain TEXT NOT NULL DEFAULT '',
+			os TEXT NOT NULL DEFAULT '', ttl INTEGER NOT NULL DEFAULT 0,
+			discovered_by TEXT NOT NULL DEFAULT '[]',
+			first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
+			last_scan_id INTEGER NOT NULL DEFAULT 0,
+			UNIQUE (mission_id, network_id, ip))`,
+		`INSERT INTO hosts (mission_id, network_id, ip, hostname, first_seen, last_seen)
+		 VALUES (1, 1, '10.0.0.5', 'ws-042', 1, 1)`,
+		`CREATE TABLE assets (
+			id INTEGER PRIMARY KEY AUTOINCREMENT, mission_id INTEGER NOT NULL,
+			label TEXT NOT NULL DEFAULT '', hostname TEXT NOT NULL DEFAULT '',
+			domain TEXT NOT NULL DEFAULT '', os TEXT NOT NULL DEFAULT '',
+			kind TEXT NOT NULL DEFAULT 'unknown', tags TEXT NOT NULL DEFAULT '[]',
+			notes TEXT NOT NULL DEFAULT '',
+			first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL)`,
+		`INSERT INTO assets (id, mission_id, label, first_seen, last_seen)
+		 VALUES (1, 1, 'ws-042', 1, 1)`,
+		// Services and findings are already triageable in this database.
+		`PRAGMA user_version = 2`,
+	} {
+		if _, err := raw.ExecContext(ctx, stmt); err != nil {
+			t.Fatalf("seed old schema: %v", err)
+		}
+	}
+	if err := raw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Open(path, nil)
+	if err != nil {
+		t.Fatalf("opening a pre-host-triage database must work: %v", err)
+	}
+	defer s.Close()
+
+	hosts, err := s.ListHosts(ctx, 1, 0)
+	if err != nil {
+		t.Fatalf("list after migration: %v", err)
+	}
+	if len(hosts) != 1 || hosts[0].Hostname != "ws-042" {
+		t.Fatalf("expected the existing host to survive, got %+v", hosts)
+	}
+	if hosts[0].Triage.Status != model.TriageTodo {
+		t.Fatalf("migrated rows should default to todo, got %q", hosts[0].Triage.Status)
+	}
+	asset, err := s.Asset(ctx, 1)
+	if err != nil {
+		t.Fatalf("asset after migration: %v", err)
+	}
+	if asset.Triage.Status != model.TriageTodo {
+		t.Fatalf("migrated assets should default to todo, got %q", asset.Triage.Status)
+	}
+
+	// And skipping works on it from there, hosts and machines alike.
+	status := model.TriageSkipped
+	if _, err := s.SetHostTriage(ctx, hosts[0].ID, &status, nil, 1); err != nil {
+		t.Fatalf("triage after migration: %v", err)
+	}
+	counts, err := s.HostTriageCounts(ctx, 1, 0)
+	if err != nil || counts[model.TriageSkipped] != 1 {
+		t.Fatalf("counts after migration: %+v err=%v", counts, err)
+	}
+	if _, _, err := s.SetAssetTriage(ctx, asset.ID, &status, nil, 1); err != nil {
+		t.Fatalf("asset triage after migration: %v", err)
 	}
 
 	// Re-opening is a no-op, not a second migration.

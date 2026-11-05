@@ -51,9 +51,17 @@ export const qk = {
   asset: (id: number) => ['asset', id] as const,
 
   matrix: (missionId: number) => ['matrix', missionId] as const,
+  matrixView: (missionId: number, includeSkipped: boolean) =>
+    ['matrix', missionId, includeSkipped] as const,
   reachRoot: (missionId: number) => ['reach', missionId] as const,
-  reach: (missionId: number, sourceNetworkId?: number) =>
-    ['reach', missionId, sourceNetworkId ?? null] as const,
+  reach: (missionId: number, sourceNetworkId?: number, includeSkipped = false) =>
+    ['reach', missionId, sourceNetworkId ?? null, includeSkipped] as const,
+
+  // The triage progress bars, and the count of what a skipped host is keeping
+  // off the screen, come from the same call.
+  triageSummaryRoot: (missionId: number) => ['triage-summary', missionId] as const,
+  triageSummary: (missionId: number, networkId?: number) =>
+    ['triage-summary', missionId, networkId ?? null] as const,
 
   exportFormats: ['export-formats'] as const,
 }
@@ -234,11 +242,16 @@ export function useDeleteScan(missionId: number) {
 // Results
 // ---------------------------------------------------------------------------
 
-export const useHosts = (missionId: number, networkId?: number) =>
+/**
+ * The hosts of a mission. `enabled` is there for the screens that only need
+ * the list to know which addresses are skipped, and only once the operator
+ * has asked to see those rows.
+ */
+export const useHosts = (missionId: number, networkId?: number, enabled = true) =>
   useQuery({
     queryKey: qk.hosts(missionId, networkId),
     queryFn: () => api.hosts(missionId, networkId),
-    enabled: missionId > 0,
+    enabled: enabled && missionId > 0,
   })
 
 export const useHost = (id: number) =>
@@ -252,6 +265,8 @@ export const useServices = (
     port?: number
     protocol?: string
     q?: string
+    triage?: string
+    include_skipped?: boolean
     limit?: number
     offset?: number
   },
@@ -265,7 +280,12 @@ export const useServices = (
 
 export const useFindings = (
   missionId: number,
-  params: { network_id?: number; host_id?: number; triage?: string } = {},
+  params: {
+    network_id?: number
+    host_id?: number
+    triage?: string
+    include_skipped?: boolean
+  } = {},
 ) =>
   useQuery({
     queryKey: qk.findings(missionId, params),
@@ -302,17 +322,25 @@ export function useMergeAssets(missionId: number) {
   })
 }
 
-export const useMatrix = (missionId: number) =>
+export const useMatrix = (missionId: number, includeSkipped = false) =>
   useQuery({
-    queryKey: qk.matrix(missionId),
-    queryFn: () => api.matrix(missionId),
+    queryKey: qk.matrixView(missionId, includeSkipped),
+    queryFn: () => api.matrix(missionId, includeSkipped || undefined),
     enabled: missionId > 0,
   })
 
-export const useReach = (missionId: number, sourceNetworkId?: number) =>
+export const useReach = (missionId: number, sourceNetworkId?: number, includeSkipped = false) =>
   useQuery({
-    queryKey: qk.reach(missionId, sourceNetworkId),
-    queryFn: () => api.reach(missionId, sourceNetworkId),
+    queryKey: qk.reach(missionId, sourceNetworkId, includeSkipped),
+    queryFn: () => api.reach(missionId, sourceNetworkId, includeSkipped || undefined),
+    enabled: missionId > 0,
+  })
+
+/** The triage progress and what the listings are hiding, in one call. */
+export const useTriageSummary = (missionId: number, networkId?: number) =>
+  useQuery({
+    queryKey: qk.triageSummary(missionId, networkId),
+    queryFn: () => api.triageSummary(missionId, networkId || undefined),
     enabled: missionId > 0,
   })
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/cn'
 import { CheckIcon, FlagIcon, SkipIcon, SpinnerIcon, TodoIcon } from '@/components/icons'
-import type { TriageStatus } from '@/types/api'
+import type { SkippedHostCounts, TriageStatus } from '@/types/api'
 import { TRIAGE_STATUSES } from '@/types/api'
 
 /**
@@ -336,6 +336,69 @@ export function TriageProgress({
           )
         })}
       </div>
+    </div>
+  )
+}
+
+/**
+ * A row belonging to a skipped host is still a real row: when the operator
+ * asks to see them, they are shown recessed so they are not mistaken for
+ * something still in scope.
+ */
+export const SKIPPED_ROW_CLASS = 'opacity-45 saturate-50'
+
+/**
+ * The one line above a table that says it is showing less than the database
+ * holds, and offers to show the rest. Without it, skipping a host would make
+ * rows vanish with no explanation, which is exactly the kind of silence that
+ * makes an operator distrust a tool mid-engagement.
+ */
+export function SkippedHostsBanner({
+  hidden,
+  showing,
+  onToggle,
+  noun,
+  className,
+}: {
+  hidden: SkippedHostCounts | undefined
+  showing: boolean
+  onToggle: () => void
+  /** What is being counted, so the sentence reads right on each screen. */
+  noun: 'services' | 'findings' | 'segmentation tests'
+  className?: string
+}) {
+  if (!hidden || hidden.hosts === 0) return null
+  const rows =
+    noun === 'services' ? hidden.services : noun === 'findings' ? hidden.findings : hidden.reach
+  if (rows === 0) return null
+
+  const labels = hidden.host_labels ?? []
+  const named = labels.join(', ')
+  const more = hidden.hosts - labels.length
+  const who =
+    hidden.hosts === 1
+      ? `${named || '1 host'}`
+      : `${hidden.hosts} skipped hosts${named ? ` (${named}${more > 0 ? ` +${more}` : ''})` : ''}`
+
+  return (
+    <div
+      className={cn(
+        'flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-border bg-elevated/50 px-3 py-1.5 text-xs text-muted',
+        className,
+      )}
+    >
+      <SkipIcon width={13} height={13} className="shrink-0 text-faint" />
+      <span>
+        {showing ? 'Showing' : 'Hiding'} {rows} {noun} on {who}
+        {hidden.hosts === 1 ? ', which is skipped' : ''}.
+      </span>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="rounded border border-border bg-surface px-1.5 py-0.5 text-[11px] text-fg hover:border-border-strong"
+      >
+        {showing ? 'Hide them' : 'Show them'}
+      </button>
     </div>
   )
 }

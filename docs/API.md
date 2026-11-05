@@ -85,22 +85,29 @@ A scan object carries `status` (`queued|running|paused|completed|failed|cancelle
 ## Results
 
 `GET /api/missions/{id}/hosts?network_id=`
-`GET /api/missions/{id}/services?network_id=&host_id=&port=&protocol=&q=&triage=&limit=&offset=`
+`GET /api/missions/{id}/services?network_id=&host_id=&port=&protocol=&q=&triage=&limit=&offset=&include_skipped=`
 (`triage` takes a comma separated list of statuses)
-`GET /api/missions/{id}/findings?network_id=&host_id=&triage=`
+`GET /api/missions/{id}/findings?network_id=&host_id=&triage=&include_skipped=`
 `GET /api/missions/{id}/assets`
-`GET /api/assets/{id}` · `PATCH /api/assets/{id}` `{label?, notes?, tags?, kind?}`
+`GET /api/assets/{id}` · `PATCH /api/assets/{id}` `{label?, notes?, tags?, kind?, status?, note?}`
 `POST /api/assets/{id}/merge` `{source_id}`
-`GET /api/hosts/{id}` - host plus its services
-`GET /api/missions/{id}/matrix` - `{networks: [...], cells: [...], techniques: [...]}`
-`GET /api/missions/{id}/reach?source_network_id=`
+`GET /api/hosts/{id}` - host plus its services, asset and findings
+`GET /api/missions/{id}/matrix?include_skipped=` - `{networks: [...], cells: [...], techniques: [...]}`
+`GET /api/missions/{id}/reach?source_network_id=&include_skipped=`
+
+**Skipped hosts.** By default the service, finding, reachability and matrix
+listings leave out the rows of a host whose triage status is `skipped`, and the
+mission summary counts them the same way. `include_skipped=true` turns that off
+and brings the rows back, each with its own triage untouched. A row with no
+host (`host_id` / `target_host_id` of 0) is never hidden. The hosts listing
+itself always shows skipped hosts: that is where they are put back in scope.
 
 ## Triage
 
 A scan says what is exposed and which checks fired; deciding whether each
 service, and each finding, is really a problem is manual work. These endpoints
 track that pass so a long engagement keeps its place, and a re-scan never
-erases it. Services and findings work the same way throughout.
+erases it. Services, findings, hosts and machines work the same way throughout.
 
 Statuses: `todo` (default), `in_progress`, `done`, `flagged`, `skipped`.
 
@@ -112,9 +119,31 @@ Statuses: `todo` (default), `in_progress`, `done`, `flagged`, `skipped`.
 | GET | `/api/findings/{id}` | - |
 | PATCH | `/api/findings/{id}` | `{status?, note?}`, same rules as a service |
 | POST | `/api/missions/{id}/findings/triage` | `{finding_ids: [], status}`, one status for a selection |
-| GET | `/api/missions/{id}/triage?network_id=` | counts per status, plus `total` and `reviewed` |
+| GET | `/api/hosts/{id}` | - |
+| PATCH | `/api/hosts/{id}` | `{status?, note?}`, same rules as a service |
+| POST | `/api/missions/{id}/hosts/triage` | `{host_ids: [], status}`, one status for a selection |
+| PATCH | `/api/assets/{id}` | `{status?, note?}` beside the other fields; the status reaches every host of the machine |
+| POST | `/api/missions/{id}/assets/triage` | `{asset_ids: [], status}`, one status for a selection, hosts included |
+| GET | `/api/missions/{id}/triage?network_id=&include_skipped=` | counts per status, plus `total` and `reviewed` |
 
-Triage is carried on every service and every finding object under `triage`:
+Every triage route needs a role that may write; reading one needs only access
+to the mission.
+
+**Skipping a machine.** Setting a status on an asset applies it to every host
+currently attached to it (`hosts.asset_id`), because an asset is a machine and
+a host is one of its addresses. A host the correlator attaches later to a
+machine that is `skipped` is skipped with it, so a device that changes IP
+mid-engagement stays out of scope instead of returning as a new host. A host
+can also be skipped on its own without touching its machine. The note stays
+where it was written and is never copied.
+
+**Skipping never writes to what hangs off a host.** The services, findings and
+segmentation results of a skipped host are filtered out of the listings above,
+not modified: whatever the operator had already recorded against each one is
+still there when the host goes back in scope.
+
+Triage is carried on every service, finding, host and asset object under
+`triage`:
 
 ```jsonc
 "triage": {
@@ -125,20 +154,27 @@ Triage is carried on every service and every finding object under `triage`:
 }
 ```
 
-The summary counts the two passes separately, because they are done
-separately: the services stay at the top level and the findings sit beside
-them under `findings`.
+The summary counts the passes separately, because they are done separately:
+the services stay at the top level and the findings and hosts sit beside them.
+The service and finding counts leave out the rows of a skipped host, exactly as
+the listings do, so a progress bar always adds up to the table under it.
+`hidden` says what that left out, which is what the UI's banner reads.
 
 ```jsonc
 {
   "counts": {"todo": 42, "done": 7, ...}, "total": 49, "reviewed": 7,
   "statuses": ["todo", "in_progress", "done", "flagged", "skipped"],
-  "findings": {"counts": {"todo": 3, ...}, "total": 3, "reviewed": 0}
+  "findings": {"counts": {"todo": 3, ...}, "total": 3, "reviewed": 0},
+  "hosts": {"counts": {"todo": 11, "skipped": 1, ...}, "total": 12, "reviewed": 1},
+  "hidden": {
+    "hosts": 1, "host_labels": ["ws-042"],
+    "services": 14, "findings": 3, "reach": 21
+  }
 }
 ```
 
-Triage is never written by a scan, and it is exported in the services and
-findings CSVs, the Excel workbook, the JSON dump and the reports.
+Triage is never written by a scan, and it is exported in the hosts, services,
+findings and machines CSVs, the Excel workbook, the JSON dump and the reports.
 
 ## Exports
 
@@ -148,6 +184,12 @@ findings CSVs, the Excel workbook, the JSON dump and the reports.
 
 Formats: `json`, `csv-hosts`, `csv-services`, `csv-findings`, `csv-reach`,
 `csv-assets`, `nmap-xml`, `gnmap`, `targets-txt`, `markdown`, `html`, `xlsx`.
+
+**Exports are complete.** Unlike the listings, an export carries every row of
+the mission, skipped hosts and their services, findings and segmentation
+results included. A report that quietly dropped a machine because it was parked
+on screen would be a report that lies; the triage columns travel with the rows
+instead, so a reader can see which ones were out of scope.
 
 ## Live events (WebSocket)
 

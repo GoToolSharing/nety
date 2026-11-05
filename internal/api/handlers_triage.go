@@ -225,6 +225,151 @@ func (a *API) handleBulkFindingTriage(w http.ResponseWriter, r *http.Request, u 
 }
 
 // ---------------------------------------------------------------------------
+// Hosts and assets
+// ---------------------------------------------------------------------------
+
+// Skipping is the reason these two exist. On a real engagement there is always
+// a machine nobody may touch: the client's own workstation, the pentester's
+// laptop, a device that was declared out of bounds. Marking each of its
+// services by hand is busywork, and its findings and segmentation results stay
+// in the way afterwards. Skipping the host, or the machine, parks all of it at
+// once: the rows are filtered out of the listings, never written to, so
+// un-skipping brings everything back exactly as the operator left it.
+
+// requireHost loads a host and checks the caller may see its mission.
+func (a *API) requireHost(w http.ResponseWriter, r *http.Request, u model.User) (model.Host, bool) {
+	id, ok := a.pathID(w, r)
+	if !ok {
+		return model.Host{}, false
+	}
+	h, err := a.Store.Host(r.Context(), id)
+	if err != nil {
+		a.failStore(w, err, "host")
+		return model.Host{}, false
+	}
+	if _, ok := a.missionByID(w, r, u, h.MissionID); !ok {
+		return model.Host{}, false
+	}
+	return h, true
+}
+
+// handleTriageHost records a status, a note, or both, exactly as the service
+// version does: a field left out is left alone.
+func (a *API) handleTriageHost(w http.ResponseWriter, r *http.Request, u model.User) {
+	h, ok := a.requireHost(w, r, u)
+	if !ok {
+		return
+	}
+	var req struct {
+		Status *model.TriageStatus `json:"status"`
+		Note   *string             `json:"note"`
+	}
+	if !a.decode(w, r, &req) {
+		return
+	}
+	if req.Status == nil && req.Note == nil {
+		a.fail(w, http.StatusBadRequest, "invalid", "give a status, a note, or both")
+		return
+	}
+	if req.Status != nil && !model.ValidTriageStatus(*req.Status) {
+		a.fail(w, http.StatusBadRequest, "invalid", "unknown status")
+		return
+	}
+	updated, err := a.Store.SetHostTriage(r.Context(), h.ID, req.Status, req.Note, u.ID)
+	if err != nil {
+		a.failStore(w, err, "host")
+		return
+	}
+	a.audit(r, u, h.MissionID, "host.triaged", h.IP+" -> "+string(updated.Triage.Status))
+	a.withTriageAuthor(r, &updated.Triage)
+	a.Bus.PublishData(model.EvtHost, h.MissionID, 0, updated)
+	if req.Status != nil {
+		// Whole tables change when a host is skipped or put back in scope, and
+		// they are keyed on the host rather than on anything we could publish
+		// row by row.
+		a.Bus.PublishData(model.EvtScanLog, h.MissionID, 0, model.LogLine{
+			Level: "info", Message: "triage updated, resynchronise",
+		})
+	}
+	a.ok(w, updated)
+}
+
+// handleBulkHostTriage applies one status to a selection of addresses.
+func (a *API) handleBulkHostTriage(w http.ResponseWriter, r *http.Request, u model.User) {
+	m, ok := a.requireMission(w, r, u)
+	if !ok {
+		return
+	}
+	var req struct {
+		HostIDs []int64            `json:"host_ids"`
+		Status  model.TriageStatus `json:"status"`
+	}
+	if !a.decode(w, r, &req) {
+		return
+	}
+	if !model.ValidTriageStatus(req.Status) {
+		a.fail(w, http.StatusBadRequest, "invalid", "unknown status")
+		return
+	}
+	if len(req.HostIDs) == 0 {
+		a.fail(w, http.StatusBadRequest, "invalid", "no host selected")
+		return
+	}
+	if len(req.HostIDs) > 5000 {
+		a.fail(w, http.StatusBadRequest, "invalid", "too many hosts in one call")
+		return
+	}
+	n, err := a.Store.BulkSetHostTriage(r.Context(), m.ID, req.HostIDs, req.Status, u.ID)
+	if err != nil {
+		a.failStore(w, err, "hosts")
+		return
+	}
+	a.audit(r, u, m.ID, "host.triaged_bulk", itoa64(n)+" hosts -> "+string(req.Status))
+	a.Bus.PublishData(model.EvtScanLog, m.ID, 0, model.LogLine{
+		Level: "info", Message: "triage updated, resynchronise",
+	})
+	a.ok(w, map[string]any{"updated": n, "status": req.Status})
+}
+
+// handleBulkAssetTriage applies one status to a selection of machines, and to
+// every address of each of them.
+func (a *API) handleBulkAssetTriage(w http.ResponseWriter, r *http.Request, u model.User) {
+	m, ok := a.requireMission(w, r, u)
+	if !ok {
+		return
+	}
+	var req struct {
+		AssetIDs []int64            `json:"asset_ids"`
+		Status   model.TriageStatus `json:"status"`
+	}
+	if !a.decode(w, r, &req) {
+		return
+	}
+	if !model.ValidTriageStatus(req.Status) {
+		a.fail(w, http.StatusBadRequest, "invalid", "unknown status")
+		return
+	}
+	if len(req.AssetIDs) == 0 {
+		a.fail(w, http.StatusBadRequest, "invalid", "no machine selected")
+		return
+	}
+	if len(req.AssetIDs) > 5000 {
+		a.fail(w, http.StatusBadRequest, "invalid", "too many machines in one call")
+		return
+	}
+	n, err := a.Store.BulkSetAssetTriage(r.Context(), m.ID, req.AssetIDs, req.Status, u.ID)
+	if err != nil {
+		a.failStore(w, err, "assets")
+		return
+	}
+	a.audit(r, u, m.ID, "asset.triaged_bulk", itoa64(n)+" machines -> "+string(req.Status))
+	a.Bus.PublishData(model.EvtScanLog, m.ID, 0, model.LogLine{
+		Level: "info", Message: "triage updated, resynchronise",
+	})
+	a.ok(w, map[string]any{"updated": n, "status": req.Status})
+}
+
+// ---------------------------------------------------------------------------
 // Shared
 // ---------------------------------------------------------------------------
 
@@ -234,31 +379,53 @@ func (a *API) handleBulkFindingTriage(w http.ResponseWriter, r *http.Request, u 
 // The service counts stay at the top level, where they have always been, and
 // the findings arrive beside them under their own key rather than mixed into
 // the same totals: the two passes are counted separately because they are
-// done separately.
+// done separately. The hosts are counted the same way beside both.
+//
+// The service and finding counts leave out the rows of a skipped host, exactly
+// as the listings do, so the bar above a table always adds up to the table
+// under it. `hidden` says what that left out, which is what the banner above
+// those tables reads from.
 func (a *API) handleTriageSummary(w http.ResponseWriter, r *http.Request, u model.User) {
 	m, ok := a.requireMission(w, r, u)
 	if !ok {
 		return
 	}
+	ctx := r.Context()
 	networkID := queryInt64(r, "network_id")
-	services, err := a.Store.TriageCounts(r.Context(), m.ID, networkID)
+	withSkipped := includeSkipped(r)
+	services, err := a.Store.TriageCounts(ctx, m.ID, networkID, withSkipped)
 	if err != nil {
 		a.failStore(w, err, "triage counts")
 		return
 	}
-	findings, err := a.Store.FindingTriageCounts(r.Context(), m.ID, networkID)
+	findings, err := a.Store.FindingTriageCounts(ctx, m.ID, networkID, withSkipped)
+	if err != nil {
+		a.failStore(w, err, "triage counts")
+		return
+	}
+	hosts, err := a.Store.HostTriageCounts(ctx, m.ID, networkID)
+	if err != nil {
+		a.failStore(w, err, "triage counts")
+		return
+	}
+	hidden, err := a.Store.SkippedHostCounts(ctx, m.ID, networkID)
 	if err != nil {
 		a.failStore(w, err, "triage counts")
 		return
 	}
 	total, reviewed := triageTotals(services)
 	findingTotal, findingReviewed := triageTotals(findings)
+	hostTotal, hostReviewed := triageTotals(hosts)
 	a.ok(w, map[string]any{
 		"counts": services, "total": total, "reviewed": reviewed,
 		"statuses": model.AllTriageStatuses,
 		"findings": map[string]any{
 			"counts": findings, "total": findingTotal, "reviewed": findingReviewed,
 		},
+		"hosts": map[string]any{
+			"counts": hosts, "total": hostTotal, "reviewed": hostReviewed,
+		},
+		"hidden": hidden,
 	})
 }
 

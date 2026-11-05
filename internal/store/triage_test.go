@@ -120,7 +120,7 @@ func TestBulkTriageIsScopedToTheMission(t *testing.T) {
 		t.Fatalf("a service from another mission was modified: %+v", other.Triage)
 	}
 
-	counts, err := s.TriageCounts(ctx, mine.ID, 0)
+	counts, err := s.TriageCounts(ctx, mine.ID, 0, false)
 	if err != nil {
 		t.Fatalf("counts: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestBulkFindingTriageIsScopedToTheMission(t *testing.T) {
 		t.Fatalf("a finding from another mission was modified: %+v", other.Triage)
 	}
 
-	counts, err := s.FindingTriageCounts(ctx, mine.ID, 0)
+	counts, err := s.FindingTriageCounts(ctx, mine.ID, 0, false)
 	if err != nil {
 		t.Fatalf("counts: %v", err)
 	}
@@ -273,7 +273,7 @@ func TestBulkFindingTriageIsScopedToTheMission(t *testing.T) {
 
 	// Service and finding counts are kept apart: triaging one says nothing
 	// about the other.
-	svcCounts, err := s.TriageCounts(ctx, mine.ID, 0)
+	svcCounts, err := s.TriageCounts(ctx, mine.ID, 0, false)
 	if err != nil {
 		t.Fatalf("service counts: %v", err)
 	}

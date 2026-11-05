@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useAssets, useMergeAssets, useNetworks, usePatchAsset } from '@/lib/queries'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import { qk, useAssets, useMergeAssets, useNetworks, usePatchAsset } from '@/lib/queries'
 import { useMissionId } from '@/lib/hooks'
 import { useAuth } from '@/state/auth'
 import PageContainer from '@/components/layout/PageContainer'
@@ -20,10 +22,16 @@ import {
 } from '@/components/common'
 import { compareIP, formatNumber, humanizeId } from '@/lib/format'
 import { cn } from '@/lib/cn'
+import { SKIPPED_ROW_CLASS, TriageNote, TriageSelect } from '@/components/Triage'
 import { ASSET_KIND_LABELS, AssetKindIcon, AssetIcon, MergeIcon } from '@/components/icons'
-import { ASSET_KINDS, type Asset, type AssetKind } from '@/types/api'
+import { ASSET_KINDS, type Asset, type AssetKind, type TriageStatus } from '@/types/api'
 
-type SortKey = 'label' | 'kind' | 'os' | 'domain' | 'ips' | 'last_seen'
+type SortKey = 'label' | 'kind' | 'status' | 'os' | 'domain' | 'ips' | 'last_seen'
+
+/** How many addresses a machine is currently answering on. */
+function addressCount(a: Asset): number {
+  return (a.ips ?? []).length
+}
 
 function confidenceTone(c: number): 'ok' | 'warn' | 'neutral' {
   if (c >= 80) return 'ok'
@@ -36,11 +44,15 @@ function AssetDrawer({
   assets,
   networkName,
   onClose,
+  onTriage,
+  busy,
 }: {
   asset: Asset | null
   assets: Asset[]
   networkName: (id: number) => string
   onClose: () => void
+  onTriage: (asset: Asset, body: { status?: TriageStatus; note?: string }) => void
+  busy: boolean
 }) {
   const missionId = useMissionId()
   const { canWrite } = useAuth()
@@ -114,6 +126,49 @@ function AssetDrawer({
           </span>
         }
       >
+        {/* The status belongs to the machine, so it says out loud that it
+            covers every address of it: that is the whole reason to set it
+            here rather than host by host. */}
+        <section className="mb-4">
+          <h3 className="panel-title mb-1.5">Your review of this machine</h3>
+          <div className="flex flex-wrap items-start gap-4 rounded-md border border-border bg-elevated/50 px-3 py-2">
+            <div className="w-44 shrink-0">
+              <div className="mb-1 text-[11px] text-muted">Status</div>
+              <TriageSelect
+                value={asset.triage?.status}
+                busy={busy}
+                onChange={(status) => onTriage(asset, { status })}
+              />
+              {asset.triage?.updated_at && (
+                <div className="mt-1.5 text-[11px] text-faint">
+                  {asset.triage.updated_by_name ? `${asset.triage.updated_by_name}, ` : ''}
+                  <RelativeTime value={asset.triage.updated_at} />
+                </div>
+              )}
+            </div>
+            <div className="min-w-[260px] flex-1">
+              <div className="mb-1 text-[11px] text-muted">Notes</div>
+              <TriageNote
+                value={asset.triage?.note ?? ''}
+                onSave={(note) => onTriage(asset, { note })}
+                placeholder="Why is this machine out of scope, or what is left to test on it?"
+              />
+            </div>
+          </div>
+          <p className="mt-1.5 text-xs text-muted">
+            The status covers the whole machine: it is applied to each of its{' '}
+            {addressCount(asset)} address{addressCount(asset) === 1 ? '' : 'es'}, and an address
+            it turns up on later is skipped with it.
+            {asset.triage?.status === 'skipped' && (
+              <>
+                {' '}
+                Its services, its findings and the segmentation tests aimed at it are hidden
+                from the other screens. Nothing was deleted.
+              </>
+            )}
+          </p>
+        </section>
+
         <section>
           <h3 className="panel-title mb-1.5">Identity</h3>
           <dl className="rounded-md border border-border bg-elevated/50 px-3 py-2">
@@ -350,6 +405,63 @@ export default function AssetsPage() {
   const [kindFilter, setKindFilter] = useState<AssetKind | 'all'>('all')
   const { sort, onSort } = useSort<SortKey>('label')
   const [selected, setSelected] = useState<Asset | null>(null)
+  const [picked, setPicked] = useState<Set<number>>(new Set())
+  const [busy, setBusy] = useState<number | null>(null)
+
+  const qc = useQueryClient()
+  const toast = useToast()
+
+  // Parking a machine parks its addresses, which changes every table keyed on
+  // them, so the refresh is deliberately wide.
+  const refresh = useCallback(() => {
+    void qc.invalidateQueries({ queryKey: qk.assets(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.hostsRoot(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.servicesRoot(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.findingsRoot(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.reachRoot(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.matrix(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.triageSummaryRoot(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.summary(missionId) })
+  }, [qc, missionId])
+
+  const setStatus = useCallback(
+    async (asset: Asset, body: { status?: TriageStatus; note?: string }) => {
+      setBusy(asset.id)
+      try {
+        await api.triageAsset(asset.id, body)
+        refresh()
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not update the status')
+      } finally {
+        setBusy(null)
+      }
+    },
+    [refresh, toast],
+  )
+
+  const setSelectionStatus = useCallback(
+    async (status: TriageStatus) => {
+      const ids = [...picked]
+      if (ids.length === 0) return
+      try {
+        const res = await api.triageAssetsBulk(missionId, ids, status)
+        setPicked(new Set())
+        refresh()
+        toast.success(`${res.updated} machines marked ${status.replace('_', ' ')}`)
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not update the selection')
+      }
+    },
+    [missionId, picked, refresh, toast],
+  )
+
+  const togglePicked = (id: number) =>
+    setPicked((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   const netName = (id: number) =>
     (networks.data ?? []).find((n) => n.id === id)?.name ?? `network ${id}`
@@ -387,6 +499,8 @@ export default function AssetsPage() {
           return dir * a.label.localeCompare(b.label)
         case 'kind':
           return dir * a.kind.localeCompare(b.kind)
+        case 'status':
+          return dir * (a.triage?.status ?? 'todo').localeCompare(b.triage?.status ?? 'todo')
         case 'os':
           return dir * (a.os ?? '').localeCompare(b.os ?? '')
         case 'domain':
@@ -426,6 +540,33 @@ export default function AssetsPage() {
         />
         <span className="tabular text-xs text-faint">{formatNumber(rows.length)} assets</span>
       </div>
+
+      {picked.size > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent/5 px-3 py-2">
+          <span className="text-xs font-medium text-fg">{picked.size} selected</span>
+          <span className="text-xs text-muted">Mark as</span>
+          {(['done', 'flagged', 'skipped', 'in_progress', 'todo'] as TriageStatus[]).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => void setSelectionStatus(s)}
+              className="rounded border border-border bg-surface px-2 py-0.5 text-[11px] text-fg hover:border-border-strong"
+            >
+              {s.replace('_', ' ')}
+            </button>
+          ))}
+          <span className="text-[11px] text-muted">
+            applied to every address of each machine
+          </span>
+          <button
+            type="button"
+            onClick={() => setPicked(new Set())}
+            className="ml-auto text-[11px] text-muted hover:text-fg"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
 
       <FilterChips<AssetKind | 'all'>
         className="mt-3"
@@ -470,6 +611,22 @@ export default function AssetsPage() {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th className="w-px">
+                    <input
+                      type="checkbox"
+                      aria-label="Select every machine shown"
+                      checked={rows.length > 0 && rows.every((a) => picked.has(a.id))}
+                      onChange={() =>
+                        setPicked(
+                          rows.every((a) => picked.has(a.id))
+                            ? new Set()
+                            : new Set(rows.map((a) => a.id)),
+                        )
+                      }
+                      className="h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]"
+                    />
+                  </th>
+                  <SortHeader column="status" label="Status" sort={sort} onSort={onSort} />
                   <SortHeader column="label" label="Asset" sort={sort} onSort={onSort} />
                   <SortHeader column="kind" label="Kind" sort={sort} onSort={onSort} />
                   <SortHeader column="os" label="OS" sort={sort} onSort={onSort} />
@@ -486,7 +643,12 @@ export default function AssetsPage() {
                   return (
                     <tr
                       key={a.id}
-                      className="cursor-pointer"
+                      // A skipped machine stays listed, recessed, because this
+                      // is where it is put back in scope.
+                      className={cn(
+                        'cursor-pointer',
+                        a.triage?.status === 'skipped' && SKIPPED_ROW_CLASS,
+                      )}
                       tabIndex={0}
                       onClick={() => setSelected(a)}
                       onKeyDown={(e) => {
@@ -496,6 +658,22 @@ export default function AssetsPage() {
                         }
                       }}
                     >
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${a.label || `asset #${a.id}`}`}
+                          checked={picked.has(a.id)}
+                          onChange={() => togglePicked(a.id)}
+                          className="h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]"
+                        />
+                      </td>
+                      <td className="w-[122px]" onClick={(e) => e.stopPropagation()}>
+                        <TriageSelect
+                          value={a.triage?.status}
+                          busy={busy === a.id}
+                          onChange={(status) => void setStatus(a, { status })}
+                        />
+                      </td>
                       <td className="font-medium">
                         <span className="flex items-center gap-2">
                           <AssetKindIcon
@@ -577,6 +755,8 @@ export default function AssetsPage() {
         assets={all}
         networkName={netName}
         onClose={() => setSelected(null)}
+        onTriage={(asset, body) => void setStatus(asset, body)}
+        busy={!!selectedLive && busy === selectedLive.id}
       />
     </PageContainer>
   )

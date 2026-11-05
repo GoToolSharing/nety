@@ -165,3 +165,69 @@ func TestCompletedButUnplannedScanCanBeResumed(t *testing.T) {
 		t.Fatal("a scan with a complete plan and no pending work should refuse to restart")
 	}
 }
+
+// A host the operator marked skipped is out of scope. Its services are already
+// left out by the service listing, so leaving it in the host-level ICMP row
+// would put the machine back in the matrix through the back door.
+func TestSegmentationLeavesSkippedHostsOut(t *testing.T) {
+	h := newHarness(t, Engines{NetInspector: stubInspector{}})
+	ctx := context.Background()
+
+	other, err := h.st.CreateNetwork(ctx, model.Network{
+		MissionID: h.mis.ID, Name: "VLAN20", VLANID: 20,
+		Interface: "eth1", LocalIP: "10.0.20.2", Prefixes: []string{"10.0.20.0/24"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kept, skipped model.Host
+	for _, ip := range []string{"10.0.20.5", "10.0.20.6"} {
+		got, err := h.st.UpsertHost(ctx, model.Host{
+			MissionID: h.mis.ID, NetworkID: other.ID, IP: ip,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ip == "10.0.20.5" {
+			kept = got
+		} else {
+			skipped = got
+		}
+	}
+	status := model.TriageSkipped
+	if _, err := h.st.SetHostTriage(ctx, skipped.ID, &status, nil, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	sc, err := h.st.CreateScan(ctx, model.Scan{
+		MissionID: h.mis.ID, NetworkID: h.net.ID,
+		Kind: model.ScanSegmentation, Options: defaultOptions(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.runner.plan(ctx, sc); err != nil {
+		t.Fatalf("plan: %v", err)
+	}
+
+	units, err := h.st.ClaimWork(ctx, sc.ID, model.PhaseSegment, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[int64]bool{}
+	for _, u := range units {
+		var p segmentPayload
+		if err := json.Unmarshal(u.Payload, &p); err != nil {
+			t.Fatal(err)
+		}
+		for _, id := range p.HostIDs {
+			seen[id] = true
+		}
+	}
+	if !seen[kept.ID] {
+		t.Fatal("the host that is in scope was not planned")
+	}
+	if seen[skipped.ID] {
+		t.Fatal("a skipped host was still planned as a segmentation target")
+	}
+}

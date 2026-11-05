@@ -321,6 +321,12 @@ export interface ScanLogLine {
 // ---------------------------------------------------------------------------
 
 export interface Host {
+  /**
+   * The operator's pass over this address. Skipping it parks the machine: its
+   * services, findings and segmentation results drop out of the default
+   * listings until it is put back in scope.
+   */
+  triage: Triage
   id: number
   mission_id: number
   network_id: number
@@ -434,13 +440,30 @@ export interface TriageCounts {
 }
 
 /**
+ * What the default listings are leaving out because a host was skipped. It is
+ * what the one-line banner above those tables reads from, so the operator is
+ * never shown fewer rows than exist without being told.
+ */
+export interface SkippedHostCounts {
+  hosts: number
+  /** The skipped hosts by name, capped so the banner stays one line. */
+  host_labels: string[] | null
+  services: number
+  findings: number
+  reach: number
+}
+
+/**
  * GET /api/missions/{id}/triage. The services stay at the top level, where
- * they have always been, and the findings are counted separately beside them
- * because they are reviewed separately.
+ * they have always been, and the findings and the hosts are counted separately
+ * beside them because they are reviewed separately. The service and finding
+ * counts leave out the rows of a skipped host, exactly as the listings do.
  */
 export interface TriageSummary extends TriageCounts {
   statuses: TriageStatus[]
   findings: TriageCounts
+  hosts: TriageCounts
+  hidden: SkippedHostCounts
 }
 
 export interface Service {
@@ -557,6 +580,12 @@ export interface AssetIP {
 }
 
 export interface Asset {
+  /**
+   * The operator's pass over the machine itself. A status set here is applied
+   * to every address of it, and an address the correlator attaches later to a
+   * skipped machine is skipped with it.
+   */
+  triage: Triage
   id: number
   mission_id: number
   label: string
@@ -577,6 +606,10 @@ export interface AssetPatch {
   notes?: string
   tags?: string[]
   kind?: AssetKind
+  /** Triage of the machine: applied to every address of it. */
+  status?: TriageStatus
+  /** The triage note, which stays on the machine. */
+  note?: string
 }
 
 // ---------------------------------------------------------------------------

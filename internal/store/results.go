@@ -21,22 +21,30 @@ import (
 // ---------------------------------------------------------------------------
 
 const hostCols = `id, mission_id, network_id, asset_id, ip, mac, vendor, hostname,
-	hostnames, domain, os, ttl, discovered_by, first_seen, last_seen, last_scan_id`
+	hostnames, domain, os, ttl, discovered_by,
+	triage_status, triage_note, triage_by, triage_at,
+	first_seen, last_seen, last_scan_id`
 
 func scanHost(sc interface{ Scan(...any) error }) (model.Host, error) {
 	var (
 		h                     model.Host
 		hostnames, discovered string
 		first, last           int64
+		triageAt              sql.NullInt64
 	)
 	err := sc.Scan(&h.ID, &h.MissionID, &h.NetworkID, &h.AssetID, &h.IP, &h.MAC,
-		&h.Vendor, &h.Hostname, &hostnames, &h.Domain, &h.OS, &h.TTL,
-		&discovered, &first, &last, &h.LastScanID)
+		&h.Vendor, &h.Hostname, &hostnames, &h.Domain, &h.OS, &h.TTL, &discovered,
+		&h.Triage.Status, &h.Triage.Note, &h.Triage.UpdatedBy, &triageAt,
+		&first, &last, &h.LastScanID)
 	if err != nil {
 		return model.Host{}, err
 	}
 	jsonDec(hostnames, &h.Hostnames)
 	jsonDec(discovered, &h.DiscoveredBy)
+	h.Triage.UpdatedAt = toTimePtr(triageAt)
+	if h.Triage.Status == "" {
+		h.Triage.Status = model.TriageTodo
+	}
 	h.FirstSeen, h.LastSeen = toTime(first), toTime(last)
 	return h, nil
 }
@@ -66,8 +74,18 @@ func (s *Store) UpsertHost(ctx context.Context, h model.Host) (model.Host, error
 			if err != nil {
 				return err
 			}
-			h.ID, err = res.LastInsertId()
-			return err
+			if h.ID, err = res.LastInsertId(); err != nil {
+				return err
+			}
+			// The row carries the column default; mirror it on the value we
+			// hand back so callers never see an empty status.
+			h.Triage = model.Triage{Status: model.TriageTodo}
+			if h.AssetID != 0 {
+				if err := inheritAssetTriageTx(ctx, tx, &h); err != nil {
+					return err
+				}
+			}
+			return nil
 		case err != nil:
 			return err
 		}
@@ -81,6 +99,11 @@ func (s *Store) UpsertHost(ctx context.Context, h model.Host) (model.Host, error
 			ms(merged.LastSeen), merged.LastScanID, merged.ID); err != nil {
 			return err
 		}
+		if merged.AssetID != 0 && merged.AssetID != existing.AssetID {
+			if err := inheritAssetTriageTx(ctx, tx, &merged); err != nil {
+				return err
+			}
+		}
 		h = merged
 		return nil
 	})
@@ -90,6 +113,11 @@ func (s *Store) UpsertHost(ctx context.Context, h model.Host) (model.Host, error
 	return h, nil
 }
 
+// mergeHost keeps everything already known about a host and lets the new
+// observation fill the gaps.
+//
+// Triage is deliberately not merged: it belongs to the operator, the UPDATE
+// above does not write its columns, and a value passed in here is ignored.
 func mergeHost(old, new model.Host) model.Host {
 	out := old
 	if new.AssetID != 0 {
@@ -138,12 +166,65 @@ func (s *Store) Host(ctx context.Context, id int64) (model.Host, error) {
 	return h, nil
 }
 
-// SetHostAsset links a host to an asset.
+// SetHostAsset links a host to an asset. This is what the identity phase calls
+// once the correlator has decided which machine an address belongs to.
 func (s *Store) SetHostAsset(ctx context.Context, hostID, assetID int64) error {
 	return s.tx(ctx, func(tx *sql.Tx) error {
-		_, err := tx.ExecContext(ctx, `UPDATE hosts SET asset_id = ? WHERE id = ?`, assetID, hostID)
-		return err
+		var previous int64
+		err := tx.QueryRowContext(ctx, `SELECT asset_id FROM hosts WHERE id = ?`, hostID).Scan(&previous)
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE hosts SET asset_id = ? WHERE id = ?`, assetID, hostID); err != nil {
+			return err
+		}
+		if assetID == 0 || assetID == previous {
+			return nil
+		}
+		h := model.Host{ID: hostID, AssetID: assetID}
+		return inheritAssetTriageTx(ctx, tx, &h)
 	})
+}
+
+// inheritAssetTriageTx gives a host the status of the asset it has just been
+// attached to, when that status is "skipped".
+//
+// A machine that changes IP mid-engagement comes back as a brand new host, and
+// without this it would walk straight back into the working views as an
+// untriaged address of a machine the client asked us not to touch. Only a new
+// attachment triggers it: re-running the identity phase on a host that is
+// already on this asset must not undo an operator who deliberately put one
+// address of it back in scope.
+func inheritAssetTriageTx(ctx context.Context, tx *sql.Tx, h *model.Host) error {
+	var (
+		status string
+		by     int64
+	)
+	err := tx.QueryRowContext(ctx,
+		`SELECT triage_status, triage_by FROM assets WHERE id = ?`, h.AssetID).Scan(&status, &by)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if model.TriageStatus(status) != model.TriageSkipped {
+		return nil
+	}
+	now := time.Now().UnixMilli()
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE hosts SET triage_status = ?, triage_by = ?, triage_at = ? WHERE id = ?`,
+		string(model.TriageSkipped), by, now, h.ID); err != nil {
+		return err
+	}
+	at := toTime(now)
+	h.Triage.Status = model.TriageSkipped
+	h.Triage.UpdatedBy = by
+	h.Triage.UpdatedAt = &at
+	return nil
 }
 
 // ListHosts returns the hosts of a mission, optionally restricted to one
@@ -353,8 +434,25 @@ type ServiceFilter struct {
 	// Triage narrows to one or more triage statuses, which is how the
 	// services screen shows "what is left to look at".
 	Triage []model.TriageStatus
-	Limit  int
-	Offset int
+	// IncludeSkippedHosts brings back the services of hosts the operator has
+	// skipped. They are left out by default: skipping a host is how a machine
+	// that is out of scope gets parked, and it should stop appearing in the
+	// work queue. The rows are hidden, never touched, so un-skipping the host
+	// brings them back exactly as they were.
+	IncludeSkippedHosts bool
+	Limit               int
+	Offset              int
+}
+
+// notOnASkippedHost is the SQL that keeps the rows of a skipped host out of a
+// listing. column is the host reference of the table being listed, written by
+// us and never by a caller.
+//
+// A row with no host (column = 0) matches no host row, so it is never hidden:
+// there is nothing to say it belongs to a machine that was parked.
+func notOnASkippedHost(column string) string {
+	return ` AND NOT EXISTS (SELECT 1 FROM hosts WHERE hosts.id = ` + column +
+		` AND hosts.triage_status = '` + string(model.TriageSkipped) + `')`
 }
 
 // ListServices returns services matching the filter.
@@ -391,6 +489,9 @@ func (s *Store) ListServices(ctx context.Context, f ServiceFilter) ([]model.Serv
 		for _, t := range f.Triage {
 			args = append(args, string(t))
 		}
+	}
+	if !f.IncludeSkippedHosts {
+		sb.WriteString(notOnASkippedHost("services.host_id"))
 	}
 	sb.WriteString(` ORDER BY network_id, ip, port`)
 	if f.Limit > 0 {
@@ -546,6 +647,11 @@ type FindingFilter struct {
 	// Triage narrows to one or more triage statuses, which is how the findings
 	// screen shows "what is left to decide on".
 	Triage []model.TriageStatus
+	// IncludeSkippedHosts brings back the findings of hosts the operator has
+	// skipped, which are left out by default for the same reason as the
+	// services: a parked machine should not keep filling the work queue. The
+	// rows are hidden, never touched.
+	IncludeSkippedHosts bool
 }
 
 // ListFindings returns the findings matching the filter.
@@ -565,6 +671,9 @@ func (s *Store) ListFindings(ctx context.Context, f FindingFilter) ([]model.Find
 		for _, t := range f.Triage {
 			args = append(args, string(t))
 		}
+	}
+	if !f.IncludeSkippedHosts {
+		q += notOnASkippedHost("findings.host_id")
 	}
 	// Severity is stored as text; order it by weight for the UI.
 	q += ` ORDER BY CASE severity
@@ -647,14 +756,28 @@ func (s *Store) UpsertReach(ctx context.Context, r model.ReachResult) (model.Rea
 	return r, nil
 }
 
+// ReachFilter narrows a reachability listing.
+type ReachFilter struct {
+	MissionID       int64
+	SourceNetworkID int64 // 0 = all
+	// IncludeSkippedHosts brings back the tests aimed at a host the operator
+	// has skipped. They are left out by default: a segmentation result against
+	// a machine that is out of scope is not something the operator is working
+	// on, and the matrix counts are filtered the same way so the two agree.
+	IncludeSkippedHosts bool
+}
+
 // ListReach returns reachability results of a mission, optionally restricted
 // to one source network.
-func (s *Store) ListReach(ctx context.Context, missionID, sourceNetworkID int64) ([]model.ReachResult, error) {
+func (s *Store) ListReach(ctx context.Context, f ReachFilter) ([]model.ReachResult, error) {
 	q := `SELECT ` + reachCols + ` FROM reach_results WHERE mission_id = ?`
-	args := []any{missionID}
-	if sourceNetworkID != 0 {
+	args := []any{f.MissionID}
+	if f.SourceNetworkID != 0 {
 		q += ` AND source_network_id = ?`
-		args = append(args, sourceNetworkID)
+		args = append(args, f.SourceNetworkID)
+	}
+	if !f.IncludeSkippedHosts {
+		q += notOnASkippedHost("reach_results.target_host_id")
 	}
 	q += ` ORDER BY source_network_id, target_network_id, ip, port, technique`
 	rows, err := s.r.QueryContext(ctx, q, args...)
@@ -673,12 +796,18 @@ func (s *Store) ListReach(ctx context.Context, missionID, sourceNetworkID int64)
 	return out, rows.Err()
 }
 
-// Matrix aggregates reachability results into source→target cells.
-func (s *Store) Matrix(ctx context.Context, missionID int64) ([]model.MatrixCell, error) {
-	rows, err := s.r.QueryContext(ctx, `
+// Matrix aggregates reachability results into source→target cells. It counts
+// exactly the rows ListReach returns for the same value of includeSkippedHosts,
+// so a cell never claims more tests than the drill-down behind it shows.
+func (s *Store) Matrix(ctx context.Context, missionID int64, includeSkippedHosts bool) ([]model.MatrixCell, error) {
+	q := `
 		SELECT source_network_id, target_network_id, technique, status, COUNT(*), MAX(tested_at)
-		FROM reach_results WHERE mission_id = ?
-		GROUP BY source_network_id, target_network_id, technique, status`, missionID)
+		FROM reach_results WHERE mission_id = ?`
+	if !includeSkippedHosts {
+		q += notOnASkippedHost("reach_results.target_host_id")
+	}
+	q += ` GROUP BY source_network_id, target_network_id, technique, status`
+	rows, err := s.r.QueryContext(ctx, q, missionID)
 	if err != nil {
 		return nil, fmt.Errorf("store: matrix: %w", err)
 	}
@@ -860,13 +989,17 @@ func (s *Store) BulkSetServiceTriage(ctx context.Context, missionID int64, ids [
 }
 
 // TriageCounts reports how many services sit in each status, for the progress
-// readout on the services screen.
-func (s *Store) TriageCounts(ctx context.Context, missionID, networkID int64) (map[model.TriageStatus]int, error) {
+// readout on the services screen. It counts the same rows the listing shows,
+// so the bar above the table and the table under it never disagree.
+func (s *Store) TriageCounts(ctx context.Context, missionID, networkID int64, includeSkippedHosts bool) (map[model.TriageStatus]int, error) {
 	q := `SELECT triage_status, COUNT(*) FROM services WHERE mission_id = ?`
 	args := []any{missionID}
 	if networkID != 0 {
 		q += ` AND network_id = ?`
 		args = append(args, networkID)
+	}
+	if !includeSkippedHosts {
+		q += notOnASkippedHost("services.host_id")
 	}
 	q += ` GROUP BY triage_status`
 
@@ -977,13 +1110,17 @@ func (s *Store) BulkSetFindingTriage(ctx context.Context, missionID int64, ids [
 }
 
 // FindingTriageCounts reports how many findings sit in each status, for the
-// progress readout on the findings screen.
-func (s *Store) FindingTriageCounts(ctx context.Context, missionID, networkID int64) (map[model.TriageStatus]int, error) {
+// progress readout on the findings screen. Like the service counts, it counts
+// exactly what the listing shows.
+func (s *Store) FindingTriageCounts(ctx context.Context, missionID, networkID int64, includeSkippedHosts bool) (map[model.TriageStatus]int, error) {
 	q := `SELECT triage_status, COUNT(*) FROM findings WHERE mission_id = ?`
 	args := []any{missionID}
 	if networkID != 0 {
 		q += ` AND network_id = ?`
 		args = append(args, networkID)
+	}
+	if !includeSkippedHosts {
+		q += notOnASkippedHost("findings.host_id")
 	}
 	q += ` GROUP BY triage_status`
 
@@ -1010,4 +1147,209 @@ func (s *Store) FindingTriageCounts(ctx context.Context, missionID, networkID in
 		out[model.TriageStatus(status)] += n
 	}
 	return out, rows.Err()
+}
+
+// ---------------------------------------------------------------------------
+// Host triage
+// ---------------------------------------------------------------------------
+
+// SetHostTriage records the operator's pass over one address. Passing a nil
+// status or note leaves that field alone, as on a service.
+//
+// Skipping a host is the one status with consequences beyond its own row: the
+// services, findings and segmentation results that belong to it drop out of
+// the default listings. Nothing is written to them, so whatever the operator
+// had already recorded against each one is still there when the host comes
+// back.
+func (s *Store) SetHostTriage(ctx context.Context, hostID int64, status *model.TriageStatus, note *string, userID int64) (model.Host, error) {
+	var out model.Host
+	err := s.tx(ctx, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx,
+			`UPDATE hosts SET `+strings.Join(triageSets(status, note), ", ")+` WHERE id = ?`,
+			append(triageArgs(status, note, userID), hostID)...)
+		if err != nil {
+			return err
+		}
+		if err := affected(res); err != nil {
+			return err
+		}
+		row := tx.QueryRowContext(ctx, `SELECT `+hostCols+` FROM hosts WHERE id = ?`, hostID)
+		out, err = scanHost(row)
+		return err
+	})
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return model.Host{}, ErrNotFound
+		}
+		return model.Host{}, fmt.Errorf("store: set host triage: %w", err)
+	}
+	return out, nil
+}
+
+// BulkSetHostTriage applies one status to many hosts at once. Only hosts of
+// the given mission are touched, so an id from another mission cannot be
+// slipped in.
+func (s *Store) BulkSetHostTriage(ctx context.Context, missionID int64, ids []int64, status model.TriageStatus, userID int64) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	var n int64
+	err := s.tx(ctx, func(tx *sql.Tx) error {
+		stmt, err := tx.PrepareContext(ctx,
+			`UPDATE hosts SET triage_status = ?, triage_by = ?, triage_at = ?
+			 WHERE id = ? AND mission_id = ?`)
+		if err != nil {
+			return err
+		}
+		defer stmt.Close()
+		now := time.Now().UnixMilli()
+		for _, id := range ids {
+			res, err := stmt.ExecContext(ctx, string(status), userID, now, id, missionID)
+			if err != nil {
+				return err
+			}
+			if k, _ := res.RowsAffected(); k > 0 {
+				n += k
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, fmt.Errorf("store: bulk host triage: %w", err)
+	}
+	return n, nil
+}
+
+// HostTriageCounts reports how many hosts sit in each status. Skipped hosts
+// are counted here, unlike their services: the hosts screen is where they are
+// shown and where they get put back in scope.
+func (s *Store) HostTriageCounts(ctx context.Context, missionID, networkID int64) (map[model.TriageStatus]int, error) {
+	q := `SELECT triage_status, COUNT(*) FROM hosts WHERE mission_id = ?`
+	args := []any{missionID}
+	if networkID != 0 {
+		q += ` AND network_id = ?`
+		args = append(args, networkID)
+	}
+	q += ` GROUP BY triage_status`
+
+	rows, err := s.r.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("store: host triage counts: %w", err)
+	}
+	defer rows.Close()
+	out := map[model.TriageStatus]int{}
+	for _, st := range model.AllTriageStatuses {
+		out[st] = 0
+	}
+	for rows.Next() {
+		var (
+			status string
+			n      int
+		)
+		if err := rows.Scan(&status, &n); err != nil {
+			return nil, err
+		}
+		if status == "" {
+			status = string(model.TriageTodo)
+		}
+		out[model.TriageStatus(status)] += n
+	}
+	return out, rows.Err()
+}
+
+// SkippedHostCounts says what the default listings are leaving out, so the UI
+// can put one quiet line above a table instead of silently showing fewer rows
+// than the database holds.
+type SkippedHostCounts struct {
+	Hosts int `json:"hosts"`
+	// Labels names the skipped hosts, best name first, capped: the banner says
+	// which machine is parked, not all of them when a whole subnet is.
+	Labels   []string `json:"host_labels"`
+	Services int      `json:"services"`
+	Findings int      `json:"findings"`
+	Reach    int      `json:"reach"`
+}
+
+// maxSkippedLabels is how many host names the banner can carry before it stops
+// being one line.
+const maxSkippedLabels = 4
+
+// SkippedHostCounts counts the rows hidden by the skipped hosts of a mission,
+// optionally restricted to one network.
+func (s *Store) SkippedHostCounts(ctx context.Context, missionID, networkID int64) (SkippedHostCounts, error) {
+	var out SkippedHostCounts
+	q := `SELECT id, ip, hostname FROM hosts WHERE mission_id = ? AND triage_status = ?`
+	args := []any{missionID, string(model.TriageSkipped)}
+	if networkID != 0 {
+		q += ` AND network_id = ?`
+		args = append(args, networkID)
+	}
+	q += ` ORDER BY id`
+	rows, err := s.r.QueryContext(ctx, q, args...)
+	if err != nil {
+		return out, fmt.Errorf("store: skipped hosts: %w", err)
+	}
+	defer rows.Close()
+	var ids []any
+	for rows.Next() {
+		var (
+			id           int64
+			ip, hostname string
+		)
+		if err := rows.Scan(&id, &ip, &hostname); err != nil {
+			return out, fmt.Errorf("store: skipped hosts: %w", err)
+		}
+		ids = append(ids, id)
+		out.Hosts++
+		if len(out.Labels) < maxSkippedLabels {
+			out.Labels = append(out.Labels, firstNonEmpty(hostname, ip))
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return out, err
+	}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	in := `?` + repeatComma(len(ids)-1)
+	for _, c := range []struct {
+		table  string
+		column string
+		into   *int
+	}{
+		{"services", "host_id", &out.Services},
+		{"findings", "host_id", &out.Findings},
+		{"reach_results", "target_host_id", &out.Reach},
+	} {
+		if err := s.r.QueryRowContext(ctx,
+			`SELECT COUNT(*) FROM `+c.table+` WHERE `+c.column+` IN (`+in+`)`, ids...).
+			Scan(c.into); err != nil {
+			return out, fmt.Errorf("store: skipped host %s: %w", c.table, err)
+		}
+	}
+	return out, nil
+}
+
+// triageSets and triageArgs build the partial UPDATE shared by every triage
+// setter: a field the caller left out keeps the value already in the row.
+func triageSets(status *model.TriageStatus, note *string) []string {
+	sets := []string{"triage_by = ?", "triage_at = ?"}
+	if status != nil {
+		sets = append([]string{"triage_status = ?"}, sets...)
+	}
+	if note != nil {
+		sets = append(sets, "triage_note = ?")
+	}
+	return sets
+}
+
+func triageArgs(status *model.TriageStatus, note *string, userID int64) []any {
+	args := []any{userID, time.Now().UnixMilli()}
+	if status != nil {
+		args = append([]any{string(*status)}, args...)
+	}
+	if note != nil {
+		args = append(args, truncate(*note, 4000))
+	}
+	return args
 }

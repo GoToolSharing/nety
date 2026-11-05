@@ -213,6 +213,43 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		// Hosts and assets get the same operator-owned record, which is how a
+		// machine that is out of scope gets parked in one gesture instead of
+		// service by service. Both tables are done here in one entry because
+		// they are one feature: an asset is skipped by skipping its hosts, so
+		// a database with the columns on only one of them would be broken.
+		name: "host and asset triage columns",
+		apply: func(ctx context.Context, tx *sql.Tx) error {
+			cols := map[string]string{
+				"triage_status": "TEXT NOT NULL DEFAULT 'todo'",
+				"triage_note":   "TEXT NOT NULL DEFAULT ''",
+				"triage_by":     "INTEGER NOT NULL DEFAULT 0",
+				"triage_at":     "INTEGER",
+			}
+			for _, table := range []string{"hosts", "assets"} {
+				existing, err := tableColumns(ctx, tx, table)
+				if err != nil {
+					return err
+				}
+				for name, decl := range cols {
+					if existing[name] {
+						continue
+					}
+					if _, err := tx.ExecContext(ctx,
+						fmt.Sprintf(`ALTER TABLE %s ADD COLUMN %s %s`, table, name, decl)); err != nil {
+						return err
+					}
+				}
+				if _, err := tx.ExecContext(ctx, fmt.Sprintf(
+					`CREATE INDEX IF NOT EXISTS idx_%s_triage ON %s(mission_id, triage_status)`,
+					table, table)); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	},
 }
 
 // tableColumns lists the columns a table currently has.

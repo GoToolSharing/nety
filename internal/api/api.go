@@ -133,6 +133,8 @@ func (a *API) routes() {
 	a.mux.Handle("GET /api/missions/{id}/matrix", auth(a.handleMatrix))
 	a.mux.Handle("GET /api/missions/{id}/reach", auth(a.handleListReach))
 	a.mux.Handle("GET /api/hosts/{id}", auth(a.handleGetHost))
+	a.mux.Handle("PATCH /api/hosts/{id}", write(a.handleTriageHost))
+	a.mux.Handle("POST /api/missions/{id}/hosts/triage", write(a.handleBulkHostTriage))
 	a.mux.Handle("GET /api/services/{id}", auth(a.handleGetService))
 	a.mux.Handle("PATCH /api/services/{id}", write(a.handleTriageService))
 	a.mux.Handle("POST /api/missions/{id}/services/triage", write(a.handleBulkTriage))
@@ -142,6 +144,7 @@ func (a *API) routes() {
 	a.mux.Handle("GET /api/missions/{id}/triage", auth(a.handleTriageSummary))
 	a.mux.Handle("GET /api/assets/{id}", auth(a.handleGetAsset))
 	a.mux.Handle("PATCH /api/assets/{id}", write(a.handleUpdateAsset))
+	a.mux.Handle("POST /api/missions/{id}/assets/triage", write(a.handleBulkAssetTriage))
 	a.mux.Handle("POST /api/assets/{id}/merge", write(a.handleMergeAssets))
 
 	a.mux.Handle("GET /api/missions/{id}/export", auth(a.handleExport))
@@ -406,6 +409,17 @@ func (a *API) pathID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 func queryInt64(r *http.Request, name string) int64 {
 	v, _ := strconv.ParseInt(r.URL.Query().Get(name), 10, 64)
 	return v
+}
+
+// includeSkipped reads the `include_skipped` parameter shared by the listings
+// that hide the rows of a skipped host. Absent or anything but a clear yes
+// means the default: those rows stay hidden.
+func includeSkipped(r *http.Request) bool {
+	switch strings.ToLower(strings.TrimSpace(r.URL.Query().Get("include_skipped"))) {
+	case "1", "true", "yes":
+		return true
+	}
+	return false
 }
 
 func queryInt(r *http.Request, name string, def int) int {

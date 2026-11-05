@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { qk, useFindings, useNetworks } from '@/lib/queries'
+import { qk, useFindings, useHosts, useNetworks, useTriageSummary } from '@/lib/queries'
 import { useMissionId } from '@/lib/hooks'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, CardHeader, PageHeader } from '@/components/ui/Card'
@@ -9,7 +9,13 @@ import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/Feedback'
 import { Badge, SeverityBadge } from '@/components/ui/Badge'
 import { LinkButton } from '@/components/ui/Button'
 import { FilterChips, Mono, RelativeTime, SearchInput } from '@/components/common'
-import { TriageNote, TriageProgress, TriageSelect } from '@/components/Triage'
+import {
+  SKIPPED_ROW_CLASS,
+  SkippedHostsBanner,
+  TriageNote,
+  TriageProgress,
+  TriageSelect,
+} from '@/components/Triage'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/cn'
 import { compareIP, formatNumber } from '@/lib/format'
@@ -25,6 +31,7 @@ function FindingRow({
   onSelect,
   onTriage,
   busy,
+  recessed,
 }: {
   finding: Finding
   networkName: string
@@ -34,9 +41,17 @@ function FindingRow({
   onSelect: () => void
   onTriage: (body: { status?: TriageStatus; note?: string }) => void
   busy: boolean
+  /** True when this row is only here because its host is skipped. */
+  recessed?: boolean
 }) {
   return (
-    <div className={cn('border-b border-border last:border-b-0', expanded && 'bg-elevated/40')}>
+    <div
+      className={cn(
+        'border-b border-border last:border-b-0',
+        expanded && 'bg-elevated/40',
+        recessed && SKIPPED_ROW_CLASS,
+      )}
+    >
       <div className="flex items-start gap-3 px-4 py-2.5 hover:bg-elevated/60">
         <button
           type="button"
@@ -166,9 +181,13 @@ export default function FindingsPage() {
   const networks = useNetworks(missionId)
   const [networkId, setNetworkId] = useState(0)
   const [triage, setTriage] = useState<TriageStatus[]>([])
+  // The findings of a skipped host are out of the way by default. This is the
+  // operator asking to see them anyway.
+  const [showSkipped, setShowSkipped] = useState(false)
   const findings = useFindings(missionId, {
     network_id: networkId || undefined,
     triage: triage.length ? triage.join(',') : undefined,
+    include_skipped: showSkipped || undefined,
   })
   const [query, setQuery] = useState('')
   const [severity, setSeverity] = useState<Severity | 'all'>('all')
@@ -179,17 +198,24 @@ export default function FindingsPage() {
   const qc = useQueryClient()
   const toast = useToast()
 
-  const summary = useQuery({
-    queryKey: ['triage-summary', missionId, networkId],
-    queryFn: () => api.triageSummary(missionId, networkId || undefined),
-    enabled: missionId > 0,
-  })
+  const summary = useTriageSummary(missionId, networkId)
+
+  // Only needed to recess the rows of a skipped host, so it is not fetched
+  // until those rows are on screen.
+  const hosts = useHosts(missionId, networkId || undefined, showSkipped)
+  const skippedHosts = useMemo(() => {
+    const ids = new Set<number>()
+    for (const h of hosts.data ?? []) {
+      if (h.triage?.status === 'skipped') ids.add(h.id)
+    }
+    return ids
+  }, [hosts.data])
 
   // A filter change can empty the selection out from under the operator, so
   // drop it rather than act on rows that are no longer on screen.
   useEffect(() => {
     setSelected(new Set())
-  }, [networkId, triage])
+  }, [networkId, triage, showSkipped])
 
   const netName = useMemo(() => {
     const m = new Map<number, string>()
@@ -201,7 +227,7 @@ export default function FindingsPage() {
 
   const refresh = useCallback(() => {
     void qc.invalidateQueries({ queryKey: qk.findingsRoot(missionId) })
-    void qc.invalidateQueries({ queryKey: ['triage-summary', missionId] })
+    void qc.invalidateQueries({ queryKey: qk.triageSummaryRoot(missionId) })
   }, [qc, missionId])
 
   const setTriageOn = useCallback(
@@ -360,6 +386,14 @@ export default function FindingsPage() {
         </div>
       )}
 
+      <SkippedHostsBanner
+        hidden={summary.data?.hidden}
+        showing={showSkipped}
+        onToggle={() => setShowSkipped((v) => !v)}
+        noun="findings"
+        className="mt-3"
+      />
+
       {selected.size > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent/5 px-3 py-2">
           <span className="text-xs font-medium text-fg">{selected.size} selected</span>
@@ -456,6 +490,7 @@ export default function FindingsPage() {
                     onSelect={() => toggleSelected(f.id)}
                     onTriage={(body) => void setTriageOn(f, body)}
                     busy={busy === f.id}
+                    recessed={skippedHosts.has(f.host_id)}
                   />
                 ))}
               </div>

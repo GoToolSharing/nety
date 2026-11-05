@@ -250,22 +250,28 @@ type Scan struct {
 // Host is an IP seen alive on a given network. The (MissionID, NetworkID, IP)
 // triple is unique; AssetID links it to a long-lived physical/logical machine.
 type Host struct {
-	ID           int64     `json:"id"`
-	MissionID    int64     `json:"mission_id"`
-	NetworkID    int64     `json:"network_id"`
-	AssetID      int64     `json:"asset_id,omitempty"` // 0 = not correlated yet
-	IP           string    `json:"ip"`
-	MAC          string    `json:"mac,omitempty"`
-	Vendor       string    `json:"vendor,omitempty"` // OUI vendor
-	Hostname     string    `json:"hostname,omitempty"`
-	Hostnames    []string  `json:"hostnames,omitempty"`
-	Domain       string    `json:"domain,omitempty"`
-	OS           string    `json:"os,omitempty"`
-	TTL          int       `json:"ttl,omitempty"`
-	DiscoveredBy []string  `json:"discovered_by,omitempty"` // arp, icmp-echo, tcp-syn:443 ...
-	FirstSeen    time.Time `json:"first_seen"`
-	LastSeen     time.Time `json:"last_seen"`
-	LastScanID   int64     `json:"last_scan_id"`
+	ID           int64    `json:"id"`
+	MissionID    int64    `json:"mission_id"`
+	NetworkID    int64    `json:"network_id"`
+	AssetID      int64    `json:"asset_id,omitempty"` // 0 = not correlated yet
+	IP           string   `json:"ip"`
+	MAC          string   `json:"mac,omitempty"`
+	Vendor       string   `json:"vendor,omitempty"` // OUI vendor
+	Hostname     string   `json:"hostname,omitempty"`
+	Hostnames    []string `json:"hostnames,omitempty"`
+	Domain       string   `json:"domain,omitempty"`
+	OS           string   `json:"os,omitempty"`
+	TTL          int      `json:"ttl,omitempty"`
+	DiscoveredBy []string `json:"discovered_by,omitempty"` // arp, icmp-echo, tcp-syn:443 ...
+	// Triage is the operator's pass over this address. Skipping it is how a
+	// machine that must not be touched is parked: its services, its findings
+	// and the segmentation tests aimed at it drop out of the working views
+	// without anything being deleted. Owned by the operator, never written by
+	// a scan.
+	Triage     Triage    `json:"triage"`
+	FirstSeen  time.Time `json:"first_seen"`
+	LastSeen   time.Time `json:"last_seen"`
+	LastScanID int64     `json:"last_scan_id"`
 }
 
 type Protocol string
@@ -284,10 +290,10 @@ const (
 	PortOpenFiltered PortState = "open|filtered"
 )
 
-// TriageStatus is where the operator is with a service or a finding. NETY
-// finds what is exposed; going through each one by hand is still the
-// operator's job, and this is how that pass is tracked so nothing is forgotten
-// and a re-scan does not erase the work.
+// TriageStatus is where the operator is with a service, a finding, a host or
+// an asset. NETY finds what is exposed; going through each one by hand is
+// still the operator's job, and this is how that pass is tracked so nothing is
+// forgotten and a re-scan does not erase the work.
 type TriageStatus string
 
 const (
@@ -313,8 +319,9 @@ func ValidTriageStatus(s TriageStatus) bool {
 	return false
 }
 
-// Triage is the operator's own record against a service or a finding: where
-// they are with it and what they found. It is never written by a scan.
+// Triage is the operator's own record against a service, a finding, a host or
+// an asset: where they are with it and what they found. It is never written by
+// a scan.
 type Triage struct {
 	Status        TriageStatus `json:"status"`
 	Note          string       `json:"note,omitempty"`
@@ -467,8 +474,13 @@ type Asset struct {
 	IPs       []AssetIP  `json:"ips"`
 	Tags      []string   `json:"tags,omitempty"`
 	Notes     string     `json:"notes,omitempty"`
-	FirstSeen time.Time  `json:"first_seen"`
-	LastSeen  time.Time  `json:"last_seen"`
+	// Triage is the operator's pass over the machine itself, not over one of
+	// its addresses: setting it applies the same status to every host attached
+	// to this asset, and a host the correlator attaches later to a skipped
+	// asset is skipped too. Owned by the operator, never written by a scan.
+	Triage    Triage    `json:"triage"`
+	FirstSeen time.Time `json:"first_seen"`
+	LastSeen  time.Time `json:"last_seen"`
 }
 
 type AssetKey struct {

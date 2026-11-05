@@ -20,8 +20,14 @@ func writeHostsCSV(w io.Writer, d model.MissionData) error {
 	names := networkNames(d)
 	assets := assetIndex(d)
 
+	// The operator's own columns sit with the identity of the address, as they
+	// do on the services sheet. A skipped host is hidden on screen but exported
+	// like any other: this file is the record of what was found, and the
+	// status is what says it was out of scope.
 	if err := cw.Write([]string{
-		"network", "vlan_id", "ip", "hostname", "domain", "mac", "vendor", "os",
+		"network", "vlan_id", "ip", "hostname",
+		"triage_status", "triage_note", "triage_by", "triage_at",
+		"domain", "mac", "vendor", "os",
 		"ttl", "asset", "open_ports", "discovered_by", "first_seen", "last_seen",
 	}); err != nil {
 		return err
@@ -32,7 +38,10 @@ func writeHostsCSV(w io.Writer, d model.MissionData) error {
 		if err := cw.Write([]string{
 			netName(names, h.NetworkID),
 			itoa(vlan[h.NetworkID]),
-			h.IP, h.Hostname, h.Domain, h.MAC, h.Vendor, h.OS,
+			h.IP, h.Hostname,
+			triageLabel(h.Triage.Status), oneLine(h.Triage.Note, 2000),
+			h.Triage.UpdatedByName, tsPtr(h.Triage.UpdatedAt),
+			h.Domain, h.MAC, h.Vendor, h.OS,
 			itoa(h.TTL),
 			assets[h.AssetID],
 			portsByHost[h.ID],
@@ -197,8 +206,12 @@ func writeAssetsCSV(w io.Writer, d model.MissionData) error {
 	defer cw.Flush()
 	names := networkNames(d)
 
+	// A machine carries its own status, which is the one that was applied to
+	// every address of it.
 	if err := cw.Write([]string{
-		"label", "kind", "hostname", "domain", "os", "networks", "ips",
+		"label", "kind",
+		"triage_status", "triage_note", "triage_by", "triage_at",
+		"hostname", "domain", "os", "networks", "ips",
 		"identity_keys", "tags", "notes", "first_seen", "last_seen",
 	}); err != nil {
 		return err
@@ -218,7 +231,10 @@ func writeAssetsCSV(w io.Writer, d model.MissionData) error {
 			keys = append(keys, fmt.Sprintf("%s=%s(%d)", k.Kind, k.Value, k.Confidence))
 		}
 		if err := cw.Write([]string{
-			a.Label, string(a.Kind), a.Hostname, a.Domain, a.OS,
+			a.Label, string(a.Kind),
+			triageLabel(a.Triage.Status), oneLine(a.Triage.Note, 2000),
+			a.Triage.UpdatedByName, tsPtr(a.Triage.UpdatedAt),
+			a.Hostname, a.Domain, a.OS,
 			strings.Join(nets, " "), strings.Join(ips, " "),
 			strings.Join(keys, " "), strings.Join(a.Tags, " "),
 			oneLine(a.Notes, 1000), ts(a.FirstSeen), ts(a.LastSeen),

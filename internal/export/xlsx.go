@@ -287,20 +287,35 @@ func sheetSummary(f *excelize.File, st xlsxStyles, d model.MissionData) error {
 
 func sheetHosts(f *excelize.File, st xlsxStyles, d model.MissionData, names map[int64]string) error {
 	const sheet = "Hosts"
-	headers := []string{"Network", "IP", "Hostname", "Domain", "MAC", "Vendor", "OS", "Machine", "Open ports", "Discovered by", "Last seen"}
-	widths := []float64{20, 16, 24, 20, 19, 22, 24, 24, 42, 20, 20}
+	// The review columns sit where they do on the Services sheet: with the
+	// identity of the row. A host the operator skipped is exported like any
+	// other, and its status is what tells the reader it was out of scope.
+	headers := []string{"Network", "IP", "Hostname",
+		"Status", "Note", "Reviewed by", "Reviewed at",
+		"Domain", "MAC", "Vendor", "OS", "Machine", "Open ports", "Discovered by", "Last seen"}
+	widths := []float64{20, 16, 24, 13, 46, 16, 20, 20, 19, 22, 24, 24, 42, 20, 20}
 	if err := newSheet(f, st, sheet, headers, widths); err != nil {
 		return err
 	}
 	assets := assetIndex(d)
 	portsByHost := openPortsByHost(d)
 	for i, h := range d.Hosts {
-		if err := writeRow(f, sheet, i+2, []any{
-			netName(names, h.NetworkID), h.IP, h.Hostname, h.Domain, h.MAC, h.Vendor,
+		row := i + 2
+		if err := writeRow(f, sheet, row, []any{
+			netName(names, h.NetworkID), h.IP, h.Hostname,
+			triageLabel(h.Triage.Status), h.Triage.Note,
+			h.Triage.UpdatedByName, tsPtr(h.Triage.UpdatedAt),
+			h.Domain, h.MAC, h.Vendor,
 			h.OS, assets[h.AssetID], portsByHost[h.ID],
 			strings.Join(h.DiscoveredBy, " "), ts(h.LastSeen),
 		}); err != nil {
 			return err
+		}
+		if style, ok := st.triage[h.Triage.Status]; ok {
+			cell, _ := excelize.CoordinatesToCellName(4, row)
+			if err := f.SetCellStyle(sheet, cell, cell, style); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -494,8 +509,10 @@ func sheetReach(f *excelize.File, st xlsxStyles, d model.MissionData, names map[
 
 func sheetAssets(f *excelize.File, st xlsxStyles, d model.MissionData, names map[int64]string) error {
 	const sheet = "Machines"
-	headers := []string{"Machine", "Type", "Hostname", "Domain", "OS", "Networks", "Addresses", "Identified by", "Tags", "First seen", "Last seen"}
-	widths := []float64{30, 18, 22, 22, 26, 26, 34, 34, 18, 20, 20}
+	headers := []string{"Machine", "Type",
+		"Status", "Note", "Reviewed by", "Reviewed at",
+		"Hostname", "Domain", "OS", "Networks", "Addresses", "Identified by", "Tags", "First seen", "Last seen"}
+	widths := []float64{30, 18, 13, 46, 16, 20, 22, 22, 26, 26, 34, 34, 18, 20, 20}
 	if err := newSheet(f, st, sheet, headers, widths); err != nil {
 		return err
 	}
@@ -514,13 +531,23 @@ func sheetAssets(f *excelize.File, st xlsxStyles, d model.MissionData, names map
 				keys = append(keys, string(k.Kind))
 			}
 		}
-		if err := writeRow(f, sheet, i+2, []any{
-			a.Label, string(a.Kind), a.Hostname, a.Domain, a.OS,
+		row := i + 2
+		if err := writeRow(f, sheet, row, []any{
+			a.Label, string(a.Kind),
+			triageLabel(a.Triage.Status), a.Triage.Note,
+			a.Triage.UpdatedByName, tsPtr(a.Triage.UpdatedAt),
+			a.Hostname, a.Domain, a.OS,
 			strings.Join(nets, ", "), strings.Join(ips, ", "),
 			strings.Join(dedupe(keys), ", "), strings.Join(a.Tags, ", "),
 			ts(a.FirstSeen), ts(a.LastSeen),
 		}); err != nil {
 			return err
+		}
+		if style, ok := st.triage[a.Triage.Status]; ok {
+			cell, _ := excelize.CoordinatesToCellName(3, row)
+			if err := f.SetCellStyle(sheet, cell, cell, style); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

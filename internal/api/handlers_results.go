@@ -47,8 +47,11 @@ func (a *API) handleGetHost(w http.ResponseWriter, r *http.Request, u model.User
 			asset = &v
 		}
 	}
+	// The caller asked for this host by id, so its own screen shows everything
+	// it has even when it is skipped and hidden from the mission listings.
 	findings, err := a.Store.ListFindings(r.Context(), store.FindingFilter{
 		MissionID: host.MissionID, NetworkID: host.NetworkID, HostID: host.ID,
+		IncludeSkippedHosts: true,
 	})
 	if err != nil {
 		a.failStore(w, err, "findings")
@@ -67,14 +70,15 @@ func (a *API) handleListServices(w http.ResponseWriter, r *http.Request, u model
 	}
 	q := r.URL.Query()
 	filter := store.ServiceFilter{
-		MissionID: m.ID,
-		NetworkID: queryInt64(r, "network_id"),
-		HostID:    queryInt64(r, "host_id"),
-		Port:      queryInt(r, "port", 0),
-		Protocol:  model.Protocol(strings.ToLower(q.Get("protocol"))),
-		Search:    q.Get("q"),
-		Limit:     queryInt(r, "limit", 0),
-		Offset:    queryInt(r, "offset", 0),
+		MissionID:           m.ID,
+		NetworkID:           queryInt64(r, "network_id"),
+		HostID:              queryInt64(r, "host_id"),
+		Port:                queryInt(r, "port", 0),
+		Protocol:            model.Protocol(strings.ToLower(q.Get("protocol"))),
+		Search:              q.Get("q"),
+		IncludeSkippedHosts: includeSkipped(r),
+		Limit:               queryInt(r, "limit", 0),
+		Offset:              queryInt(r, "offset", 0),
 	}
 	statuses, ok := a.triageQuery(w, r)
 	if !ok {
@@ -158,10 +162,11 @@ func (a *API) handleListFindings(w http.ResponseWriter, r *http.Request, u model
 		return
 	}
 	findings, err := a.Store.ListFindings(r.Context(), store.FindingFilter{
-		MissionID: m.ID,
-		NetworkID: queryInt64(r, "network_id"),
-		HostID:    queryInt64(r, "host_id"),
-		Triage:    statuses,
+		MissionID:           m.ID,
+		NetworkID:           queryInt64(r, "network_id"),
+		HostID:              queryInt64(r, "host_id"),
+		Triage:              statuses,
+		IncludeSkippedHosts: includeSkipped(r),
 	})
 	if err != nil {
 		a.failStore(w, err, "findings")
@@ -218,18 +223,59 @@ func (a *API) handleGetAsset(w http.ResponseWriter, r *http.Request, u model.Use
 	a.ok(w, map[string]any{"asset": asset, "hosts": mine})
 }
 
+// handleUpdateAsset edits a machine. Besides the label and the rest, it is
+// also where the machine is triaged, under the same `status` and `note` fields
+// a service or a finding takes: an asset is one thing, and one PATCH changes
+// it. A status set here reaches every address of the machine (see
+// store.SetAssetTriage).
 func (a *API) handleUpdateAsset(w http.ResponseWriter, r *http.Request, u model.User) {
 	asset, ok := a.requireAsset(w, r, u)
 	if !ok {
 		return
 	}
 	var req struct {
-		Label *string          `json:"label"`
-		Notes *string          `json:"notes"`
-		Tags  *[]string        `json:"tags"`
-		Kind  *model.AssetKind `json:"kind"`
+		Label  *string             `json:"label"`
+		Notes  *string             `json:"notes"`
+		Tags   *[]string           `json:"tags"`
+		Kind   *model.AssetKind    `json:"kind"`
+		Status *model.TriageStatus `json:"status"`
+		Note   *string             `json:"note"`
 	}
 	if !a.decode(w, r, &req) {
+		return
+	}
+	if req.Status != nil && !model.ValidTriageStatus(*req.Status) {
+		a.fail(w, http.StatusBadRequest, "invalid", "unknown status")
+		return
+	}
+	if req.Status != nil || req.Note != nil {
+		updated, hosts, err := a.Store.SetAssetTriage(r.Context(), asset.ID, req.Status, req.Note, u.ID)
+		if err != nil {
+			a.failStore(w, err, "asset")
+			return
+		}
+		detail := updated.Label + " -> " + string(updated.Triage.Status)
+		if req.Status != nil {
+			detail += " (" + itoa64(hosts) + " addresses)"
+		}
+		a.audit(r, u, asset.MissionID, "asset.triaged", detail)
+		a.withTriageAuthor(r, &updated.Triage)
+		a.Bus.PublishData(model.EvtAsset, asset.MissionID, 0, updated)
+		// A machine going out of scope takes its addresses with it, and every
+		// table keyed on those addresses changes under the operator's feet.
+		if req.Status != nil {
+			a.Bus.PublishData(model.EvtScanLog, asset.MissionID, 0, model.LogLine{
+				Level: "info", Message: "triage updated, resynchronise",
+			})
+		}
+		asset = updated
+	}
+	if req.Label == nil && req.Notes == nil && req.Tags == nil && req.Kind == nil {
+		if req.Status == nil && req.Note == nil {
+			a.fail(w, http.StatusBadRequest, "invalid", "nothing to change")
+			return
+		}
+		a.ok(w, asset)
 		return
 	}
 	if req.Label != nil {
@@ -297,7 +343,11 @@ func (a *API) handleListReach(w http.ResponseWriter, r *http.Request, u model.Us
 	if !ok {
 		return
 	}
-	results, err := a.Store.ListReach(r.Context(), m.ID, queryInt64(r, "source_network_id"))
+	results, err := a.Store.ListReach(r.Context(), store.ReachFilter{
+		MissionID:           m.ID,
+		SourceNetworkID:     queryInt64(r, "source_network_id"),
+		IncludeSkippedHosts: includeSkipped(r),
+	})
 	if err != nil {
 		a.failStore(w, err, "reachability results")
 		return
@@ -316,7 +366,7 @@ func (a *API) handleMatrix(w http.ResponseWriter, r *http.Request, u model.User)
 		a.failStore(w, err, "networks")
 		return
 	}
-	cells, err := a.Store.Matrix(r.Context(), m.ID)
+	cells, err := a.Store.Matrix(r.Context(), m.ID, includeSkipped(r))
 	if err != nil {
 		a.failStore(w, err, "matrix")
 		return

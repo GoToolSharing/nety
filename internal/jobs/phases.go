@@ -325,6 +325,7 @@ func (r *Runner) planSegment(ctx context.Context, sc model.Scan) error {
 		return err
 	}
 	skipped := 0
+	skippedHosts := 0
 	inScope := func(ip string) bool {
 		addr, err := netip.ParseAddr(ip)
 		if err != nil {
@@ -364,12 +365,24 @@ func (r *Runner) planSegment(ctx context.Context, sc model.Scan) error {
 			if !inScope(h.IP) {
 				continue
 			}
+			// A skipped host is out of scope for the operator, and its
+			// services are already left out by the service listing. Probing
+			// it at host level would contradict that, and it would put the
+			// machine back in the matrix through the ICMP row.
+			if h.Triage.Status == model.TriageSkipped {
+				skippedHosts++
+				continue
+			}
 			hostIDs = append(hostIDs, h.ID)
 		}
 	}
 	if skipped > 0 {
 		r.logScan(ctx, sc, "info",
 			fmt.Sprintf("%d inventoried targets skipped: they are outside the scope (exclusions)", skipped))
+	}
+	if skippedHosts > 0 {
+		r.logScan(ctx, sc, "info",
+			fmt.Sprintf("%d hosts skipped: the operator marked them out of scope", skippedHosts))
 	}
 	if len(serviceIDs) == 0 && len(hostIDs) == 0 {
 		return fmt.Errorf("nothing to test: run a discovery scan on at least one other network first, and check the exclusion list")

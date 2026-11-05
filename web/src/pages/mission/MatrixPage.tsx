@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useMatrix, useNetworks, useReach } from '@/lib/queries'
+import { useHosts, useMatrix, useNetworks, useReach, useTriageSummary } from '@/lib/queries'
 import { useMissionId } from '@/lib/hooks'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, CardHeader, PageHeader } from '@/components/ui/Card'
@@ -15,6 +15,7 @@ import {
   TechniqueFlags,
   TechniqueHelpLink,
 } from '@/components/TechniqueDetail'
+import { SKIPPED_ROW_CLASS, SkippedHostsBanner } from '@/components/Triage'
 import { techniqueHelpHref, useTechniqueGuides } from '@/lib/techniques'
 import { cn } from '@/lib/cn'
 import { compareIP, formatMs, formatNumber } from '@/lib/format'
@@ -66,9 +67,25 @@ const STATUS_RANK: Record<ReachStatus, number> = {
 
 export default function MatrixPage() {
   const missionId = useMissionId()
-  const matrix = useMatrix(missionId)
+  // Tests aimed at a skipped host are out of the way by default: the grid and
+  // the rows under it both follow this one switch, so a cell never counts
+  // something the list below does not show.
+  const [showSkipped, setShowSkipped] = useState(false)
+  const matrix = useMatrix(missionId, showSkipped)
   const networksQuery = useNetworks(missionId)
-  const reach = useReach(missionId)
+  const reach = useReach(missionId, undefined, showSkipped)
+  const summary = useTriageSummary(missionId)
+
+  // Only needed to recess the rows of a skipped host, so it is not fetched
+  // until those rows are on screen.
+  const hostsQuery = useHosts(missionId, undefined, showSkipped)
+  const skippedHosts = useMemo(() => {
+    const ids = new Set<number>()
+    for (const h of hostsQuery.data ?? []) {
+      if (h.triage?.status === 'skipped') ids.add(h.id)
+    }
+    return ids
+  }, [hostsQuery.data])
   const [view, setView] = useState<View>('network')
   const [drill, setDrill] = useState<{ source: number; target: number } | null>(null)
   const [explained, setExplained] = useState<number | null>(null)
@@ -110,6 +127,7 @@ export default function MatrixPage() {
     port?: number
     protocol?: string
     targetNetworkId: number
+    targetHostId: number
     bySource: Map<number, ReachResult[]>
   }
 
@@ -125,6 +143,7 @@ export default function MatrixPage() {
           port: r.port,
           protocol: r.protocol,
           targetNetworkId: r.target_network_id,
+          targetHostId: r.target_host_id,
           bySource: new Map(),
         }
         map.set(key, row)
@@ -179,6 +198,14 @@ export default function MatrixPage() {
             Export the matrix
           </LinkButton>
         }
+      />
+
+      <SkippedHostsBanner
+        hidden={summary.data?.hidden}
+        showing={showSkipped}
+        onToggle={() => setShowSkipped((v) => !v)}
+        noun="segmentation tests"
+        className="mt-4"
       />
 
       {loading ? (
@@ -447,7 +474,10 @@ export default function MatrixPage() {
                     </thead>
                     <tbody>
                       {serviceRows.slice(0, 500).map((row) => (
-                        <tr key={row.key}>
+                        <tr
+                          key={row.key}
+                          className={cn(skippedHosts.has(row.targetHostId) && SKIPPED_ROW_CLASS)}
+                        >
                           <td className="sticky left-0 z-10 bg-surface">
                             <Mono className="font-medium">
                               {row.ip}
@@ -540,7 +570,11 @@ export default function MatrixPage() {
                   const open = explained === r.id
                   return (
                     <Fragment key={r.id}>
-                      <tr>
+                      <tr
+                        className={cn(
+                          skippedHosts.has(r.target_host_id) && SKIPPED_ROW_CLASS,
+                        )}
+                      >
                         <td>
                           <Mono>{r.ip}</Mono>
                         </td>

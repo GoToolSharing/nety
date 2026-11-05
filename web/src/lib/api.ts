@@ -246,6 +246,18 @@ export const api = {
       }),
     ),
   host: (id: number) => request<HostDetail>(`api/hosts/${id}`),
+
+  /** Record a status, a note, or both on one address. */
+  triageHost: (id: number, body: { status?: TriageStatus; note?: string }) =>
+    request<Host>(`api/hosts/${id}`, { method: 'PATCH', body }),
+
+  /** Apply one status to a selection of addresses in a single call. */
+  triageHostsBulk: (missionId: number, hostIds: number[], status: TriageStatus) =>
+    request<{ updated: number; status: TriageStatus }>(
+      `api/missions/${missionId}/hosts/triage`,
+      { method: 'POST', body: { host_ids: hostIds, status } },
+    ),
+
   services: async (
     missionId: number,
     params: {
@@ -255,6 +267,8 @@ export const api = {
       protocol?: string
       q?: string
       triage?: string
+      /** Show the services of hosts the operator has skipped. */
+      include_skipped?: boolean
       limit?: number
       offset?: number
     } = {},
@@ -289,7 +303,13 @@ export const api = {
 
   findings: async (
     missionId: number,
-    params: { network_id?: number; host_id?: number; triage?: string } = {},
+    params: {
+      network_id?: number
+      host_id?: number
+      triage?: string
+      /** Show the findings of hosts the operator has skipped. */
+      include_skipped?: boolean
+    } = {},
   ) => list(await request<Finding[] | null>(`api/missions/${missionId}/findings`, { query: params })),
   finding: (id: number) => request<Finding>(`api/findings/${id}`),
 
@@ -309,13 +329,31 @@ export const api = {
   asset: (id: number) => request<Asset>(`api/assets/${id}`),
   patchAsset: (id: number, body: AssetPatch) =>
     request<Asset>(`api/assets/${id}`, { method: 'PATCH', body }),
+
+  /**
+   * Triage a machine. The same endpoint as any other edit, because a machine
+   * is one thing; the status reaches every address of it.
+   */
+  triageAsset: (id: number, body: { status?: TriageStatus; note?: string }) =>
+    request<Asset>(`api/assets/${id}`, { method: 'PATCH', body }),
+
+  /** Apply one status to a selection of machines in a single call. */
+  triageAssetsBulk: (missionId: number, assetIds: number[], status: TriageStatus) =>
+    request<{ updated: number; status: TriageStatus }>(
+      `api/missions/${missionId}/assets/triage`,
+      { method: 'POST', body: { asset_ids: assetIds, status } },
+    ),
+
   mergeAssets: (id: number, source_id: number) =>
     request<Asset>(`api/assets/${id}/merge`, { method: 'POST', body: { source_id } }),
-  matrix: (missionId: number) => request<Matrix>(`api/missions/${missionId}/matrix`),
-  reach: async (missionId: number, sourceNetworkId?: number) =>
+  matrix: (missionId: number, includeSkipped?: boolean) =>
+    request<Matrix>(`api/missions/${missionId}/matrix`, {
+      query: { include_skipped: includeSkipped },
+    }),
+  reach: async (missionId: number, sourceNetworkId?: number, includeSkipped?: boolean) =>
     list(
       await request<ReachResult[] | null>(`api/missions/${missionId}/reach`, {
-        query: { source_network_id: sourceNetworkId },
+        query: { source_network_id: sourceNetworkId, include_skipped: includeSkipped },
       }),
     ),
 

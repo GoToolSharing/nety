@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useHost, useHosts, useNetworks } from '@/lib/queries'
+import { useQueryClient } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import { qk, useHost, useHosts, useNetworks } from '@/lib/queries'
 import { useMissionId } from '@/lib/hooks'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, KeyValue, PageHeader } from '@/components/ui/Card'
@@ -17,20 +19,27 @@ import {
   useSort,
 } from '@/components/common'
 import ServiceDetail from '@/components/ServiceDetail'
+import { SKIPPED_ROW_CLASS, TriageNote, TriageSelect } from '@/components/Triage'
+import { useToast } from '@/components/ui/Toast'
+import { cn } from '@/lib/cn'
 import { compareIP, formatNumber } from '@/lib/format'
 import { HostIcon } from '@/components/icons'
-import type { Host, Service } from '@/types/api'
+import type { Host, Service, TriageStatus } from '@/types/api'
 
-type SortKey = 'ip' | 'hostname' | 'os' | 'mac' | 'network' | 'last_seen'
+type SortKey = 'ip' | 'hostname' | 'os' | 'mac' | 'status' | 'network' | 'last_seen'
 
 function HostDrawer({
   host,
   networkName,
   onClose,
+  onTriage,
+  busy,
 }: {
   host: Host | null
   networkName: string
   onClose: () => void
+  onTriage: (host: Host, body: { status?: TriageStatus; note?: string }) => void
+  busy: boolean
 }) {
   const detail = useHost(host?.id ?? 0)
   const [openService, setOpenService] = useState<Service | null>(null)
@@ -59,6 +68,43 @@ function HostDrawer({
       >
         {host && (
           <>
+            {/* The operator's own pass comes first: this pane is where an
+                address is taken out of scope, and where it comes back. */}
+            <section className="mb-4">
+              <h3 className="panel-title mb-1.5">Your review</h3>
+              <div className="flex flex-wrap items-start gap-4 rounded-md border border-border bg-elevated/50 px-3 py-2">
+                <div className="w-44 shrink-0">
+                  <div className="mb-1 text-[11px] text-muted">Status</div>
+                  <TriageSelect
+                    value={host.triage?.status}
+                    busy={busy}
+                    onChange={(status) => onTriage(host, { status })}
+                  />
+                  {host.triage?.updated_at && (
+                    <div className="mt-1.5 text-[11px] text-faint">
+                      {host.triage.updated_by_name ? `${host.triage.updated_by_name}, ` : ''}
+                      <RelativeTime value={host.triage.updated_at} />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-[260px] flex-1">
+                  <div className="mb-1 text-[11px] text-muted">Notes</div>
+                  <TriageNote
+                    value={host.triage?.note ?? ''}
+                    onSave={(note) => onTriage(host, { note })}
+                    placeholder="Why is this address skipped, or what is left to test on it?"
+                  />
+                </div>
+              </div>
+              {host.triage?.status === 'skipped' && (
+                <p className="mt-1.5 text-xs text-muted">
+                  This address is out of the way: its services, its findings and the
+                  segmentation tests aimed at it are hidden from the other screens. Nothing
+                  was deleted, and nothing written on them was touched.
+                </p>
+              )}
+            </section>
+
             <dl className="rounded-md border border-border bg-elevated/50 px-3 py-2">
               <KeyValue label="IP" mono>
                 <span className="flex items-center gap-1">
@@ -180,6 +226,63 @@ export default function HostsPage() {
   const [query, setQuery] = useState('')
   const { sort, onSort } = useSort<SortKey>('ip')
   const [selected, setSelected] = useState<Host | null>(null)
+  const [picked, setPicked] = useState<Set<number>>(new Set())
+  const [busy, setBusy] = useState<number | null>(null)
+
+  const qc = useQueryClient()
+  const toast = useToast()
+
+  // Skipping an address changes every table keyed on it, so the refresh is
+  // deliberately wide rather than one cache at a time.
+  const refresh = useCallback(() => {
+    void qc.invalidateQueries({ queryKey: qk.hostsRoot(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.servicesRoot(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.findingsRoot(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.reachRoot(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.matrix(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.triageSummaryRoot(missionId) })
+    void qc.invalidateQueries({ queryKey: qk.summary(missionId) })
+  }, [qc, missionId])
+
+  const setStatus = useCallback(
+    async (host: Host, body: { status?: TriageStatus; note?: string }) => {
+      setBusy(host.id)
+      try {
+        const updated = await api.triageHost(host.id, body)
+        setSelected((open) => (open && open.id === updated.id ? updated : open))
+        refresh()
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not update the status')
+      } finally {
+        setBusy(null)
+      }
+    },
+    [refresh, toast],
+  )
+
+  const setSelectionStatus = useCallback(
+    async (status: TriageStatus) => {
+      const ids = [...picked]
+      if (ids.length === 0) return
+      try {
+        const res = await api.triageHostsBulk(missionId, ids, status)
+        setPicked(new Set())
+        refresh()
+        toast.success(`${res.updated} hosts marked ${status.replace('_', ' ')}`)
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not update the selection')
+      }
+    },
+    [missionId, picked, refresh, toast],
+  )
+
+  const togglePicked = (id: number) =>
+    setPicked((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   const netName = useMemo(() => {
     const m = new Map<number, string>()
@@ -211,6 +314,8 @@ export default function HostsPage() {
           return dir * (a.os ?? '').localeCompare(b.os ?? '')
         case 'mac':
           return dir * (a.mac ?? '').localeCompare(b.mac ?? '')
+        case 'status':
+          return dir * (a.triage?.status ?? 'todo').localeCompare(b.triage?.status ?? 'todo')
         case 'network':
           return dir * (netName.get(a.network_id) ?? '').localeCompare(netName.get(b.network_id) ?? '')
         case 'last_seen':
@@ -253,6 +358,30 @@ export default function HostsPage() {
         </span>
       </div>
 
+      {picked.size > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent/5 px-3 py-2">
+          <span className="text-xs font-medium text-fg">{picked.size} selected</span>
+          <span className="text-xs text-muted">Mark as</span>
+          {(['done', 'flagged', 'skipped', 'in_progress', 'todo'] as TriageStatus[]).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => void setSelectionStatus(s)}
+              className="rounded border border-border bg-surface px-2 py-0.5 text-[11px] text-fg hover:border-border-strong"
+            >
+              {s.replace('_', ' ')}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setPicked(new Set())}
+            className="ml-auto text-[11px] text-muted hover:text-fg"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
       <Card className="mt-4">
         {hosts.isLoading ? (
           <TableSkeleton rows={10} columns={6} />
@@ -284,6 +413,22 @@ export default function HostsPage() {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th className="w-px">
+                    <input
+                      type="checkbox"
+                      aria-label="Select every host shown"
+                      checked={rows.length > 0 && rows.every((h) => picked.has(h.id))}
+                      onChange={() =>
+                        setPicked(
+                          rows.every((h) => picked.has(h.id))
+                            ? new Set()
+                            : new Set(rows.map((h) => h.id)),
+                        )
+                      }
+                      className="h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]"
+                    />
+                  </th>
+                  <SortHeader column="status" label="Status" sort={sort} onSort={onSort} />
                   <SortHeader column="ip" label="IP" sort={sort} onSort={onSort} />
                   <SortHeader column="mac" label="MAC / vendor" sort={sort} onSort={onSort} />
                   <SortHeader column="hostname" label="Hostname" sort={sort} onSort={onSort} />
@@ -298,7 +443,13 @@ export default function HostsPage() {
                   <tr
                     key={h.id}
                     onClick={() => setSelected(h)}
-                    className="cursor-pointer"
+                    // A skipped host stays on this screen, because this is
+                    // where it gets put back in scope, but it is recessed so
+                    // it is never mistaken for one still in play.
+                    className={cn(
+                      'cursor-pointer',
+                      h.triage?.status === 'skipped' && SKIPPED_ROW_CLASS,
+                    )}
                     tabIndex={0}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -307,6 +458,22 @@ export default function HostsPage() {
                       }
                     }}
                   >
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${h.ip}`}
+                        checked={picked.has(h.id)}
+                        onChange={() => togglePicked(h.id)}
+                        className="h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]"
+                      />
+                    </td>
+                    <td className="w-[122px]" onClick={(e) => e.stopPropagation()}>
+                      <TriageSelect
+                        value={h.triage?.status}
+                        busy={busy === h.id}
+                        onChange={(status) => void setStatus(h, { status })}
+                      />
+                    </td>
                     <td>
                       <Mono className="font-medium">{h.ip}</Mono>
                     </td>
@@ -344,6 +511,8 @@ export default function HostsPage() {
         host={selected}
         networkName={selected ? (netName.get(selected.network_id) ?? '') : ''}
         onClose={() => setSelected(null)}
+        onTriage={(host, body) => void setStatus(host, body)}
+        busy={!!selected && busy === selected.id}
       />
     </PageContainer>
   )
