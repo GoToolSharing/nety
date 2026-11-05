@@ -1,6 +1,10 @@
 package main
 
-import "github.com/GoToolSharing/nety/internal/model"
+import (
+	"github.com/GoToolSharing/nety/internal/checks"
+	"github.com/GoToolSharing/nety/internal/engine"
+	"github.com/GoToolSharing/nety/internal/model"
+)
 
 // The invented estate. Four VLANs: offices, servers, telephony, management.
 
@@ -74,7 +78,7 @@ func demoHosts() []demoHost {
 				{port: 9100, proto: model.TCP, name: "jetdirect"},
 				{port: 161, proto: model.UDP, name: "snmp", product: "HP LaserJet", extra: "public"},
 			},
-			findings: []string{"snmp-default-community", "tls-cert-self-signed", "printer-unauthenticated-admin"}},
+			findings: []string{"snmp-default-community", "tls-cert-self-signed", "printer-unauth-admin"}},
 
 		demoHost{net: 0, last: 52, hostname: "IMP-RDC", os: "Ricoh", kind: model.AssetPrinter,
 			mac: "00:26:73:91:aa:0c", vendor: "Ricoh Company, Ltd.",
@@ -97,7 +101,7 @@ func demoHosts() []demoHost {
 					title: "DiskStation - NAS-BUREAU", server: "nginx", techs: []string{"DSM", "nginx"}},
 				{port: 2049, proto: model.TCP, name: "nfs", product: "Linux nfsd", version: "3-4"},
 			},
-			findings: []string{"smb-signing-not-required", "nfs-world-readable-export", "ssh-weak-algorithms"}},
+			findings: []string{"smb-signing-not-required", "nfs-exports-world-readable", "ssh-weak-algorithms"}},
 	)
 
 	// ---- VLAN 20, servers ------------------------------------------------
@@ -156,7 +160,7 @@ func demoHosts() []demoHost {
 					title: "Intranet Lumexa", server: "nginx/1.22.1", techs: []string{"nginx", "PHP"}},
 				{port: 3306, proto: model.TCP, name: "mysql", product: "MariaDB", version: "10.11.6"},
 			},
-			findings: []string{"tls-certificate-expiring"}},
+			findings: []string{"tls-weak-protocols"}},
 
 		demoHost{net: 1, last: 30, hostname: "SRV-GITLAB", os: "Ubuntu 22.04", kind: model.AssetServer,
 			mac: "00:50:56:9a:42:1b", vendor: "VMware, Inc.",
@@ -181,7 +185,7 @@ func demoHosts() []demoHost {
 					title: "Prometheus Time Series Collection", techs: []string{"Prometheus"}},
 				{port: 9100, proto: model.TCP, name: "http", product: "Prometheus node exporter"},
 			},
-			findings: []string{"prometheus-unauthenticated"}},
+			findings: []string{"elasticsearch-no-auth"}},
 
 		demoHost{net: 1, last: 40, hostname: "SRV-BACKUP", os: "Linux 5.15", kind: model.AssetServer,
 			mac: "00:50:56:9a:44:3d", vendor: "VMware, Inc.",
@@ -192,7 +196,7 @@ func demoHosts() []demoHost {
 				{port: 111, proto: model.TCP, name: "rpcbind", version: "2-4"},
 				{port: 2049, proto: model.TCP, name: "nfs", product: "Linux nfsd", version: "3-4"},
 			},
-			findings: []string{"rsync-module-listing", "nfs-world-readable-export"}},
+			findings: []string{"rsync-modules", "nfs-exports-world-readable"}},
 
 		demoHost{net: 1, last: 45, hostname: "SRV-REDIS", os: "Debian 12", kind: model.AssetServer,
 			mac: "00:50:56:9a:45:4e", vendor: "VMware, Inc.",
@@ -216,7 +220,7 @@ func demoHosts() []demoHost {
 				{port: 902, proto: model.TCP, name: "vmware-auth", product: "VMware Authentication Daemon",
 					version: "1.10", banner: "220 VMware Authentication Daemon Version 1.10"},
 			},
-			findings: []string{"tls-cert-self-signed", "esxi-ssh-enabled"}},
+			findings: []string{"tls-cert-self-signed", "ssh-password-auth"}},
 
 		demoHost{net: 1, last: 51, hostname: "ESXI-02", os: "VMware ESXi 7.0", kind: model.AssetHypervisor,
 			mac: "ac:1f:6b:22:9c:02", vendor: "Super Micro Computer, Inc.",
@@ -242,7 +246,7 @@ func demoHosts() []demoHost {
 					banner: "Asterisk Call Manager/5.0.2"},
 				{port: 5060, proto: model.UDP, name: "sip", product: "Asterisk PBX", version: "16.30.0"},
 			},
-			findings: []string{"ssh-weak-algorithms", "asterisk-ami-exposed"}},
+			findings: []string{"ssh-weak-algorithms", "ssh-password-auth"}},
 	)
 	phones := []struct {
 		last int
@@ -250,6 +254,16 @@ func demoHosts() []demoHost {
 	}{
 		{41, "SIP-ACCUEIL"}, {42, "SIP-COMPTA-01"}, {43, "SIP-COMPTA-02"},
 		{44, "SIP-DIR-01"}, {45, "SIP-SALLE-B204"}, {46, "SIP-SUPPORT-01"},
+	}
+	// Not every handset answers to the same thing: a headline list that is the same row
+	// seven times says nothing about the estate.
+	phoneFindings := [][]string{
+		{"http-default-credentials"},
+		{"tls-cert-self-signed"},
+		{"telnet-cleartext"},
+		{"http-default-credentials"},
+		{"tls-cert-self-signed"},
+		{"ssh-password-auth"},
 	}
 	for i, p := range phones {
 		out = append(out, demoHost{
@@ -260,7 +274,7 @@ func demoHosts() []demoHost {
 					title: "Yealink T46S", server: "Yealink Embedded Web Server"},
 				{port: 5060, proto: model.UDP, name: "sip", product: "Yealink SIP-T46S", version: "66.86.0.15"},
 			},
-			findings: []string{"voip-phone-default-web-credentials"},
+			findings: phoneFindings[i%len(phoneFindings)],
 		})
 	}
 
@@ -307,7 +321,7 @@ func demoHosts() []demoHost {
 					title: "HPE iLO 5", server: "HPE-iLO-Server/1.30", techs: []string{"HPE iLO"}},
 				{port: 17990, proto: model.TCP, name: "ilo-remote-console"},
 			},
-			findings: []string{"tls-certificate-expired", "tls-cert-self-signed", "ilo-default-credentials"}},
+			findings: []string{"tls-cert-expired", "tls-cert-self-signed", "http-default-credentials"}},
 
 		demoHost{net: 3, last: 21, hostname: "IDRAC-ESXI-01", os: "Dell iDRAC 9", kind: model.AssetNetwork,
 			mac: "d0:94:66:33:cd:ef", vendor: "Dell Inc.",
@@ -326,7 +340,7 @@ func demoHosts() []demoHost {
 					title: "APC | Log On", server: "APC AOS"},
 				{port: 161, proto: model.UDP, name: "snmp", product: "APC Smart-UPS", extra: "public"},
 			},
-			findings: []string{"snmp-default-community", "apc-default-credentials"}},
+			findings: []string{"snmp-default-community", "snmp-write-community"}},
 	)
 
 	return out
@@ -342,131 +356,68 @@ func hex2(v int) string {
 	return string([]byte{digits[v>>4], digits[v&0x0f]})
 }
 
-// findingFor returns the finding body for a check id, with the port it applies
-// to. The texts are the ones a report would carry.
+// placement says where a demo finding sits. Everything a reader actually looks at (the
+// title, the severity, the description, the remediation) is taken from the real check
+// catalogue instead, because a demo that writes its own wording drifts from the product,
+// and the screenshots in the README would then show text NETY never produces. What is
+// left here is only what the catalogue cannot know: which port the finding was raised on,
+// and a plausible evidence line, since nothing was really probed.
+type placement struct {
+	port     int
+	proto    model.Protocol
+	evidence string
+}
+
+var placements = map[string]placement{
+	"smb-signing-not-required":   {445, model.TCP, "SMB2 NEGOTIATE: signing enabled=true, signing required=false (dialect 0x0311)"},
+	"smb-null-session":           {445, model.TCP, "anonymous SESSION_SETUP accepted, TREE_CONNECT \\\\IPC$ returned STATUS_SUCCESS"},
+	"smb-anonymous-share-access": {445, model.TCP, "shares readable without credentials: SHARED, BACKUPS"},
+	"rdp-nla-not-required":       {3389, model.TCP, "X.224 Connection Confirm: PROTOCOL_RDP accepted, NLA not enforced"},
+	"ldap-anonymous-bind":        {389, model.TCP, "anonymous bind: result 0 (success), defaultNamingContext=DC=lumexa,DC=lan"},
+	"ldap-signing-not-required":  {389, model.TCP, "bind accepted without signing or channel binding"},
+	"redis-no-auth":              {6379, model.TCP, "PING -> +PONG; INFO server -> redis_version:7.0.15, executable:/usr/bin/redis-server"},
+	"snmp-default-community":     {161, model.UDP, "GET sysDescr.0 with community=public returned a valid response"},
+	"snmp-write-community":       {161, model.UDP, "community \"private\" answered GET sysDescr.0"},
+	"telnet-cleartext":           {23, model.TCP, "banner received: User Access Verification"},
+	"ssh-weak-algorithms":        {22, model.TCP, "kex: diffie-hellman-group14-sha1; mac: hmac-sha1"},
+	"ssh-password-auth":          {22, model.TCP, "server offers: publickey, password"},
+	"tls-cert-self-signed":       {443, model.TCP, "issuer == subject, chain length 1"},
+	"tls-cert-expired":           {443, model.TCP, "notAfter passed 93 days ago"},
+	"tls-weak-protocols":         {443, model.TCP, "TLS 1.0 and TLS 1.1 accepted"},
+	"nfs-exports-world-readable": {2049, model.TCP, "MOUNT EXPORT: /srv/shared -> (everyone)"},
+	"rsync-modules":              {873, model.TCP, "module list received: backups, vmdk, archives"},
+	"elasticsearch-no-auth":      {9200, model.TCP, "GET /_cluster/health -> 200, status green, 148 indices"},
+	"printer-unauth-admin":       {80, model.TCP, "GET /hp/device/set_config_networkprotocols.html -> 200 without authentication"},
+	"http-default-credentials":   {443, model.TCP, "authenticated with the vendor account printed on the chassis label"},
+	"ipmi-cipher-zero":           {623, model.UDP, "RAKP: session opened with cipher suite 0"},
+	"ipmi-exposed":               {623, model.UDP, "ASF RMCP presence pong, IPMI 2.0"},
+	"ftp-anonymous":              {21, model.TCP, "USER anonymous -> 230 Login successful"},
+}
+
+// catalogue is the product's own check list, loaded once.
+var catalogue = func() map[string]engine.CheckInfo {
+	m := map[string]engine.CheckInfo{}
+	for _, c := range checks.New(nil).Catalog() {
+		m[c.ID] = c
+	}
+	return m
+}()
+
+// findingFor builds a demo finding for a check id, refusing ids the product does not
+// actually have. An invented check in a screenshot is a promise the tool cannot keep.
 func findingFor(id, ip string) model.Finding {
-	type def struct {
-		title, desc, ev, fix string
-		sev                  model.Severity
-		port                 int
-		proto                model.Protocol
-		refs                 []string
-	}
-	defs := map[string]def{
-		"smb-signing-not-required": {
-			title: "Signature SMB non requise", sev: model.SevMedium, port: 445, proto: model.TCP,
-			desc: "Le serveur accepte des sessions SMB non signées. Un attaquant en position d'homme du milieu peut relayer une authentification vers ce service.",
-			ev:   "SMB2 NEGOTIATE: signing enabled=true, signing required=false (dialect 0x0311)",
-			fix:  "Activer « Serveur réseau Microsoft : signer numériquement les communications (toujours) » par GPO sur l'ensemble du parc.",
-			refs: []string{"https://learn.microsoft.com/windows-server/security/smb-signing"}},
-		"smb-null-session": {
-			title: "Session SMB anonyme acceptée", sev: model.SevHigh, port: 445, proto: model.TCP,
-			desc: "Une session SMB sans authentification est acceptée et permet d'énumérer les partages.",
-			ev:   "SESSION_SETUP anonyme accepté - TREE_CONNECT \\\\IPC$ : STATUS_SUCCESS",
-			fix:  "Positionner RestrictAnonymous=1 et RestrictAnonymousSAM=1, et retirer « Tout le monde » des autorisations de partage."},
-		"rdp-nla-not-required": {
-			title: "RDP sans authentification réseau (NLA)", sev: model.SevMedium, port: 3389, proto: model.TCP,
-			desc: "Le service RDP accepte les connexions sans NLA, ce qui expose la pile RDP avant toute authentification.",
-			ev:   "X.224 Connection Confirm : PROTOCOL_RDP accepté (NLA non imposé)",
-			fix:  "Exiger l'authentification au niveau du réseau dans les paramètres Bureau à distance ou par GPO."},
-		"ldap-anonymous-bind": {
-			title: "Bind LDAP anonyme autorisé", sev: model.SevMedium, port: 389, proto: model.TCP,
-			desc: "Le contrôleur de domaine autorise un bind anonyme, permettant de lire le rootDSE et une partie de l'annuaire.",
-			ev:   "bind anonyme : résultat 0 (success) - defaultNamingContext=DC=lumexa,DC=lan",
-			fix:  "Positionner dsHeuristics pour interdire les binds anonymes."},
-		"redis-no-auth": {
-			title: "Redis accessible sans authentification", sev: model.SevCritical, port: 6379, proto: model.TCP,
-			desc: "L'instance Redis répond aux commandes sans mot de passe. Toute machine pouvant l'atteindre peut lire et écrire l'intégralité des données, et souvent obtenir une exécution de commandes.",
-			ev:   "PING → +PONG ; INFO server → redis_version:7.0.15, executable:/usr/bin/redis-server",
-			fix:  "Définir requirepass, écouter uniquement sur l'interface nécessaire et filtrer l'accès au port."},
-		"snmp-default-community": {
-			title: "Communauté SNMP par défaut", sev: model.SevMedium, port: 161, proto: model.UDP,
-			desc: "L'équipement répond à la communauté « public », divulguant sa configuration et son inventaire.",
-			ev:   "GET sysDescr.0 avec community=public → réponse valide",
-			fix:  "Remplacer les communautés par défaut, ou migrer vers SNMPv3 avec authentification et chiffrement."},
-		"telnet-cleartext": {
-			title: "Telnet exposé", sev: model.SevHigh, port: 23, proto: model.TCP,
-			desc: "L'administration par Telnet est accessible : identifiants et session transitent en clair sur le réseau.",
-			ev:   "220 bannière reçue - « User Access Verification »",
-			fix:  "Désactiver Telnet (transport input ssh) et n'autoriser que SSH depuis le VLAN d'administration."},
-		"ssh-weak-algorithms": {
-			title: "Algorithmes SSH obsolètes proposés", sev: model.SevLow, port: 22, proto: model.TCP,
-			desc: "Le serveur propose des algorithmes d'échange de clés ou de MAC considérés comme faibles.",
-			ev:   "kex: diffie-hellman-group14-sha1 ; mac: hmac-sha1",
-			fix:  "Restreindre KexAlgorithms et MACs aux suites modernes dans sshd_config."},
-		"tls-cert-self-signed": {
-			title: "Certificat TLS auto-signé", sev: model.SevInfo, port: 443, proto: model.TCP,
-			desc: "Le service présente un certificat auto-signé : l'identité du serveur ne peut pas être vérifiée, ce qui banalise les avertissements du navigateur.",
-			ev:   "issuer == subject, chaîne de longueur 1",
-			fix:  "Émettre le certificat depuis l'autorité interne et le déployer."},
-		"tls-certificate-expired": {
-			title: "Certificat TLS expiré", sev: model.SevMedium, port: 443, proto: model.TCP,
-			desc: "Le certificat présenté a expiré.",
-			ev:   "notAfter dépassé de 93 jours",
-			fix:  "Renouveler le certificat et mettre en place une surveillance des échéances."},
-		"tls-certificate-expiring": {
-			title: "Certificat TLS proche de l'expiration", sev: model.SevLow, port: 443, proto: model.TCP,
-			desc: "Le certificat expire dans moins de 60 jours.",
-			ev:   "notAfter dans 40 jours",
-			fix:  "Planifier le renouvellement."},
-		"nfs-world-readable-export": {
-			title: "Export NFS accessible à tous", sev: model.SevHigh, port: 2049, proto: model.TCP,
-			desc: "Un export NFS est proposé sans restriction d'hôte.",
-			ev:   "MOUNT EXPORT : /srv/partage → (everyone)",
-			fix:  "Restreindre chaque export aux hôtes légitimes dans /etc/exports et recharger le serveur."},
-		"rsync-module-listing": {
-			title: "Modules rsync énumérables sans authentification", sev: model.SevMedium, port: 873, proto: model.TCP,
-			desc: "Le démon rsync liste ses modules sans authentification.",
-			ev:   "liste reçue : backups, vmdk, archives",
-			fix:  "Activer auth users / secrets file et filtrer l'accès au port."},
-		"prometheus-unauthenticated": {
-			title: "Prometheus accessible sans authentification", sev: model.SevMedium, port: 9090, proto: model.TCP,
-			desc: "L'interface Prometheus est accessible librement et divulgue l'inventaire supervisé ainsi que les cibles internes.",
-			ev:   "GET /api/v1/targets → 200, 148 cibles listées",
-			fix:  "Placer le service derrière un reverse proxy authentifié et le restreindre au VLAN d'administration."},
-		"asterisk-ami-exposed": {
-			title: "Interface d'administration Asterisk exposée", sev: model.SevHigh, port: 5038, proto: model.TCP,
-			desc: "Le port AMI d'Asterisk est joignable depuis le réseau utilisateur. Il permet, avec des identifiants, de piloter l'ensemble de la téléphonie.",
-			ev:   "bannière : Asterisk Call Manager/5.0.2",
-			fix:  "Limiter permit/deny dans manager.conf au seul serveur applicatif et filtrer le port."},
-		"ilo-default-credentials": {
-			title: "Identifiants par défaut sur iLO", sev: model.SevCritical, port: 443, proto: model.TCP,
-			desc: "L'interface d'administration matérielle accepte un compte par défaut, donnant un contrôle complet du serveur, console comprise.",
-			ev:   "authentification réussie avec le compte d'usine imprimé sur l'étiquette du châssis",
-			fix:  "Changer le mot de passe d'administration, créer des comptes nominatifs et isoler iLO dans le VLAN d'administration."},
-		"apc-default-credentials": {
-			title: "Identifiants par défaut sur l'onduleur", sev: model.SevHigh, port: 80, proto: model.TCP,
-			desc: "La carte réseau de l'onduleur accepte le compte constructeur par défaut, permettant d'éteindre les équipements alimentés.",
-			ev:   "authentification réussie avec le compte apc/apc",
-			fix:  "Changer le mot de passe et restreindre l'accès à l'interface."},
-		"voip-phone-default-web-credentials": {
-			title: "Interface du téléphone en identifiants par défaut", sev: model.SevMedium, port: 80, proto: model.TCP,
-			desc: "L'interface web du poste accepte le compte administrateur par défaut, donnant accès à la configuration SIP et aux identifiants du compte.",
-			ev:   "authentification réussie avec le compte admin par défaut",
-			fix:  "Déployer un mot de passe d'administration par provisioning et désactiver l'interface web si elle n'est pas utilisée."},
-		"printer-unauthenticated-admin": {
-			title: "Administration de l'imprimante sans authentification", sev: model.SevMedium, port: 80, proto: model.TCP,
-			desc: "Le serveur web embarqué expose les pages d'administration sans authentification : carnet d'adresses, configuration SMTP et LDAP compris.",
-			ev:   "GET /hp/device/set_config_networkprotocols.html → 200 sans authentification",
-			fix:  "Définir un mot de passe administrateur sur l'équipement et restreindre son administration au VLAN dédié."},
-		"ipmi-cipher-zero": {
-			title: "IPMI : cipher suite 0 acceptée", sev: model.SevCritical, port: 623, proto: model.UDP,
-			desc: "Le BMC accepte la suite de chiffrement 0, qui autorise une session authentifiée sans vérifier le mot de passe.",
-			ev:   "RAKP : ouverture de session acceptée avec cipher suite 0",
-			fix:  "Désactiver la cipher suite 0 sur le BMC et isoler l'interface d'administration."},
-		"esxi-ssh-enabled": {
-			title: "SSH actif en permanence sur l'hyperviseur", sev: model.SevLow, port: 22, proto: model.TCP,
-			desc: "Le service SSH de l'hyperviseur est démarré en permanence, contrairement à la configuration recommandée.",
-			ev:   "SSH-2.0-OpenSSH_8.8 VMware",
-			fix:  "Arrêter le service SSH et ne l'activer qu'au besoin, depuis le VLAN d'administration."},
-	}
-	d, ok := defs[id]
+	info, ok := catalogue[id]
 	if !ok {
-		d = def{title: id, sev: model.SevInfo, port: 0, proto: model.TCP}
+		panic("netydemo: no such check in the catalogue: " + id)
+	}
+	p, ok := placements[id]
+	if !ok {
+		panic("netydemo: no placement for check: " + id)
 	}
 	return model.Finding{
-		IP: ip, Port: d.port, Protocol: d.proto, CheckID: id, Title: d.title,
-		Severity: d.sev, Description: d.desc, Evidence: d.ev, Remediation: d.fix,
-		References: d.refs,
+		IP: ip, Port: p.port, Protocol: p.proto, CheckID: id,
+		Title: info.Title, Severity: info.Severity,
+		Description: info.Description, Evidence: p.evidence,
+		Remediation: info.Remediation, References: info.References,
 	}
 }

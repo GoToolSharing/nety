@@ -1,6 +1,6 @@
-// Package checks implements NETY's light, safe and non-destructive
-// misconfiguration / vulnerability checks. Every check is registered in a
-// static catalog (see register) and run concurrently per host.
+// Package checks implements NETY's light, safe and non-destructive misconfiguration /
+// vulnerability checks. Every check is registered in a static catalog (see register) and
+// run concurrently per host.
 //
 // Rules for checks:
 //   - Never modify state on the target (read-only protocol operations only).
@@ -40,12 +40,11 @@ type Check struct {
 	// Description/Remediation/References used to fill findings.
 	Remediation string
 	References  []string
-	// HostLevel checks run once per host (Applies receives every service and
-	// Run gets Target.Service zero-valued); otherwise once per applicable
-	// service.
+	// HostLevel checks run once per host (Applies receives every service and Run gets
+	// Target.Service zero-valued); otherwise once per applicable service.
 	HostLevel bool
-	// Applies reports whether the check is relevant for svc (service level)
-	// or for the host's services (host level, svc is the zero value).
+	// Applies reports whether the check is relevant for svc (service level) or for the
+	// host's services (host level, svc is the zero value).
 	Applies func(t *Target) bool
 	// Run executes the check. It returns findings (use t.Finding to build them).
 	Run func(ctx context.Context, t *Target) []model.Finding
@@ -63,10 +62,10 @@ type Target struct {
 	Timeout  time.Duration // per I/O
 	Log      *slog.Logger
 	check    *Check
-	// creds caps how many authentication attempts every intrusive check
-	// together may make against this host. It is shared by all of the host's
-	// targets, because a lockout policy counts failures per account, not per
-	// service. A nil budget means no cap has been attached (unit tests).
+	// creds caps how many authentication attempts every intrusive check together may make
+	// against this host. It is shared by all of the host's targets, because a lockout
+	// policy counts failures per account, not per service. A nil budget means no cap has
+	// been attached (unit tests).
 	creds *credBudget
 }
 
@@ -76,11 +75,11 @@ type credBudget struct {
 	left int
 }
 
-// MaxCredAttemptsPerHost is the total number of credentials the gated
-// default-credential checks may try against one host in one scan. It is kept
-// well below every common lockout threshold (Active Directory's default is
-// 10 after the 2022 baselines, and most appliances lock at 3 to 5 per
-// account) so that a scan can never be the reason someone is locked out.
+// MaxCredAttemptsPerHost is the total number of credentials the gated default-credential
+// checks may try against one host in one scan. It is kept well below every common lockout
+// threshold (Active Directory's default is 10 after the 2022 baselines, and most
+// appliances lock at 3 to 5 per account) so that a scan can never be the reason someone
+// is locked out.
 const MaxCredAttemptsPerHost = 12
 
 func newCredBudget() *credBudget { return &credBudget{left: MaxCredAttemptsPerHost} }
@@ -132,8 +131,8 @@ func isOpen(s model.PortState) bool {
 	return s == "" || s == model.PortOpen || s == model.PortOpenFiltered
 }
 
-// Finding builds a finding for this check on the current service (or on
-// port/proto for host level checks, pass 0/"" for host-wide findings).
+// Finding builds a finding for this check on the current service (or on port/proto for
+// host level checks, pass 0/"" for host-wide findings).
 func (t *Target) Finding(evidence string) model.Finding {
 	f := model.Finding{
 		IP:          t.IP,
@@ -157,12 +156,12 @@ func (t *Target) FindingOn(port int, proto model.Protocol, evidence string) mode
 	return f
 }
 
-// Dial opens a TCP connection to the service with the per-I/O timeout and
-// an initial deadline.
+// Dial opens a TCP connection to the service with the per-I/O timeout and an initial
+// deadline.
 func (t *Target) Dial(ctx context.Context) (net.Conn, error) { return t.DialPort(ctx, t.Service.Port) }
 
-// DialPort opens a TCP connection to port. The connection is closed when ctx
-// is cancelled.
+// DialPort opens a TCP connection to port. The connection is closed when ctx is
+// cancelled.
 func (t *Target) DialPort(ctx context.Context, port int) (net.Conn, error) {
 	d := net.Dialer{Timeout: t.Timeout}
 	c, err := d.DialContext(ctx, "tcp", t.AddrPort(port))
@@ -234,6 +233,8 @@ func (c *checker) Catalog() []engine.CheckInfo {
 	for _, x := range cs {
 		info := x.Info
 		info.Services = append([]string(nil), info.Services...)
+		info.Remediation = x.Remediation
+		info.References = append([]string(nil), x.References...)
 		out = append(out, info)
 	}
 	return out
@@ -390,8 +391,8 @@ func sortFindings(fs []model.Finding) []model.Finding {
 	return fs
 }
 
-// ---------------------------------------------------------------------------
-// Small helpers shared by checks
+// --------------------------------------------------------------------------- Small
+// helpers shared by checks
 // ---------------------------------------------------------------------------
 
 func truncate(s string, n int) string {

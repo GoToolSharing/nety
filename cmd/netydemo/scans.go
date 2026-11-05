@@ -12,8 +12,8 @@ import (
 	"github.com/GoToolSharing/nety/internal/store"
 )
 
-// seedScans writes the scan history: one discovery per network, the
-// segmentation run, plus a paused one so the resume path is visible.
+// seedScans writes the scan history: one discovery per network, the segmentation run,
+// plus a paused one so the resume path is visible.
 func seedScans(ctx context.Context, st *store.Store, raw *sql.DB, missionID int64, nets []demoNet, userID int64, now time.Time) error {
 	type phasePlan struct {
 		phase      model.WorkPhase
@@ -22,7 +22,7 @@ func seedScans(ctx context.Context, st *store.Store, raw *sql.DB, missionID int6
 
 	mk := func(net demoNet, kind model.ScanKind, status model.ScanStatus, opts model.ScanOptions,
 		startedAgo, ranFor time.Duration, stats model.ScanStats, phases []phasePlan, phaseName string,
-		progress float64, errText string) error {
+		progress float64, errText string, logLines []logLine) error {
 
 		sc, err := st.CreateScan(ctx, model.Scan{
 			MissionID: missionID, NetworkID: net.ID, Kind: kind,
@@ -67,6 +67,13 @@ func seedScans(ctx context.Context, st *store.Store, raw *sql.DB, missionID int6
 		if err := st.SetScanStatus(ctx, sc.ID, status, errText); err != nil {
 			return err
 		}
+		// The log pane is the part of the scan screen an operator watches, so a demo with
+		// an empty one shows the opposite of what the tool does.
+		for _, l := range logLines {
+			if err := st.AppendScanLog(ctx, sc.ID, l.level, l.msg); err != nil {
+				return err
+			}
+		}
 		return backdate(ctx, raw, sc.ID, now.Add(-startedAgo), ranFor, status)
 	}
 
@@ -105,7 +112,8 @@ func seedScans(ctx context.Context, st *store.Store, raw *sql.DB, missionID int6
 				TargetsTotal: 254, HostsUp: int64(p.hosts), PortsOpen: int64(p.services),
 				Services: int64(p.services), Findings: p.findings, NewAssets: p.newAssets,
 			},
-			discoveryPhases(p.hosts, p.services), string(model.PhaseChecks), 1, "")
+			discoveryPhases(p.hosts, p.services), string(model.PhaseChecks), 1, "",
+			discoveryLog(nets[p.net], p.hosts, p.services, int(p.findings)))
 		if err != nil {
 			return err
 		}
@@ -121,11 +129,11 @@ func seedScans(ctx context.Context, st *store.Store, raw *sql.DB, missionID int6
 		20*time.Hour, 47*time.Minute,
 		model.ScanStats{ReachTested: 412, ReachOK: 37},
 		[]phasePlan{{model.PhaseL2, 1, 0}, {model.PhaseSegment, 7, 0}},
-		string(model.PhaseSegment), 1, ""); err != nil {
+		string(model.PhaseSegment), 1, "", segmentationLog()); err != nil {
 		return err
 	}
 
-	// A long one the operator paused to go to lunch - resumable.
+	// A long one the operator paused to go to lunch, so the resume path is visible.
 	full := std
 	full.Profile, full.TCPPorts, full.UDPPorts = "full", "all", "top100"
 	if err := mk(nets[1], model.ScanDiscovery, model.ScanPaused, full,
@@ -136,14 +144,62 @@ func seedScans(ctx context.Context, st *store.Store, raw *sql.DB, missionID int6
 			{model.PhaseDiscovery, 1, 0},
 			{model.PhasePortsTCP, 16, 6},
 		},
-		string(model.PhasePortsTCP), 0.62, ""); err != nil {
+		string(model.PhasePortsTCP), 0.62, "", pausedLog(nets[1])); err != nil {
 		return err
 	}
 	return nil
 }
 
-// backdate rewrites timestamps through a second connection rather than adding
-// a demo-only escape hatch to the store's API.
+// logLine is one line of a scan's log trail.
+type logLine struct {
+	level, msg string
+}
+
+// discoveryLog is what a discovery writes as it goes: the scope it resolved, the plan it
+// built for each phase, and the counts it ended on. It is the running commentary an
+// operator reads while the scan is live.
+func discoveryLog(n demoNet, hosts, services, findings int) []logLine {
+	return []logLine{
+		{"info", "scan started"},
+		{"info", fmt.Sprintf("listening on %s for switch-port information (45s)", n.Network.Interface)},
+		{"info", fmt.Sprintf("scope: %s (254 addresses)", n.prefix)},
+		{"info", "host discovery planned: 1 work unit"},
+		{"info", fmt.Sprintf("host discovery finished: %d hosts answered", hosts)},
+		{"info", fmt.Sprintf("TCP scan planned: %d hosts x 1000 ports in 2 work units", hosts)},
+		{"info", fmt.Sprintf("UDP scan planned: %d hosts x 20 ports in 1 work unit", hosts)},
+		{"info", fmt.Sprintf("service detection planned: %d services", services)},
+		{"warn", "10.20.20.45:6379 answered before the banner was requested"},
+		{"info", fmt.Sprintf("identity collection finished: %d machines matched", hosts)},
+		{"info", fmt.Sprintf("checks finished: %d findings", findings)},
+		{"info", "scan completed"},
+	}
+}
+
+func segmentationLog() []logLine {
+	return []logLine{
+		{"info", "scan started"},
+		{"info", "segmentation test planned: 412 services and 36 hosts from other networks, in 7 work units"},
+		{"info", "techniques: direct, icmp, src-port-53, src-port-123, gateway-route"},
+		{"warn", "10.20.99.0/24 answered nothing on the direct technique; falling back to the alternate route"},
+		{"info", "source port 53 reached 6 services that plain routing could not"},
+		{"info", "scan completed: 37 of 412 attempts crossed a boundary"},
+	}
+}
+
+// pausedLog stops mid sentence, which is what a pause looks like.
+func pausedLog(n demoNet) []logLine {
+	return []logLine{
+		{"info", "scan started"},
+		{"info", fmt.Sprintf("scope: %s (254 addresses)", n.prefix)},
+		{"info", "host discovery finished: 11 hosts answered"},
+		{"info", "TCP scan planned: 11 hosts x 65535 ports in 16 work units"},
+		{"error", "port unit 9 failed after 3 attempts: dial tcp 10.20.20.51:9100: i/o timeout"},
+		{"info", "paused by demo: 12 of 18 work units done, the rest are kept"},
+	}
+}
+
+// backdate rewrites timestamps through a second connection rather than adding a demo-only
+// escape hatch to the store's API.
 func backdate(ctx context.Context, raw *sql.DB, scanID int64, started time.Time, ranFor time.Duration, status model.ScanStatus) error {
 	finished := started.Add(ranFor)
 	_, err := raw.ExecContext(ctx,
@@ -162,10 +218,9 @@ func backdate(ctx context.Context, raw *sql.DB, scanID int64, started time.Time,
 // reachability
 // ---------------------------------------------------------------------------
 
-// seedReachability fills the matrix with a result that tells a story: the
-// office VLAN is mostly contained but leaks a few flows to the servers, the
-// voice VLAN is not separated from the offices at all, and management is
-// reachable from nowhere it should not be.
+// seedReachability fills the matrix with a result that tells a story: the office VLAN is
+// mostly contained but leaks a few flows to the servers, the voice VLAN is not separated
+// from the offices at all, and management is reachable from nowhere it should not be.
 func seedReachability(ctx context.Context, st *store.Store, missionID int64, nets []demoNet, now time.Time, rng *rand.Rand) error {
 	services, err := st.ListServices(ctx, store.ServiceFilter{MissionID: missionID})
 	if err != nil {
@@ -185,8 +240,8 @@ func seedReachability(ctx context.Context, st *store.Store, missionID int64, net
 		technique      string
 	}
 	rules := []rule{
-		// Offices → servers: filtered, but file sharing and the intranet pass,
-		// and a stateless rule lets anything with source port 53 through.
+		// Offices → servers: filtered, but file sharing and the intranet pass, and a
+		// stateless rule lets anything with source port 53 through.
 		{src: 0, dst: 1, direct: 0.18, bypass: 0.12, closed: 0.05, technique: model.TechSrcPort53},
 		// Offices → telephony: wide open, the two VLANs share the same switch.
 		{src: 0, dst: 2, direct: 0.85, bypass: 0, closed: 0.05},

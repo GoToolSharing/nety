@@ -1,12 +1,11 @@
-// Command netydemo fills a NETY database with a realistic engagement so the
-// platform can be shown without plugging into anyone's network.
+// Command netydemo fills a NETY database with a realistic engagement so the platform can
+// be shown without plugging into anyone's network.
 //
 //	go run ./cmd/netydemo -data ./demo-data
 //	nety serve --data ./demo-data --no-tls --listen 127.0.0.1:8080
 //
-// Everything it writes is invented. The addresses are RFC 1918, the hostnames
-// and the client name are made up, and nothing here was observed on a real
-// network.
+// Everything it writes is invented. The addresses are RFC 1918, the hostnames and the
+// client name are made up, and nothing here was observed on a real network.
 package main
 
 import (
@@ -70,10 +69,10 @@ func run(dataDir, username, password string, reset bool) error {
 	}
 
 	m, err := st.CreateMission(ctx, model.Mission{
-		Name:   "Revue de segmentation interne",
-		Client: "Groupe Lumexa",
-		Description: "Cartographie des VLAN du siège et vérification de leur cloisonnement. " +
-			"Quatre points de raccordement testés, matrice de traversée en annexe.",
+		Name:   "Internal segmentation review",
+		Client: "Lumexa Group",
+		Description: "Map the head office VLANs and check that they are really separated. " +
+			"Four patch points tested, crossing matrix in the appendix.",
 		ScopeCIDRs:   []string{"10.20.0.0/16"},
 		ExcludeCIDRs: []string{"10.20.99.250/32"},
 		CreatedBy:    u.ID,
@@ -102,6 +101,9 @@ func run(dataDir, username, password string, reset bool) error {
 	if err := seedReachability(ctx, st, m.ID, nets, now, rng); err != nil {
 		return err
 	}
+	if err := seedTriage(ctx, st, m.ID, u.ID, rng); err != nil {
+		return err
+	}
 
 	stats, _ := st.Stats(ctx)
 	fmt.Printf("Demo mission ready in %s\n\n", dataDir)
@@ -113,8 +115,7 @@ func run(dataDir, username, password string, reset bool) error {
 	return nil
 }
 
-// ---------------------------------------------------------------------------
-// networks
+// --------------------------------------------------------------------------- networks
 // ---------------------------------------------------------------------------
 
 type demoNet struct {
@@ -130,7 +131,7 @@ func seedNetworks(ctx context.Context, st *store.Store, missionID int64, now tim
 		l2                                   model.L2Info
 	}{
 		{
-			name: "Bureaux - étage 2", desc: "Prise murale salle de réunion B204.",
+			name: "Offices, floor 2", desc: "Wall socket, meeting room B204.",
 			iface: "eth0", local: "10.20.10.37", gw: "10.20.10.1", prefix: "10.20.10.0/24", vlan: 10,
 			l2: model.L2Info{
 				Neighbors: []model.L2Neighbor{{
@@ -144,7 +145,7 @@ func seedNetworks(ctx context.Context, st *store.Store, missionID int64, now tim
 			},
 		},
 		{
-			name: "Serveurs", desc: "Port patché depuis la baie, salle technique.",
+			name: "Servers", desc: "Patched from the rack, server room.",
 			iface: "eth0", local: "10.20.20.60", gw: "10.20.20.1", prefix: "10.20.20.0/24", vlan: 20,
 			l2: model.L2Info{
 				Neighbors: []model.L2Neighbor{{
@@ -156,7 +157,7 @@ func seedNetworks(ctx context.Context, st *store.Store, missionID int64, now tim
 			},
 		},
 		{
-			name: "Téléphonie", desc: "Prise derrière le téléphone de l'accueil.",
+			name: "Telephony", desc: "Socket behind the reception phone.",
 			iface: "eth0", local: "10.20.30.88", gw: "10.20.30.1", prefix: "10.20.30.0/24", vlan: 30,
 			l2: model.L2Info{
 				DTPSeen: true, DTPMode: "desirable",
@@ -169,7 +170,7 @@ func seedNetworks(ctx context.Context, st *store.Store, missionID int64, now tim
 			},
 		},
 		{
-			name: "Management", desc: "Port d'administration, accès accordé pour l'audit.",
+			name: "Management", desc: "Administration port, access granted for the audit.",
 			iface: "eth0", local: "10.20.99.201", gw: "10.20.99.1", prefix: "10.20.99.0/24", vlan: 99,
 			l2: model.L2Info{
 				Neighbors: []model.L2Neighbor{{

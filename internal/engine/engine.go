@@ -1,6 +1,6 @@
-// Package engine defines the contracts between the scanning engines and the
-// platform (job runner). Engine packages implement these interfaces; the job
-// runner only depends on this package, and cmd/nety wires implementations.
+// Package engine defines the contracts between the scanning engines and the platform (job
+// runner). Engine packages implement these interfaces; the job runner only depends on
+// this package, and cmd/nety wires implementations.
 //
 // Conventions for every engine:
 //   - Honour ctx cancellation promptly (scans can be cancelled from the UI).
@@ -26,15 +26,15 @@ import (
 // ErrUnsupported is returned by features that need Linux / raw sockets.
 var ErrUnsupported = errors.New("not supported on this platform")
 
-// ErrNeedPrivileges is returned when raw sockets are required but unavailable
-// (not root and no CAP_NET_RAW / CAP_NET_ADMIN).
+// ErrNeedPrivileges is returned when raw sockets are required but unavailable (not root
+// and no CAP_NET_RAW / CAP_NET_ADMIN).
 var ErrNeedPrivileges = errors.New("raw socket privileges required (run as root or grant CAP_NET_RAW,CAP_NET_ADMIN)")
 
 // Progress reports done/total units of work for the current phase.
 type Progress func(done, total int64)
 
-// ---------------------------------------------------------------------------
-// Network interface inspection (package netif)
+// --------------------------------------------------------------------------- Network
+// interface inspection (package netif)
 // ---------------------------------------------------------------------------
 
 type InterfaceInfo struct {
@@ -46,10 +46,9 @@ type InterfaceInfo struct {
 	IsVLAN    bool           `json:"is_vlan"` // 802.1Q sub-interface
 	VLANID    int            `json:"vlan_id,omitempty"`
 	Parent    string         `json:"parent,omitempty"`
-	// Kind is "ethernet", "wireless", "bridge", "vlan", "loopback", "tunnel"
-	// or "other". Wireless matters: everything that works over a cable also
-	// works over Wi-Fi except the switch-port techniques, which have no
-	// meaning on an access point association.
+	// Kind is "ethernet", "wireless", "bridge", "vlan", "loopback", "tunnel" or "other".
+	// Wireless matters: everything that works over a cable also works over Wi-Fi except
+	// the switch-port techniques, which have no meaning on an access point association.
 	Kind     string `json:"kind"`
 	Wireless bool   `json:"wireless"`
 }
@@ -65,8 +64,8 @@ const (
 	LinkOther    = "other"
 )
 
-// ErrWirelessUnsupported is returned by the techniques that only exist on a
-// wired switch port when the attachment is a Wi-Fi association.
+// ErrWirelessUnsupported is returned by the techniques that only exist on a wired switch
+// port when the attachment is a Wi-Fi association.
 var ErrWirelessUnsupported = errors.New("not applicable on a wireless interface: 802.1Q tagging and switch-port negotiation only exist on a wired switch port")
 
 // NetContext is what the operator's machine sees on the attached network.
@@ -86,23 +85,23 @@ type NetContext struct {
 type NetInspector interface {
 	// Interfaces lists local interfaces (for the UI interface picker).
 	Interfaces() ([]InterfaceInfo, error)
-	// Detect reads addressing/routing/DNS/DHCP lease info for iface ("" = the
-	// interface holding the default route).
+	// Detect reads addressing/routing/DNS/DHCP lease info for iface ("" = the interface
+	// holding the default route).
 	Detect(ctx context.Context, iface string) (NetContext, error)
 	// SniffL2 passively listens for CDP/LLDP/DTP/STP/802.1Q frames for dur.
 	SniffL2(ctx context.Context, iface string, dur time.Duration) (model.L2Info, error)
 }
 
-// ---------------------------------------------------------------------------
-// Host discovery (package discovery)
+// --------------------------------------------------------------------------- Host
+// discovery (package discovery)
 // ---------------------------------------------------------------------------
 
 type DiscoveryOptions struct {
 	Interface string
 	Targets   []netip.Prefix // already expanded from user input, excludes applied by Excludes
 	Excludes  []netip.Prefix
-	// Methods: "arp" (local segment only), "icmp-echo", "icmp-timestamp",
-	// "tcp-syn" (on TCPPorts), "tcp-ack", "udp" (on UDPPorts). Empty = sane default.
+	// Methods: "arp" (local segment only), "icmp-echo", "icmp-timestamp", "tcp-syn" (on
+	// TCPPorts), "tcp-ack", "udp" (on UDPPorts). Empty = sane default.
 	Methods  []string
 	TCPPorts []uint16 // default: 21,22,23,25,53,80,88,135,139,389,443,445,3389,5985,8080,8443
 	UDPPorts []uint16 // default: 53,123,137,161,500
@@ -124,8 +123,8 @@ type Discoverer interface {
 	Discover(ctx context.Context, opts DiscoveryOptions, out func(DiscoveredHost)) error
 }
 
-// ---------------------------------------------------------------------------
-// Port scanning (package portscan)
+// --------------------------------------------------------------------------- Port
+// scanning (package portscan)
 // ---------------------------------------------------------------------------
 
 type ScanMode string
@@ -160,17 +159,16 @@ type PortResult struct {
 }
 
 type PortScanner interface {
-	// Scan reports open ports only (TCP: SYN-ACK / connect success, UDP: a
-	// response was received). Closed/filtered ports are NOT reported to keep
-	// volume manageable.
+	// Scan reports open ports only (TCP: SYN-ACK / connect success, UDP: a response was
+	// received). Closed/filtered ports are NOT reported to keep volume manageable.
 	Scan(ctx context.Context, opts PortScanOptions, out func(PortResult)) error
 }
 
-// Port specs ("top100", "top1000", "all", "22,80,8000-8100") are parsed by
-// package ports: ports.Parse(spec, proto) ([]uint16, error).
+// Port specs ("top100", "top1000", "all", "22,80,8000-8100") are parsed by package ports:
+// ports.Parse(spec, proto) ([]uint16, error).
 
-// ---------------------------------------------------------------------------
-// Service fingerprinting (package fingerprint)
+// --------------------------------------------------------------------------- Service
+// fingerprinting (package fingerprint)
 // ---------------------------------------------------------------------------
 
 type FingerprintOptions struct {
@@ -181,33 +179,33 @@ type FingerprintOptions struct {
 
 type Fingerprinter interface {
 	// Fingerprint identifies the service on ip:port/proto and returns a filled
-	// model.Service (IDs, mission/network/host fields left zero: the caller sets
-	// them). It must fill TLS/HTTP/SSH sub-structs when relevant.
+	// model.Service (IDs, mission/network/host fields left zero: the caller sets them).
+	// It must fill TLS/HTTP/SSH sub-structs when relevant.
 	Fingerprint(ctx context.Context, ip netip.Addr, port uint16, proto model.Protocol, opts FingerprintOptions) (model.Service, error)
 }
 
-// ---------------------------------------------------------------------------
-// Identity collection & correlation (package identity)
+// --------------------------------------------------------------------------- Identity
+// collection & correlation (package identity)
 // ---------------------------------------------------------------------------
 
 type IdentityCollector interface {
-	// Collect gathers identity evidence for a host using its open services
-	// (SMB/NTLM, RDP/NTLM, NetBIOS, mDNS, LLMNR, SNMP, SSH host keys, TLS
-	// certs, reverse DNS, MAC/OUI ...). dns may be invalid (system resolver).
+	// Collect gathers identity evidence for a host using its open services (SMB/NTLM,
+	// RDP/NTLM, NetBIOS, mDNS, LLMNR, SNMP, SSH host keys, TLS certs, reverse DNS,
+	// MAC/OUI ...). dns may be invalid (system resolver).
 	Collect(ctx context.Context, host model.Host, services []model.Service, dns []netip.Addr) ([]model.IdentityEvidence, error)
 }
 
 type Correlator interface {
-	// Resolve decides which existing asset (if any) the observation belongs to
-	// and returns the merged asset. Pure function: no I/O.
+	// Resolve decides which existing asset (if any) the observation belongs to and
+	// returns the merged asset. Pure function: no I/O.
 	Resolve(existing []model.Asset, obs model.HostObservation) model.AssetDecision
-	// Enrich derives Host-level fields (Hostname, Domain, OS, Hostnames) from
-	// evidence and services. Pure function.
+	// Enrich derives Host-level fields (Hostname, Domain, OS, Hostnames) from evidence
+	// and services. Pure function.
 	Enrich(host model.Host, services []model.Service, ev []model.IdentityEvidence) model.Host
 }
 
-// ---------------------------------------------------------------------------
-// Light vulnerability / misconfiguration checks (package checks)
+// --------------------------------------------------------------------------- Light
+// vulnerability / misconfiguration checks (package checks)
 // ---------------------------------------------------------------------------
 
 type CheckOptions struct {
@@ -217,9 +215,9 @@ type CheckOptions struct {
 }
 
 type Checker interface {
-	// Run executes every applicable check against the host's services and
-	// returns findings (IDs/mission/network left zero: caller sets them;
-	// HostID/ServiceID left zero too, caller maps by IP/Port/Protocol).
+	// Run executes every applicable check against the host's services and returns
+	// findings (IDs/mission/network left zero: caller sets them; HostID/ServiceID left
+	// zero too, caller maps by IP/Port/Protocol).
 	Run(ctx context.Context, host model.Host, services []model.Service, opts CheckOptions) ([]model.Finding, error)
 	// Catalog lists every check (id, title, severity) for the UI.
 	Catalog() []CheckInfo
@@ -232,6 +230,11 @@ type CheckInfo struct {
 	Services    []string       `json:"services"`  // service names it applies to
 	Intrusive   bool           `json:"intrusive"` // e.g. login attempts
 	Description string         `json:"description"`
+	// Remediation is what a finding from this check carries. It lives in the catalogue as
+	// well so that anything describing a check, rather than running one, quotes the
+	// product's own words instead of writing its own and drifting from them.
+	Remediation string   `json:"remediation,omitempty"`
+	References  []string `json:"references,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
@@ -267,10 +270,10 @@ type SegmentOptions struct {
 }
 
 type SegmentTester interface {
-	// Test tries to reach every target with every enabled technique and
-	// streams one ReachResult per (target, technique[, vlan]). It MUST restore
-	// any system change it makes (routes, sub-interfaces, DTP state) before
-	// returning, including on ctx cancellation.
+	// Test tries to reach every target with every enabled technique and streams one
+	// ReachResult per (target, technique[, vlan]). It MUST restore any system change it
+	// makes (routes, sub-interfaces, DTP state) before returning, including on ctx
+	// cancellation.
 	Test(ctx context.Context, opts SegmentOptions, targets []ReachTarget, out func(model.ReachResult)) error
 	// Techniques lists the supported techniques for the UI.
 	Techniques() []TechniqueInfo
@@ -285,8 +288,8 @@ type TechniqueInfo struct {
 	Default     bool   `json:"default"`   // enabled when Techniques is empty
 }
 
-// ---------------------------------------------------------------------------
-// Exports (package export)
+// --------------------------------------------------------------------------- Exports
+// (package export)
 // ---------------------------------------------------------------------------
 
 type ExportFormat struct {
@@ -303,8 +306,8 @@ type Exporter interface {
 	Export(w ExportWriter, format string, data model.MissionData, networkID int64) error
 }
 
-// ExportWriter is an io.Writer (kept as an interface here to avoid importing io
-// in signatures used by generated mocks).
+// ExportWriter is an io.Writer (kept as an interface here to avoid importing io in
+// signatures used by generated mocks).
 type ExportWriter interface {
 	Write(p []byte) (n int, err error)
 }
