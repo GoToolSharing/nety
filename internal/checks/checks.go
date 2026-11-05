@@ -63,7 +63,44 @@ type Target struct {
 	Timeout  time.Duration // per I/O
 	Log      *slog.Logger
 	check    *Check
+	// creds caps how many authentication attempts every intrusive check
+	// together may make against this host. It is shared by all of the host's
+	// targets, because a lockout policy counts failures per account, not per
+	// service. A nil budget means no cap has been attached (unit tests).
+	creds *credBudget
 }
+
+// credBudget is the per-host ceiling on authentication attempts.
+type credBudget struct {
+	mu   sync.Mutex
+	left int
+}
+
+// MaxCredAttemptsPerHost is the total number of credentials the gated
+// default-credential checks may try against one host in one scan. It is kept
+// well below every common lockout threshold (Active Directory's default is
+// 10 after the 2022 baselines, and most appliances lock at 3 to 5 per
+// account) so that a scan can never be the reason someone is locked out.
+const MaxCredAttemptsPerHost = 12
+
+func newCredBudget() *credBudget { return &credBudget{left: MaxCredAttemptsPerHost} }
+
+// take reserves one attempt and reports whether it was granted.
+func (b *credBudget) take() bool {
+	if b == nil {
+		return true
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.left <= 0 {
+		return false
+	}
+	b.left--
+	return true
+}
+
+// credAttempt reserves one authentication attempt against this host.
+func (t *Target) credAttempt() bool { return t.creds.take() }
 
 // Addr returns ip:port for the service.
 func (t *Target) Addr() string { return net.JoinHostPort(t.IP, strconv.Itoa(t.Service.Port)) }
@@ -229,12 +266,14 @@ func (c *checker) Run(ctx context.Context, host model.Host, services []model.Ser
 		}
 	}
 	log := c.log.With("ip", ip)
+	// One budget for the whole host, shared by every target built below.
+	budget := newCredBudget()
 	var jobs []job
 	for _, ch := range allChecks() {
 		if ch.Info.Intrusive && !opts.AllowDefaultCreds {
 			continue
 		}
-		base := Target{Host: host, IP: ip, Services: open, Opts: opts, Timeout: timeout, check: ch}
+		base := Target{Host: host, IP: ip, Services: open, Opts: opts, Timeout: timeout, check: ch, creds: budget}
 		if ch.HostLevel {
 			t := base
 			t.Log = log.With("check", ch.Info.ID)

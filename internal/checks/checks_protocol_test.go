@@ -104,6 +104,9 @@ func probeTimeout(t *testing.T, id string, timeout time.Duration, svc model.Serv
 		Timeout:  timeout,
 		Log:      quietLogger(),
 		check:    c,
+		// The same per-host ceiling on authentication attempts the engine
+		// attaches, so the tests exercise what a real scan does.
+		creds: newCredBudget(),
 	}
 	if c.HostLevel {
 		tg.Service = model.Service{}
