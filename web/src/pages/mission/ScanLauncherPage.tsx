@@ -614,7 +614,11 @@ export default function ScanLauncherPage() {
                       </Badge>
                     </span>
                   }
-                  hint="The only check family that authenticates. A short, capped list of vendor defaults is tried, so nothing gets locked out - but these are real login attempts and they land in the target's logs. Off by default; agree it with the client."
+                  hint={
+                    opts.checks
+                      ? "The only check family that authenticates. A short, capped list of vendor defaults is tried, so nothing gets locked out - but these are real login attempts and they land in the target's logs. Off by default; agree it with the client."
+                      : 'Turn on Light checks above to enable this: it is one of the checks, so it has nothing to run in.'
+                  }
                 />
               </div>
             </CardBody>

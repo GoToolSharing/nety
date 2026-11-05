@@ -223,11 +223,15 @@ export function Toggle({
         onClick={() => onChange(!checked)}
         className={cn(
           'relative mt-0.5 h-5 w-9 shrink-0 rounded-full border transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60',
           checked
             ? danger
               ? 'border-crit bg-crit'
               : 'border-accent bg-accent'
             : 'border-border-strong bg-elevated',
+          // A switch that cannot be flipped has to look like it, otherwise a
+          // click that does nothing reads as a broken control.
+          disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
         )}
       >
         <span
@@ -237,14 +241,22 @@ export function Toggle({
           )}
         />
       </button>
-      <div className="min-w-0">
-        <label
+      <div className={cn('min-w-0', disabled && 'opacity-50')}>
+        {/* A <label for> does not activate a button, so clicking the text used
+            to do nothing at all while the cursor promised otherwise. The text
+            carries the click itself; the keyboard path stays on the button. */}
+        <span
           id={labelId}
-          htmlFor={id}
-          className="cursor-pointer select-none text-sm font-medium text-fg"
+          onClick={() => {
+            if (!disabled) onChange(!checked)
+          }}
+          className={cn(
+            'block select-none text-sm font-medium text-fg',
+            disabled ? 'cursor-not-allowed' : 'cursor-pointer',
+          )}
         >
           {label}
-        </label>
+        </span>
         {hint && (
           <div id={hintId} className="mt-0.5 text-xs text-muted">
             {hint}
