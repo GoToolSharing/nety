@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/state/auth'
 import { useMissionMembers, useSetMissionMembers, useUsers } from '@/lib/queries'
 import { Card, CardHeader } from '@/components/ui/Card'
@@ -22,15 +22,13 @@ export default function MissionTeam({ missionId }: { missionId: number }) {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const members = useMissionMembers(missionId)
-  const users = useUsers(true)
+  // Listing every account is admin-only, so the roster comes from the members
+  // endpoint: an operator must see their own team.
+  const users = useUsers(isAdmin)
   const [editing, setEditing] = useState(false)
 
-  const memberIds = useMemo(() => new Set(members.data ?? []), [members.data])
-  const roster = useMemo(
-    () => (users.data ?? []).filter((u) => memberIds.has(u.id)),
-    [users.data, memberIds],
-  )
-  const outsiders = (users.data ?? []).length - roster.length
+  const roster = members.data?.members ?? []
+  const outsiders = isAdmin ? (users.data ?? []).length - roster.length : 0
 
   return (
     <Card>
@@ -46,7 +44,7 @@ export default function MissionTeam({ missionId }: { missionId: number }) {
         }
       />
       <div className="px-4 py-3">
-        {members.isLoading || users.isLoading ? (
+        {members.isLoading ? (
           <Skeleton className="h-5 w-48" />
         ) : roster.length === 0 ? (
           <p className="text-xs text-muted">
@@ -89,7 +87,7 @@ function TeamModal({ missionId, onClose }: { missionId: number; onClose: () => v
   const [selected, setSelected] = useState<Set<number>>(new Set())
 
   useEffect(() => {
-    if (members.data) setSelected(new Set(members.data))
+    if (members.data) setSelected(new Set(members.data.ids))
   }, [members.data])
 
   const toggle = (id: number) =>

@@ -143,7 +143,32 @@ func (a *API) handleGetMembers(w http.ResponseWriter, r *http.Request, u model.U
 		a.failStore(w, err, "members")
 		return
 	}
-	a.ok(w, map[string]any{"user_ids": ids})
+	// Return the people, not just their ids. Listing every account is an
+	// administrator's privilege, so a plain operator had no way to turn these
+	// ids into names and saw an empty team on a mission they are part of.
+	// Who else is on your own mission is not a secret from you.
+	members := make([]missionMember, 0, len(ids))
+	for _, id := range ids {
+		mu, err := a.Store.UserByID(r.Context(), id)
+		if err != nil {
+			continue // deleted meanwhile
+		}
+		members = append(members, missionMember{
+			ID: mu.ID, Username: mu.Username, DisplayName: mu.DisplayName,
+			Role: mu.Role, Disabled: mu.Disabled,
+		})
+	}
+	a.ok(w, map[string]any{"user_ids": ids, "members": members})
+}
+
+// missionMember is the public view of someone on a mission: enough to show
+// who they are, nothing more.
+type missionMember struct {
+	ID          int64      `json:"id"`
+	Username    string     `json:"username"`
+	DisplayName string     `json:"display_name"`
+	Role        model.Role `json:"role"`
+	Disabled    bool       `json:"disabled"`
 }
 
 func (a *API) handleSetMembers(w http.ResponseWriter, r *http.Request, u model.User) {

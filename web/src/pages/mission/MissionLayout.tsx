@@ -137,7 +137,7 @@ function MissionSections({ missionId }: { missionId: number }) {
     { to: `${base}/assets`, label: 'Assets', icon: <AssetIcon />, count: s?.assets },
     { to: `${base}/matrix`, label: 'Segmentation matrix', icon: <MatrixIcon /> },
     { to: `${base}/exports`, label: 'Exports', icon: <ExportIcon /> },
-    { to: `${base}/team`, label: 'Team', icon: <UsersIcon />, count: members.data?.length },
+    { to: `${base}/team`, label: 'Team', icon: <UsersIcon />, count: members.data?.members.length },
   ]
 
   return (

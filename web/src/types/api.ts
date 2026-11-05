@@ -394,6 +394,15 @@ export interface SSHInfo {
   auth_methods?: string[]
 }
 
+/** One person on a mission, as GET /api/missions/{id}/members returns them. */
+export interface MissionMember {
+  id: number
+  username: string
+  display_name: string
+  role: Role
+  disabled: boolean
+}
+
 /** model.TriageStatus - where the operator is with a service. */
 export type TriageStatus = 'todo' | 'in_progress' | 'done' | 'flagged' | 'skipped'
 

@@ -12,6 +12,7 @@ import type {
   Matrix,
   Mission,
   MissionInput,
+  MissionMember,
   MissionSummary,
   Network,
   NetworkInput,
@@ -186,9 +187,14 @@ export const api = {
   patchMission: (id: number, body: Partial<MissionInput>) =>
     request<Mission>(`api/missions/${id}`, { method: 'PATCH', body }),
   deleteMission: (id: number) => request<void>(`api/missions/${id}`, { method: 'DELETE' }),
-  // The handler answers {"user_ids": [...]}, not a bare array.
-  missionMembers: async (id: number) =>
-    list((await request<{ user_ids: number[] | null }>(`api/missions/${id}/members`)).user_ids),
+  // The handler answers the people as well as their ids: listing every account
+  // is admin-only, so an operator needs the names to come back with the ids.
+  missionMembers: async (id: number) => {
+    const r = await request<{ user_ids: number[] | null; members: MissionMember[] | null }>(
+      `api/missions/${id}/members`,
+    )
+    return { ids: list(r.user_ids), members: list(r.members) }
+  },
   setMissionMembers: (id: number, user_ids: number[]) =>
     request<void>(`api/missions/${id}/members`, { method: 'PUT', body: { user_ids } }),
   missionSummary: (id: number) => request<MissionSummary>(`api/missions/${id}/summary`),
