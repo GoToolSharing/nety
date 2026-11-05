@@ -20,7 +20,7 @@ import {
   useSort,
 } from '@/components/common'
 import ServiceDetail from '@/components/ServiceDetail'
-import { SKIPPED_ROW_CLASS, TriageNote, TriageSelect } from '@/components/Triage'
+import { SKIPPED_ROW_CLASS, SkipToggle, TriageNote } from '@/components/Triage'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/cn'
 import { formatNumber, isAddressOrPrefix } from '@/lib/format'
@@ -39,13 +39,11 @@ function HostDrawer({
   networkName,
   onClose,
   onTriage,
-  busy,
 }: {
   host: Host | null
   networkName: string
   onClose: () => void
   onTriage: (host: Host, body: { status?: TriageStatus; note?: string }) => void
-  busy: boolean
 }) {
   const detail = useHost(host?.id ?? 0)
   const [openService, setOpenService] = useState<Service | null>(null)
@@ -74,34 +72,21 @@ function HostDrawer({
       >
         {host && (
           <>
-            {/* The operator's own pass comes first: this pane is where an
-                address is taken out of scope, and where it comes back. */}
+            {/* Notes only. In or out of scope is set on the row this pane
+                opened from, so there is one control for it, not two. */}
             <section className="mb-4">
-              <h3 className="panel-title mb-1.5">Your review</h3>
-              <div className="flex flex-wrap items-start gap-4 rounded-md border border-border bg-elevated/50 px-3 py-2">
-                <div className="w-44 shrink-0">
-                  <div className="mb-1 text-[11px] text-muted">Status</div>
-                  <TriageSelect
-                    value={host.triage?.status}
-                    busy={busy}
-                    onChange={(status) => onTriage(host, { status })}
-                  />
-                  {host.triage?.updated_at && (
-                    <div className="mt-1.5 text-[11px] text-faint">
-                      {host.triage.updated_by_name ? `${host.triage.updated_by_name}, ` : ''}
-                      <RelativeTime value={host.triage.updated_at} />
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-[260px] flex-1">
-                  <div className="mb-1 text-[11px] text-muted">Notes</div>
-                  <TriageNote
-                    value={host.triage?.note ?? ''}
-                    onSave={(note) => onTriage(host, { note })}
-                    placeholder="Why is this address skipped, or what is left to test on it?"
-                  />
-                </div>
-              </div>
+              <h3 className="panel-title mb-1.5">Your notes</h3>
+              <TriageNote
+                value={host.triage?.note ?? ''}
+                onSave={(note) => onTriage(host, { note })}
+                placeholder="Why is this address skipped, or what is left to test on it?"
+              />
+              {host.triage?.updated_at && (
+                <p className="mt-1.5 text-[11px] text-faint">
+                  Last changed by {host.triage.updated_by_name || 'someone'},{' '}
+                  <RelativeTime value={host.triage.updated_at} />
+                </p>
+              )}
               {host.triage?.status === 'skipped' && (
                 <p className="mt-1.5 text-xs text-muted">
                   This address is out of the way: its services, its findings and the
@@ -283,7 +268,11 @@ export default function HostsPage() {
         const res = await api.triageHostsBulk(missionId, ids, status)
         setPicked(new Set())
         refresh()
-        toast.success(`${res.updated} hosts marked ${status.replace('_', ' ')}`)
+        toast.success(
+          status === 'skipped'
+            ? `${res.updated} addresses skipped`
+            : `${res.updated} addresses back in scope`,
+        )
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Could not update the selection')
       }
@@ -360,17 +349,20 @@ export default function HostsPage() {
       {picked.size > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent/5 px-3 py-2">
           <span className="text-xs font-medium text-fg">{picked.size} selected</span>
-          <span className="text-xs text-muted">Mark as</span>
-          {(['done', 'flagged', 'skipped', 'in_progress', 'todo'] as TriageStatus[]).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => void setSelectionStatus(s)}
-              className="rounded border border-border bg-surface px-2 py-0.5 text-[11px] text-fg hover:border-border-strong"
-            >
-              {s.replace('_', ' ')}
-            </button>
-          ))}
+          <button
+            type="button"
+            onClick={() => void setSelectionStatus('skipped')}
+            className="rounded border border-border bg-surface px-2 py-0.5 text-[11px] text-fg hover:border-border-strong"
+          >
+            Skip
+          </button>
+          <button
+            type="button"
+            onClick={() => void setSelectionStatus('todo')}
+            className="rounded border border-border bg-surface px-2 py-0.5 text-[11px] text-fg hover:border-border-strong"
+          >
+            Bring back in scope
+          </button>
           <button
             type="button"
             onClick={() => setPicked(new Set())}
@@ -430,7 +422,7 @@ export default function HostsPage() {
                       className="h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]"
                     />
                   </th>
-                  <SortHeader column="status" label="Status" sort={sort} onSort={onSort} />
+                  <SortHeader column="status" label="Scope" sort={sort} onSort={onSort} />
                   <SortHeader column="ip" label="IP" sort={sort} onSort={onSort} />
                   <SortHeader column="mac" label="MAC / vendor" sort={sort} onSort={onSort} />
                   <SortHeader column="hostname" label="Hostname" sort={sort} onSort={onSort} />
@@ -469,9 +461,9 @@ export default function HostsPage() {
                         className="h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]"
                       />
                     </td>
-                    <td className="w-[122px]" onClick={(e) => e.stopPropagation()}>
-                      <TriageSelect
-                        value={h.triage?.status}
+                    <td className="w-[112px]" onClick={(e) => e.stopPropagation()}>
+                      <SkipToggle
+                        status={h.triage?.status}
                         busy={busy === h.id}
                         onChange={(status) => void setStatus(h, { status })}
                       />
@@ -514,7 +506,6 @@ export default function HostsPage() {
         networkName={selected ? (netName.get(selected.network_id) ?? '') : ''}
         onClose={() => setSelected(null)}
         onTriage={(host, body) => void setStatus(host, body)}
-        busy={!!selected && busy === selected.id}
       />
     </PageContainer>
   )

@@ -94,9 +94,13 @@ still your job, one port at a time. Each service carries a status and a note.
 
 ![Service triage](docs/images/triage.png)
 
-Mark things **to do**, **in progress**, **done**, **flagged** or **skipped**,
-alone or in batches, and write what you tested. The progress bar tells you how
-much is left.
+Mark a service or a finding **to do**, **in progress**, **done**, **flagged**,
+a **false positive** or **skipped**, alone or in batches, and write what you
+tested. Skipped and false positive are kept apart on purpose: one says you are
+not spending time on it, the other says the check is wrong. Both are hidden by
+default from the findings list and left out of the overview's counters, with
+the number of hidden rows always on screen. A host or a machine is simply in
+scope or out of it.
 
 This is yours, not the scanner's: re-running a scan tomorrow refreshes what was
 observed and leaves every status and note intact.

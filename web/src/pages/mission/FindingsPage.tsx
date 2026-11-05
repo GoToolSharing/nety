@@ -19,6 +19,7 @@ import {
   useSort,
 } from '@/components/common'
 import {
+  HideDismissedToggle,
   SKIPPED_ROW_CLASS,
   SkippedHostsBanner,
   TriageNote,
@@ -29,7 +30,14 @@ import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/cn'
 import { formatNumber, isAddressOrPrefix } from '@/lib/format'
 import { ChevronDownIcon, ChevronRightIcon, FindingIcon } from '@/components/icons'
-import { SEVERITIES, type Finding, type Severity, type TriageStatus } from '@/types/api'
+import {
+  DISMISSED_STATUSES,
+  SEVERITIES,
+  TRIAGE_STATUSES,
+  type Finding,
+  type Severity,
+  type TriageStatus,
+} from '@/types/api'
 
 /**
  * The columns the findings list can be sorted by. Each one is a key the
@@ -135,34 +143,22 @@ function FindingRow({
 
       {expanded && (
         <div className="space-y-3 border-t border-border px-4 py-3 pl-11 text-sm">
-          {/* The operator's own verdict comes first: it is the reason this
-              pane is open, and the check's own text is reference under it. */}
+          {/* Notes only. The status is three centimetres up, on the row this
+              pane belongs to; a second control for the same value here just
+              made the operator wonder which one counted. */}
           <div>
-            <h4 className="panel-title mb-1">Your review</h4>
-            <div className="flex flex-wrap items-start gap-4 rounded-md border border-border bg-elevated/50 px-3 py-2">
-              <div className="w-44 shrink-0">
-                <div className="mb-1 text-[11px] text-muted">Status</div>
-                <TriageSelect
-                  value={finding.triage?.status}
-                  busy={busy}
-                  onChange={(status) => onTriage({ status })}
-                />
-                {finding.triage?.updated_at && (
-                  <div className="mt-1.5 text-[11px] text-faint">
-                    {finding.triage.updated_by_name ? `${finding.triage.updated_by_name}, ` : ''}
-                    <RelativeTime value={finding.triage.updated_at} />
-                  </div>
-                )}
-              </div>
-              <div className="min-w-[260px] flex-1">
-                <div className="mb-1 text-[11px] text-muted">Notes</div>
-                <TriageNote
-                  value={finding.triage?.note ?? ''}
-                  onSave={(note) => onTriage({ note })}
-                  placeholder="Confirmed, exploitable, false positive?"
-                />
-              </div>
-            </div>
+            <h4 className="panel-title mb-1">Your notes</h4>
+            <TriageNote
+              value={finding.triage?.note ?? ''}
+              onSave={(note) => onTriage({ note })}
+              placeholder="Confirmed, exploitable, false positive?"
+            />
+            {finding.triage?.updated_at && (
+              <p className="mt-1 text-[11px] text-faint">
+                Last changed by {finding.triage.updated_by_name || 'someone'},{' '}
+                <RelativeTime value={finding.triage.updated_at} />
+              </p>
+            )}
           </div>
           {finding.description && (
             <div>
@@ -216,15 +212,30 @@ export default function FindingsPage() {
   // The findings of a skipped host are out of the way by default. This is the
   // operator asking to see them anyway.
   const [showSkipped, setShowSkipped] = useState(false)
+  // Findings the operator has set aside themselves, skipped or called a false
+  // positive. Most of a check wave gets waved away on sight and what is left
+  // to look at drowns in it, so they start hidden - with the count on the
+  // switch, so nothing goes missing quietly.
+  const [hideDismissed, setHideDismissed] = useState(true)
   const [address, setAddress] = useState('')
   const { sort, onSort } = useSort<SortKey>('severity')
   const debouncedAddress = useDebounced(address, 300)
   // Half a typed subnet is not a filter yet, so it is not sent: the list
   // keeps showing what it had instead of emptying at every keystroke.
+  // Asking for every status but the two dismissals is the same question as
+  // "hide what I have set aside", and the server already answers it. An
+  // explicit status filter wins: that is the operator saying exactly what
+  // they want to see.
+  const statusFilter = triage.length
+    ? triage.join(',')
+    : hideDismissed
+      ? TRIAGE_STATUSES.filter((t) => !DISMISSED_STATUSES.includes(t)).join(',')
+      : undefined
+
   const findings = useFindings(missionId, {
     network_id: networkId || undefined,
     ip: isAddressOrPrefix(debouncedAddress) ? debouncedAddress.trim() : undefined,
-    triage: triage.length ? triage.join(',') : undefined,
+    triage: statusFilter,
     include_skipped: showSkipped || undefined,
     sort: sort.key,
     dir: sort.dir,
@@ -258,7 +269,7 @@ export default function FindingsPage() {
   // leave twenty-nine of them armed and invisible.
   useEffect(() => {
     setSelected(new Set())
-  }, [networkId, triage, showSkipped, debouncedAddress, query, severity])
+  }, [networkId, triage, showSkipped, hideDismissed, debouncedAddress, query, severity])
 
   const netName = useMemo(() => {
     const m = new Map<number, string>()
@@ -385,6 +396,14 @@ export default function FindingsPage() {
           className="w-full max-w-sm"
         />
         <AddressFilterInput value={address} onChange={setAddress} />
+        <HideDismissedToggle
+          noun="findings"
+          hiding={hideDismissed}
+          disabled={triage.length > 0}
+          skipped={summary.data?.findings.counts.skipped ?? 0}
+          falsePositives={summary.data?.findings.counts.false_positive ?? 0}
+          onToggle={() => setHideDismissed((v) => !v)}
+        />
         <label className="flex items-center gap-2 text-xs text-muted">
           <span>Network</span>
           <select
@@ -434,7 +453,16 @@ export default function FindingsPage() {
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent/5 px-3 py-2">
           <span className="text-xs font-medium text-fg">{selected.size} selected</span>
           <span className="text-xs text-muted">Mark as</span>
-          {(['done', 'flagged', 'skipped', 'in_progress', 'todo'] as TriageStatus[]).map((s) => (
+          {(
+            [
+              'done',
+              'flagged',
+              'false_positive',
+              'skipped',
+              'in_progress',
+              'todo',
+            ] as TriageStatus[]
+          ).map((s) => (
             <button
               key={s}
               type="button"

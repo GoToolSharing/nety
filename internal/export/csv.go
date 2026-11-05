@@ -448,6 +448,8 @@ func triageLabel(s model.TriageStatus) string {
 		return "done"
 	case model.TriageFlagged:
 		return "flagged"
+	case model.TriageFalsePositive:
+		return "false positive"
 	case model.TriageSkipped:
 		return "skipped"
 	case "", model.TriageTodo:

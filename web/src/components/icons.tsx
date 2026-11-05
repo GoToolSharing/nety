@@ -471,3 +471,11 @@ export const SkipIcon = (p: IconProps) => (
     <path d="M9 12h6" />
   </Icon>
 )
+
+/** False positive: the circle struck through, not merely emptied out. */
+export const FalsePositiveIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="8" />
+    <path d="M6.5 6.5l11 11" />
+  </Icon>
+)

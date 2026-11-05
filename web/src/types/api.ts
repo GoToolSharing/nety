@@ -431,13 +431,28 @@ export interface MissionMember {
 }
 
 /** model.TriageStatus - where the operator is with a service or a finding. */
-export type TriageStatus = 'todo' | 'in_progress' | 'done' | 'flagged' | 'skipped'
+export type TriageStatus =
+  | 'todo'
+  | 'in_progress'
+  | 'done'
+  | 'flagged'
+  | 'false_positive'
+  | 'skipped'
+
+/**
+ * The two ways of putting a row aside. They are not the same judgement:
+ * skipped is a decision about where to spend the time, a false positive is a
+ * statement that the tool is wrong. Neither is outstanding work, so neither
+ * belongs in the counters that say what is left.
+ */
+export const DISMISSED_STATUSES: TriageStatus[] = ['skipped', 'false_positive']
 
 export const TRIAGE_STATUSES: TriageStatus[] = [
   'todo',
   'in_progress',
   'done',
   'flagged',
+  'false_positive',
   'skipped',
 ]
 

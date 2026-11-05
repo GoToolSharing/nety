@@ -311,7 +311,16 @@ export default function ServicesPage() {
             </button>
           )}
           <span className="text-xs text-muted">Mark as</span>
-          {(['done', 'flagged', 'skipped', 'in_progress', 'todo'] as TriageStatus[]).map((s) => (
+          {(
+            [
+              'done',
+              'flagged',
+              'false_positive',
+              'skipped',
+              'in_progress',
+              'todo',
+            ] as TriageStatus[]
+          ).map((s) => (
             <button
               key={s}
               type="button"

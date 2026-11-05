@@ -305,11 +305,42 @@ const (
 	TriageDone       TriageStatus = "done"        // tested, nothing worth reporting
 	TriageFlagged    TriageStatus = "flagged"     // tested, something to report
 	TriageSkipped    TriageStatus = "skipped"     // out of scope or not worth testing
+
+	// TriageFalsePositive is not the same judgement as skipped, and the
+	// difference matters when the report is written. Skipped means "I am not
+	// spending time on this". False positive means "I looked, and the tool is
+	// wrong". One is a choice about where to put the effort; the other is a
+	// statement about the finding, and it is the one a client may ask about.
+	TriageFalsePositive TriageStatus = "false_positive"
 )
 
 // AllTriageStatuses is the canonical order, used by the UI and the exports.
 var AllTriageStatuses = []TriageStatus{
-	TriageTodo, TriageInProgress, TriageDone, TriageFlagged, TriageSkipped,
+	TriageTodo, TriageInProgress, TriageDone, TriageFlagged,
+	TriageFalsePositive, TriageSkipped,
+}
+
+// DismissedTriageStatuses are the two ways of putting a row aside: the
+// operator chose not to spend time on it, or decided the tool was wrong about
+// it. Neither is outstanding work, so neither belongs in the counters and
+// headlines that are meant to say what is left to deal with.
+var DismissedTriageStatuses = []TriageStatus{TriageSkipped, TriageFalsePositive}
+
+// Dismissed reports whether this status means the row has been set aside.
+func Dismissed(s TriageStatus) bool {
+	return s == TriageSkipped || s == TriageFalsePositive
+}
+
+// LiveTriageStatuses is every status that is not a dismissal. Passing it as a
+// filter is how a listing asks for "what is still on the table".
+func LiveTriageStatuses() []TriageStatus {
+	out := make([]TriageStatus, 0, len(AllTriageStatuses))
+	for _, s := range AllTriageStatuses {
+		if !Dismissed(s) {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // ValidTriageStatus reports whether s is a known status.

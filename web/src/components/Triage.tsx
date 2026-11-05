@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/cn'
-import { CheckIcon, FlagIcon, SkipIcon, SpinnerIcon, TodoIcon } from '@/components/icons'
+import {
+  CheckIcon,
+  FalsePositiveIcon,
+  FlagIcon,
+  SkipIcon,
+  SpinnerIcon,
+  TodoIcon,
+} from '@/components/icons'
 import type { SkippedHostCounts, TriageStatus } from '@/types/api'
 import { TRIAGE_STATUSES } from '@/types/api'
 
@@ -45,12 +52,19 @@ export const TRIAGE_META: Record<
     dot: 'bg-crit',
     hint: 'Tested, something to report',
   },
+  false_positive: {
+    label: 'False positive',
+    short: 'False',
+    tone: 'border-warn/40 bg-warn/10 text-warn',
+    dot: 'bg-warn',
+    hint: 'Looked at it: the check is wrong about this one',
+  },
   skipped: {
     label: 'Skipped',
     short: 'Skip',
     tone: 'border-border bg-surface text-faint',
     dot: 'bg-border-strong',
-    hint: 'Out of scope or not worth testing',
+    hint: 'Not worth the time, or out of scope. Not a judgement on the check.',
   },
 }
 
@@ -67,6 +81,8 @@ export function TriageIcon({ status, className }: { status: TriageStatus; classN
       return <CheckIcon {...props} />
     case 'flagged':
       return <FlagIcon {...props} />
+    case 'false_positive':
+      return <FalsePositiveIcon {...props} />
     case 'skipped':
       return <SkipIcon {...props} />
     default:
@@ -194,6 +210,57 @@ export function TriageSelect({
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * The two-state version, for a machine rather than a port.
+ *
+ * A service or a finding gets looked at and judged, so it earns the full
+ * ladder. An asset does not: nobody declares a whole machine "done", because
+ * the machine is not the unit of work. The only thing worth recording about
+ * one is whether it is in play at all - the client's own laptop, the tester's
+ * own box, a device ruled out of bounds. So it is in or it is out, and
+ * nothing in between to deliberate over.
+ */
+export function SkipToggle({
+  status,
+  onChange,
+  busy,
+  className,
+}: {
+  status: TriageStatus | undefined
+  onChange: (next: TriageStatus) => void
+  busy?: boolean
+  className?: string
+}) {
+  const skipped = status === 'skipped'
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      aria-pressed={skipped}
+      title={
+        skipped
+          ? 'Out of scope. Click to bring it back: its services, findings and segmentation results come back with it.'
+          : 'In scope. Click to skip it: everything attached to it is hidden, never deleted.'
+      }
+      onClick={(e) => {
+        e.stopPropagation()
+        onChange(skipped ? 'todo' : 'skipped')
+      }}
+      className={cn(
+        'inline-flex w-full items-center gap-1.5 rounded border px-1.5 py-0.5 text-[11px]',
+        'font-medium transition-opacity hover:opacity-80 disabled:opacity-50',
+        skipped
+          ? 'border-border bg-surface text-faint'
+          : 'border-ok/40 bg-ok/10 text-ok',
+        className,
+      )}
+    >
+      {skipped ? <SkipIcon width={13} height={13} /> : <CheckIcon width={13} height={13} />}
+      <span className="truncate">{skipped ? 'Skipped' : 'In scope'}</span>
+    </button>
   )
 }
 
@@ -353,6 +420,71 @@ export const SKIPPED_ROW_CLASS = 'opacity-45 saturate-50'
  * rows vanish with no explanation, which is exactly the kind of silence that
  * makes an operator distrust a tool mid-engagement.
  */
+/**
+ * Hide the rows the operator has already dealt with by setting them aside:
+ * skipped, or called a false positive.
+ *
+ * On a long engagement most of what a check wave produces gets waved away on
+ * sight, and what is left to look at ends up buried in it. This hides those
+ * rows by default - but it always says how many it is hiding, right next to
+ * the switch, because a tool that shows you fewer results than exist without
+ * saying so is worse than one that shows you too many.
+ */
+export function HideDismissedToggle({
+  hiding,
+  onToggle,
+  skipped,
+  falsePositives,
+  noun,
+  disabled,
+  className,
+}: {
+  hiding: boolean
+  onToggle: () => void
+  skipped: number
+  falsePositives: number
+  noun: string
+  /** True when an explicit status filter already decides what is shown. */
+  disabled?: boolean
+  className?: string
+}) {
+  const total = skipped + falsePositives
+  if (total === 0 && !hiding) return null
+  const detail = [
+    skipped > 0 ? `${skipped} skipped` : '',
+    falsePositives > 0 ? `${falsePositives} false positive${falsePositives === 1 ? '' : 's'}` : '',
+  ]
+    .filter(Boolean)
+    .join(' and ')
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={disabled}
+      aria-pressed={hiding}
+      title={
+        disabled
+          ? 'A status filter is active, so it already decides what is shown.'
+          : hiding
+            ? `Hidden: ${detail}. Click to show them again.`
+            : `Showing ${detail}. Click to put them away.`
+      }
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded border px-2 py-1 text-[11px] transition-colors',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        hiding && !disabled
+          ? 'border-accent/45 bg-accent/10 text-accent'
+          : 'border-border bg-elevated text-muted hover:text-fg',
+        className,
+      )}
+    >
+      <SkipIcon width={12} height={12} />
+      {hiding ? `${total} set aside, hidden` : `${total} set aside, shown`}
+      <span className="sr-only"> {noun}</span>
+    </button>
+  )
+}
+
 export function SkippedHostsBanner({
   hidden,
   showing,

@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
-import { TriageNote, TriageSelect } from '@/components/Triage'
+import { TriageNote } from '@/components/Triage'
 import { KeyValue } from '@/components/ui/Card'
 import { Badge, PortStateBadge } from '@/components/ui/Badge'
 import { CopyButton, Mono, RelativeTime } from '@/components/common'
@@ -71,57 +70,28 @@ export default function ServiceDetail({
   const s = service
   const title = [s.product, s.version].filter(Boolean).join(' ')
   const toast = useToast()
-  const [status, setStatus] = useState(s.triage?.status ?? 'todo')
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    setStatus(s.triage?.status ?? 'todo')
-  }, [s.id, s.triage?.status])
-
   const save = async (body: { status?: TriageStatus; note?: string }) => {
-    setSaving(true)
     try {
       await api.triageService(s.id, body)
       onTriaged?.()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not save')
-      setStatus(s.triage?.status ?? 'todo')
-    } finally {
-      setSaving(false)
     }
   }
 
   return (
     <div>
-      {/* The operator's own pass comes first: it is the reason this pane is
-          open, and the rest is reference material under it. */}
-      <Section title="Your review">
-        <div className="flex flex-wrap items-start gap-4">
-          <div className="w-44 shrink-0">
-            <div className="mb-1 text-[11px] text-muted">Status</div>
-            <TriageSelect
-              value={status}
-              busy={saving}
-              onChange={(next) => {
-                setStatus(next)
-                void save({ status: next })
-              }}
-            />
-            {s.triage?.updated_at && (
-              <div className="mt-1.5 text-[11px] text-faint">
-                {s.triage.updated_by_name ? `${s.triage.updated_by_name}, ` : ''}
-                <RelativeTime value={s.triage.updated_at} />
-              </div>
-            )}
-          </div>
-          <div className="min-w-[260px] flex-1">
-            <div className="mb-1 text-[11px] text-muted">Notes</div>
-            <TriageNote
-              value={s.triage?.note ?? ''}
-              onSave={(note) => void save({ note })}
-            />
-          </div>
-        </div>
+      {/* Notes only. The status is set on the row this pane hangs under;
+          carrying a second copy of the control here meant two places to
+          change one value. */}
+      <Section title="Your notes">
+        <TriageNote value={s.triage?.note ?? ''} onSave={(note) => void save({ note })} />
+        {s.triage?.updated_at && (
+          <p className="mt-1 text-[11px] text-faint">
+            Last changed by {s.triage.updated_by_name || 'someone'},{' '}
+            <RelativeTime value={s.triage.updated_at} />
+          </p>
+        )}
       </Section>
 
       <Section title="Service">

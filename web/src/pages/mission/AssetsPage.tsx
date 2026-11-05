@@ -28,7 +28,7 @@ import {
   isAddressOrPrefix,
 } from '@/lib/format'
 import { cn } from '@/lib/cn'
-import { SKIPPED_ROW_CLASS, TriageNote, TriageSelect } from '@/components/Triage'
+import { SKIPPED_ROW_CLASS, SkipToggle, TriageNote } from '@/components/Triage'
 import { ASSET_KIND_LABELS, AssetKindIcon, AssetIcon, MergeIcon } from '@/components/icons'
 import { ASSET_KINDS, type Asset, type AssetKind, type TriageStatus } from '@/types/api'
 
@@ -56,14 +56,12 @@ function AssetDrawer({
   networkName,
   onClose,
   onTriage,
-  busy,
 }: {
   asset: Asset | null
   assets: Asset[]
   networkName: (id: number) => string
   onClose: () => void
   onTriage: (asset: Asset, body: { status?: TriageStatus; note?: string }) => void
-  busy: boolean
 }) {
   const missionId = useMissionId()
   const { canWrite } = useAuth()
@@ -143,44 +141,29 @@ function AssetDrawer({
         {/* The status belongs to the machine, so it says out loud that it
             covers every address of it: that is the whole reason to set it
             here rather than host by host. */}
+        {/* Notes only. The status is set on the row this pane opened from;
+            having it in both places meant two controls for one value. */}
         <section className="mb-4">
-          <h3 className="panel-title mb-1.5">Your review of this machine</h3>
-          <div className="flex flex-wrap items-start gap-4 rounded-md border border-border bg-elevated/50 px-3 py-2">
-            <div className="w-44 shrink-0">
-              <div className="mb-1 text-[11px] text-muted">Status</div>
-              <TriageSelect
-                value={asset.triage?.status}
-                busy={busy}
-                onChange={(status) => onTriage(asset, { status })}
-              />
-              {asset.triage?.updated_at && (
-                <div className="mt-1.5 text-[11px] text-faint">
-                  {asset.triage.updated_by_name ? `${asset.triage.updated_by_name}, ` : ''}
-                  <RelativeTime value={asset.triage.updated_at} />
-                </div>
-              )}
-            </div>
-            <div className="min-w-[260px] flex-1">
-              <div className="mb-1 text-[11px] text-muted">Notes</div>
-              <TriageNote
-                value={asset.triage?.note ?? ''}
-                onSave={(note) => onTriage(asset, { note })}
-                placeholder="Why is this machine out of scope, or what is left to test on it?"
-              />
-            </div>
-          </div>
-          <p className="mt-1.5 text-xs text-muted">
-            The status covers the whole machine: it is applied to each of its{' '}
-            {addressCount(asset)} address{addressCount(asset) === 1 ? '' : 'es'}, and an address
-            it turns up on later is skipped with it.
-            {asset.triage?.status === 'skipped' && (
-              <>
-                {' '}
-                Its services, its findings and the segmentation tests aimed at it are hidden
-                from the other screens. Nothing was deleted.
-              </>
-            )}
-          </p>
+          <h3 className="panel-title mb-1.5">Your notes</h3>
+          <TriageNote
+            value={asset.triage?.note ?? ''}
+            onSave={(note) => onTriage(asset, { note })}
+            placeholder="Why is this machine out of scope, or what is left to test on it?"
+          />
+          {asset.triage?.updated_at && (
+            <p className="mt-1.5 text-[11px] text-faint">
+              Last changed by {asset.triage.updated_by_name || 'someone'},{' '}
+              <RelativeTime value={asset.triage.updated_at} />
+            </p>
+          )}
+          {asset.triage?.status === 'skipped' && (
+            <p className="mt-1.5 text-xs text-muted">
+              Skipped: every one of its {addressCount(asset)} address
+              {addressCount(asset) === 1 ? '' : 'es'} is out of scope, and so is any address it
+              turns up on later. Its services, its findings and the segmentation tests aimed at
+              it are hidden from the other screens. Nothing was deleted.
+            </p>
+          )}
         </section>
 
         <section>
@@ -484,7 +467,11 @@ export default function AssetsPage() {
         const res = await api.triageAssetsBulk(missionId, ids, status)
         setPicked(new Set())
         refresh()
-        toast.success(`${res.updated} machines marked ${status.replace('_', ' ')}`)
+        toast.success(
+          status === 'skipped'
+            ? `${res.updated} machines skipped`
+            : `${res.updated} machines back in scope`,
+        )
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Could not update the selection')
       }
@@ -566,17 +553,20 @@ export default function AssetsPage() {
       {picked.size > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent/5 px-3 py-2">
           <span className="text-xs font-medium text-fg">{picked.size} selected</span>
-          <span className="text-xs text-muted">Mark as</span>
-          {(['done', 'flagged', 'skipped', 'in_progress', 'todo'] as TriageStatus[]).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => void setSelectionStatus(s)}
-              className="rounded border border-border bg-surface px-2 py-0.5 text-[11px] text-fg hover:border-border-strong"
-            >
-              {s.replace('_', ' ')}
-            </button>
-          ))}
+          <button
+            type="button"
+            onClick={() => void setSelectionStatus('skipped')}
+            className="rounded border border-border bg-surface px-2 py-0.5 text-[11px] text-fg hover:border-border-strong"
+          >
+            Skip
+          </button>
+          <button
+            type="button"
+            onClick={() => void setSelectionStatus('todo')}
+            className="rounded border border-border bg-surface px-2 py-0.5 text-[11px] text-fg hover:border-border-strong"
+          >
+            Bring back in scope
+          </button>
           <span className="text-[11px] text-muted">
             applied to every address of each machine
           </span>
@@ -650,7 +640,7 @@ export default function AssetsPage() {
                       className="h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]"
                     />
                   </th>
-                  <SortHeader column="status" label="Status" sort={sort} onSort={onSort} />
+                  <SortHeader column="status" label="Scope" sort={sort} onSort={onSort} />
                   <SortHeader column="label" label="Asset" sort={sort} onSort={onSort} />
                   <SortHeader column="kind" label="Kind" sort={sort} onSort={onSort} />
                   <SortHeader column="os" label="OS" sort={sort} onSort={onSort} />
@@ -691,9 +681,9 @@ export default function AssetsPage() {
                           className="h-3.5 w-3.5 cursor-pointer align-middle accent-[rgb(var(--c-accent))]"
                         />
                       </td>
-                      <td className="w-[122px]" onClick={(e) => e.stopPropagation()}>
-                        <TriageSelect
-                          value={a.triage?.status}
+                      <td className="w-[112px]" onClick={(e) => e.stopPropagation()}>
+                        <SkipToggle
+                          status={a.triage?.status}
                           busy={busy === a.id}
                           onChange={(status) => void setStatus(a, { status })}
                         />
@@ -790,7 +780,6 @@ export default function AssetsPage() {
         networkName={netName}
         onClose={() => setSelected(null)}
         onTriage={(asset, body) => void setStatus(asset, body)}
-        busy={!!selectedLive && busy === selectedLive.id}
       />
     </PageContainer>
   )

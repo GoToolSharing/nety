@@ -18,7 +18,12 @@ import { LinkButton } from '@/components/ui/Button'
 import { ProgressBar, RelativeTime } from '@/components/common'
 import SeverityByNetwork from '@/components/charts/SeverityByNetwork'
 import { formatNumber, formatPercent } from '@/lib/format'
-import { SEVERITIES, type Severity } from '@/types/api'
+import {
+  DISMISSED_STATUSES,
+  SEVERITIES,
+  TRIAGE_STATUSES,
+  type Severity,
+} from '@/types/api'
 import { NetworkIcon, PlusIcon, ScanIcon, TrunkIcon } from '@/components/icons'
 
 export default function OverviewPage() {
@@ -33,7 +38,13 @@ export default function OverviewPage() {
   const networks = useNetworks(missionId)
   const scans = useScans(missionId)
   const hosts = useHosts(missionId)
-  const findings = useFindings(missionId)
+  // What is left to deal with, so the findings the operator has skipped or
+  // called a false positive are not in the headline list or the tiles. They
+  // are still on the findings screen with their status; they have just been
+  // dealt with, and the front page is about what has not.
+  const findings = useFindings(missionId, {
+    triage: TRIAGE_STATUSES.filter((t) => !DISMISSED_STATUSES.includes(t)).join(','),
+  })
 
   const nets = networks.data ?? []
   const scanList = scans.data ?? []

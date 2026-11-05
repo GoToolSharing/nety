@@ -127,7 +127,10 @@ func buildStyles(f *excelize.File) (xlsxStyles, error) {
 		model.TriageInProgress: {"DBEAFE", "1D4ED8"},
 		model.TriageDone:       {"DCFCE7", "166534"},
 		model.TriageFlagged:    {"FEE2E2", "991B1B"},
-		model.TriageSkipped:    {"E5E7EB", "6B7280"},
+		// A false positive is a judgement about the finding, so it gets its
+		// own colour rather than hiding inside the grey of "skipped".
+		model.TriageFalsePositive: {"FEF3C7", "92400E"},
+		model.TriageSkipped:       {"E5E7EB", "6B7280"},
 	}
 	s.triage = map[model.TriageStatus]int{}
 	for status, c := range triageColors {

@@ -258,7 +258,15 @@ func (a *API) handleMissionSummary(w http.ResponseWriter, r *http.Request, u mod
 		a.failStore(w, err, "services")
 		return
 	}
-	findings, err := a.Store.ListFindings(ctx, storeFindingFilter(m.ID, 0, withSkipped))
+	// The headline counters are "what is left to deal with", so a finding the
+	// operator has skipped or called a false positive is not one of them. It
+	// is still on the findings screen, with its status; it just stops shouting
+	// from the front page after being dealt with.
+	findingFilter := storeFindingFilter(m.ID, 0, withSkipped)
+	if !withSkipped {
+		findingFilter.Triage = model.LiveTriageStatuses()
+	}
+	findings, err := a.Store.ListFindings(ctx, findingFilter)
 	if err != nil {
 		a.failStore(w, err, "findings")
 		return

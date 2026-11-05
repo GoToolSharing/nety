@@ -226,7 +226,17 @@ service, and each finding, is really a problem is manual work. These endpoints
 track that pass so a long engagement keeps its place, and a re-scan never
 erases it. Services, findings, hosts and machines work the same way throughout.
 
-Statuses: `todo` (default), `in_progress`, `done`, `flagged`, `skipped`.
+Statuses: `todo` (default), `in_progress`, `done`, `flagged`, `false_positive`,
+`skipped`.
+
+The last two are both ways of setting a row aside, and they are not the same
+judgement: `skipped` says the operator is not spending time on it, while
+`false_positive` says they looked and the check is wrong. The mission summary
+leaves both out of its counters, so the overview reports what is left to deal
+with rather than everything ever raised.
+
+A host and a machine only ever use `todo` and `skipped`: nobody declares a
+whole machine "done", so the interface offers it as in scope or out.
 
 | Method | Path | Body |
 |---|---|---|
@@ -280,7 +290,7 @@ the listings do, so a progress bar always adds up to the table under it.
 ```jsonc
 {
   "counts": {"todo": 42, "done": 7, ...}, "total": 49, "reviewed": 7,
-  "statuses": ["todo", "in_progress", "done", "flagged", "skipped"],
+  "statuses": ["todo", "in_progress", "done", "flagged", "false_positive", "skipped"],
   "findings": {"counts": {"todo": 3, ...}, "total": 3, "reviewed": 0},
   "hosts": {"counts": {"todo": 11, "skipped": 1, ...}, "total": 12, "reviewed": 1},
   "hidden": {

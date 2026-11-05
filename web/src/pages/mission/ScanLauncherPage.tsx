@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   useCreateScan,
+  useMissionSummary,
   useNetworks,
   useScanProfiles,
   useTechniques,
@@ -16,7 +17,7 @@ import { EmptyState, InlineAlert, Skeleton } from '@/components/ui/Feedback'
 import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/cn'
-import { humanizeId } from '@/lib/format'
+import { formatNumber, humanizeId } from '@/lib/format'
 import {
   AlertIcon,
   FindingIcon,
@@ -178,6 +179,7 @@ export default function ScanLauncherPage() {
   const [error, setError] = useState<string | null>(null)
 
   const nets = networks.data ?? []
+  const summary = useMissionSummary(missionId)
 
   // Preselect the network from ?network=, else the first one.
   useEffect(() => {
@@ -245,6 +247,28 @@ export default function ScanLauncherPage() {
       'source_network_ids',
       on ? [...new Set([...sourceIds, id])] : sourceIds.filter((x) => x !== id),
     )
+
+  // What each network already holds. A segmentation test replays exactly this
+  // and discovers nothing, so the operator can see before launching that the
+  // work is already done and does not need redoing.
+  const perNetwork = summary.data?.per_network ?? {}
+  const inventoryOf = (id: number) => {
+    const c = perNetwork[String(id)] ?? {}
+    return { hosts: c.hosts ?? 0, services: c.services ?? 0 }
+  }
+
+  // What this run would actually have to work with: the ticked networks, or
+  // every other network when none is ticked.
+  const reachableTargets = useMemo(() => {
+    const chosen = otherNetworks.filter((n) => sourceIds.length === 0 || sourceIds.includes(n.id))
+    return chosen.reduce(
+      (acc, n) => {
+        const c = perNetwork[String(n.id)] ?? {}
+        return { hosts: acc.hosts + (c.hosts ?? 0), services: acc.services + (c.services ?? 0) }
+      },
+      { hosts: 0, services: 0 },
+    )
+  }, [otherNetworks, sourceIds, perNetwork])
 
   const l2Selected = (techniques.data ?? []).filter(
     (t) => t.l2_active && selectedTechniques.includes(t.id),
@@ -395,12 +419,16 @@ export default function ScanLauncherPage() {
         {/* ---------------- network ---------------- */}
         <Card>
           <CardHeader
-            title="Where are you plugged in?"
-            description="The network whose interface NETY will send from."
+            title={kind === 'segmentation' ? 'From' : 'Where are you plugged in?'}
+            description={
+              kind === 'segmentation'
+                ? 'The network you are testing from. Every probe leaves through this interface.'
+                : 'The network whose interface NETY will send from.'
+            }
           />
           <CardBody className="grid gap-4 sm:grid-cols-2">
             <SelectField
-              label="Source network"
+              label={kind === 'segmentation' ? 'Testing from' : 'Source network'}
               required
               value={networkId || ''}
               onChange={(e) => setNetworkId(Number(e.target.value))}
@@ -439,7 +467,11 @@ export default function ScanLauncherPage() {
         </Card>
 
         {/* ---------------- profile ---------------- */}
-        {kind !== 'l2probe' && kind !== 'checks' && (
+        {/* A profile and a target list belong to a discovery. A segmentation
+            test replays what is already in the database and never scans an
+            address of its own, so showing it a "full" profile read as "this
+            will go and scan everything again first". */}
+        {kind === 'discovery' && (
           <Card>
             <CardHeader
               title="Profile"
@@ -478,7 +510,7 @@ export default function ScanLauncherPage() {
         )}
 
         {/* ---------------- targets & options ---------------- */}
-        {kind !== 'l2probe' && kind !== 'checks' && (
+        {kind === 'discovery' && (
           <Card>
             <CardHeader
               title="Targets and parameters"
@@ -647,37 +679,86 @@ export default function ScanLauncherPage() {
         {kind === 'segmentation' && (
           <Card>
             <CardHeader
-              title="Segmentation"
-              description="Which networks' services to replay from here, and how to try reaching them."
+              title="To"
+              description="The networks to try to reach from there, and how to try."
             />
             <CardBody className="space-y-6">
+              <InlineAlert tone="info">
+                Nothing is discovered and no address is scanned. The test replays the hosts and
+                services <strong>already inventoried</strong> on the networks you pick, from
+                where you are plugged in now, and records what answers. Scan each VLAN once from
+                inside it, then come here from each position in turn: one run per direction
+                fills that row of the matrix.
+              </InlineAlert>
+
               <div>
-                <span className="field-label">Source networks to replay</span>
+                <span className="field-label">Networks to reach</span>
                 <p className="mb-2 text-xs text-faint">
-                  The services discovered on these networks are retried from your current
-                  position. Select none to test every other network.
+                  Leave every box unticked to try all of them.
                 </p>
                 {otherNetworks.length === 0 ? (
                   <InlineAlert tone="warn">
-                    This mission has only one network. Discover at least one other VLAN before
-                    testing segmentation.
+                    This mission has only one network. Add the other VLAN and discover it from
+                    inside before testing segmentation.
                   </InlineAlert>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {otherNetworks.map((n) => (
-                      <Checkbox
-                        key={n.id}
-                        label={n.name}
-                        hint={
-                          n.vlan_id
-                            ? `VLAN ${n.vlan_id} · ${(n.prefixes ?? []).join(', ')}`
-                            : (n.prefixes ?? []).join(', ')
-                        }
-                        checked={sourceIds.includes(n.id)}
-                        onChange={(e) => toggleSource(n.id, e.target.checked)}
-                      />
-                    ))}
+                    {otherNetworks.map((n) => {
+                      const inv = inventoryOf(n.id)
+                      const empty = inv.hosts === 0 && inv.services === 0
+                      return (
+                        <Checkbox
+                          key={n.id}
+                          label={
+                            <span className="flex flex-wrap items-center gap-1.5">
+                              {n.name}
+                              {empty ? (
+                                <Badge tone="warn" title="Nothing has been discovered here yet">
+                                  nothing to replay
+                                </Badge>
+                              ) : (
+                                <Badge tone="neutral">
+                                  {formatNumber(inv.services)} services
+                                </Badge>
+                              )}
+                            </span>
+                          }
+                          hint={
+                            <>
+                              {n.vlan_id ? `VLAN ${n.vlan_id} · ` : ''}
+                              {(n.prefixes ?? []).join(', ') || 'no prefix'}
+                              {!empty && ` · ${formatNumber(inv.hosts)} hosts known`}
+                            </>
+                          }
+                          checked={sourceIds.includes(n.id)}
+                          onChange={(e) => toggleSource(n.id, e.target.checked)}
+                        />
+                      )
+                    })}
                   </div>
+                )}
+                {/* Said before the launch rather than as a failed scan: the
+                    planner refuses an empty plan, and "nothing to test" after
+                    the fact is a worse way to learn it. */}
+                {reachableTargets.services === 0 && reachableTargets.hosts === 0 && (
+                  <InlineAlert tone="warn" className="mt-3">
+                    {sourceIds.length > 0
+                      ? 'Nothing has been discovered on the networks you ticked, so there is nothing to replay. Run a discovery from inside each of them first, or tick a network that has results.'
+                      : 'No other network has any result yet. Plug into each VLAN in turn and run a discovery there, then come back and test segmentation.'}
+                  </InlineAlert>
+                )}
+                {reachableTargets.services > 0 && (
+                  <p className="mt-3 text-xs text-muted">
+                    This run will replay{' '}
+                    <strong className="text-fg">
+                      {formatNumber(reachableTargets.services)} services
+                    </strong>{' '}
+                    and ping{' '}
+                    <strong className="text-fg">
+                      {formatNumber(reachableTargets.hosts)} hosts
+                    </strong>{' '}
+                    from {selectedNetwork?.name ?? 'here'}. No new scanning.
+                  </p>
                 )}
               </div>
 
@@ -799,6 +880,28 @@ export default function ScanLauncherPage() {
                 value={vlanRange}
                 onChange={(e) => setVlanRange(e.target.value)}
               />
+
+              {/* The only two engine parameters a segmentation test reads.
+                  They used to be buried in the discovery parameters card,
+                  alongside forty options this scan never looks at. */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <TextField
+                  label="Timeout (ms)"
+                  type="number"
+                  min={100}
+                  hint="How long to wait for an answer before calling a service unreachable."
+                  value={opts.timeout_ms}
+                  onChange={(e) => set('timeout_ms', Number(e.target.value))}
+                />
+                <TextField
+                  label="Concurrency"
+                  type="number"
+                  min={1}
+                  hint="Probes in flight at once."
+                  value={opts.concurrency}
+                  onChange={(e) => set('concurrency', Number(e.target.value))}
+                />
+              </div>
             </CardBody>
           </Card>
         )}
