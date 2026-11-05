@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="128" viewBox="0 0 440 128"
+     role="img" aria-label="NETY">
+  <title>NETY</title>
+  <!--
+    The mark: three nodes wired into one graph, laid across a dashed segment
+    boundary. Two nodes on one side, one on the other, and the links running
+    straight through, which is the whole job of the tool: map the nodes, then
+    find out whether the boundary actually holds.
+
+    The colours are written out rather than taken from the interface tokens.
+    A README is rendered on a light page and on a dark one, and an <img> gets
+    no CSS from either, so every value here has to read on both. #0ea5e9 sits
+    between the light and dark accents; the greys are mid-range on purpose.
+  -->
+  <g transform="translate(16 20) scale(3.7)">
+    <path d="M12.5 2v20" stroke="#8b94a3" stroke-opacity="0.65" stroke-width="2"
+          stroke-linecap="round" stroke-dasharray="2 3" fill="none"/>
+    <path d="M5 7v10M5 7l14 5M5 17l14-5" stroke="#0ea5e9" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <circle cx="5" cy="7" r="2.9" fill="#0ea5e9"/>
+    <circle cx="5" cy="17" r="2.9" fill="#0ea5e9"/>
+    <circle cx="19" cy="12" r="2.9" fill="#0ea5e9"/>
+  </g>
+  <text x="124" y="66"
+        font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="54" font-weight="700" letter-spacing="6" fill="#0ea5e9">NETY</text>
+  <text x="127" y="94"
+        font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="14.5" font-weight="500" letter-spacing="0.6" fill="#8b94a3">map the VLANs, then prove the boundary</text>
+</svg>

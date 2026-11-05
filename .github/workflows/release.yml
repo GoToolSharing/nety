@@ -1,0 +1,174 @@
+name: Release
+
+# Push a tag, get a release. Nobody should have to clone the repository and
+# run a toolchain to obtain a working NETY: the tarball that comes out of here
+# is the binary, the systemd unit and the installer, ready to scp onto the
+# machine the engagement will be run from.
+on:
+  push:
+    tags: ['v*']
+  # Build the artifacts without publishing anything, to check the pipeline
+  # before cutting a real tag.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # The interface is embedded in the binary, so it has to exist before the
+      # Go build runs. A release built without this step would serve a blank
+      # page, which the compiler has no way of catching.
+      - name: Build the interface
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Version strings
+        id: v
+        run: |
+          version="${GITHUB_REF_NAME}"
+          case "$version" in
+            v*) ;;
+            *) version="$(git describe --tags --always)" ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      # Static, so it runs on whatever distribution the client's jump box
+      # happens to be, with no libc to match and nothing to install.
+      - name: Build
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: ${{ matrix.arch }}
+          P: github.com/GoToolSharing/nety/internal/config
+        run: |
+          go build -trimpath \
+            -ldflags "-s -w \
+              -X $P.Version=${{ steps.v.outputs.version }} \
+              -X $P.Commit=${{ steps.v.outputs.commit }} \
+              -X $P.BuildDate=${{ steps.v.outputs.date }}" \
+            -o nety ./cmd/nety
+          file nety
+
+      - name: Check it is really static
+        run: |
+          if file nety | grep -q "dynamically linked"; then
+            echo "the binary is dynamically linked; it would not run on an unknown host" >&2
+            exit 1
+          fi
+
+      - name: Assemble the tarball
+        id: pack
+        env:
+          NAME: nety-${{ steps.v.outputs.version }}-linux-${{ matrix.arch }}
+        run: |
+          mkdir -p "dist/$NAME"
+          mv nety "dist/$NAME/nety"
+          cp deploy/nety.service deploy/install.sh "dist/$NAME/"
+          cp README.md LICENSE docs/DEPLOY.md "dist/$NAME/"
+          chmod +x "dist/$NAME/install.sh" "dist/$NAME/nety"
+          tar -C dist -czf "dist/$NAME.tar.gz" "$NAME"
+          (cd dist && sha256sum "$NAME.tar.gz" > "$NAME.tar.gz.sha256")
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          ls -lh dist/
+
+      # The tarball is what people will download, so prove here that it
+      # unpacks into something runnable rather than finding out from an issue.
+      - name: Smoke test the artifact
+        env:
+          NAME: ${{ steps.pack.outputs.name }}
+        run: |
+          mkdir -p /tmp/unpack && tar -C /tmp/unpack -xzf "dist/$NAME.tar.gz"
+          if [ "${{ matrix.arch }}" = amd64 ]; then
+            out="$(/tmp/unpack/$NAME/nety version)"
+            echo "$out"
+            echo "$out" | grep -q "${{ steps.v.outputs.version }}" \
+              || { echo "the binary does not report the version it was built with" >&2; exit 1; }
+          else
+            echo "cross-built for arm64; not executed on this runner"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pack.outputs.name }}
+          path: |
+            dist/*.tar.gz
+            dist/*.sha256
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Collect the checksums into one file
+        run: |
+          cd dist
+          cat *.sha256 > SHA256SUMS
+          rm -f *.sha256
+          ls -lh
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          generate_release_notes: true
+          files: |
+            dist/*.tar.gz
+            dist/SHA256SUMS
+          body: |
+            ## Install
+
+            Download the archive for your architecture, check it, and run the
+            installer on the Linux machine you will scan from:
+
+            ```sh
+            tar xzf nety-${{ github.ref_name }}-linux-amd64.tar.gz
+            cd nety-${{ github.ref_name }}-linux-amd64
+            sudo ./install.sh
+            ```
+
+            It installs a systemd service, creates the data directory, prints
+            the URL and the first admin password. Running it again upgrades in
+            place and never touches the database.
+
+            The binary is static: no libc to match, nothing else to install.
+            Raw scanning needs `CAP_NET_RAW` and `CAP_NET_ADMIN`, which the
+            installer grants to the service.
+
+            Verify a download against `SHA256SUMS`:
+
+            ```sh
+            sha256sum -c SHA256SUMS --ignore-missing
+            ```

@@ -17,7 +17,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version-file: go.mod
           cache: true
 
       - name: gofmt
@@ -44,6 +44,41 @@ jobs:
           GOOS=linux  GOARCH=arm64 go build ./...
           GOOS=darwin GOARCH=arm64 go build ./...
 
+  # The release pipeline is the only way anyone gets a binary, so a change
+  # that breaks it must fail here rather than on the day a tag is pushed.
+  release-dry-run:
+    name: Release artifact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build the interface
+        working-directory: web
+        run: npm ci --no-audit --no-fund && npm run build
+
+      - name: Build the binary
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: amd64
+        run: go build -trimpath -ldflags '-s -w' -o nety ./cmd/nety
+
+      - name: It runs, and it serves the interface it embedded
+        run: |
+          ./nety version
+          test -s internal/server/dist/index.html
+
   web:
     name: Web
     runs-on: ubuntu-latest
@@ -59,6 +94,10 @@ jobs:
       - name: Install
         working-directory: web
         run: npm ci --no-audit --no-fund
+
+      - name: Formatting
+        working-directory: web
+        run: npm run format:check
 
       - name: Typecheck
         working-directory: web
