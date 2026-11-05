@@ -123,6 +123,11 @@ func writeMarkdown(w io.Writer, d model.MissionData) error {
 		config.Version, d.ExportedAt.Format("2006-01-02 15:04 MST")); err != nil {
 		return err
 	}
+	if d.Omitted.Any() {
+		if err := p("_%s_\n\n", scopeLine(d)); err != nil {
+			return err
+		}
+	}
 
 	// Summary.
 	if err := p("## Summary\n\n"); err != nil {
@@ -535,6 +540,11 @@ func writeHTML(w io.Writer, d model.MissionData) error {
 	}
 	if d.Mission.Description != "" {
 		if err := p(`<p>%s</p>`, e(d.Mission.Description)); err != nil {
+			return err
+		}
+	}
+	if d.Omitted.Any() {
+		if err := p(`<p class="sub">%s</p>`, e(scopeLine(d))); err != nil {
 			return err
 		}
 	}

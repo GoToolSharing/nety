@@ -710,6 +710,35 @@ type MissionData struct {
 	// ExportedAt / By are set by the exporter caller.
 	ExportedAt time.Time `json:"exported_at"`
 	ExportedBy string    `json:"exported_by"`
+	// Omitted records what the operator's own triage kept out of this export.
+	// It travels with the data so the file itself can say it: a spreadsheet
+	// that is shorter than the mission must admit as much on its own, without
+	// needing whoever opens it to remember which box was ticked.
+	Omitted *OmittedRows `json:"omitted,omitempty"`
+}
+
+// OmittedRows counts what was left out of an export because the operator had
+// set it aside: skipped hosts and machines with everything attached to them,
+// and the services and findings marked skipped or a false positive.
+type OmittedRows struct {
+	Hosts    int `json:"hosts"`
+	Assets   int `json:"assets"`
+	Services int `json:"services"`
+	Findings int `json:"findings"`
+	Reach    int `json:"reach"`
+}
+
+// Any reports whether anything at all was left out.
+func (o *OmittedRows) Any() bool {
+	return o != nil && o.Hosts+o.Assets+o.Services+o.Findings+o.Reach > 0
+}
+
+// Total is how many rows were held back, all kinds together.
+func (o *OmittedRows) Total() int {
+	if o == nil {
+		return 0
+	}
+	return o.Hosts + o.Assets + o.Services + o.Findings + o.Reach
 }
 
 // ---------------------------------------------------------------------------

@@ -621,3 +621,74 @@ func TestPasswordChangeIsEnforcedServerSide(t *testing.T) {
 		t.Fatalf("the account should work normally now, got %d", got)
 	}
 }
+
+// The export is a deliverable by default, so the rows the operator decided
+// against stay out of it, and the file says how many it held back. Asking for
+// the whole record brings them back: that is the handover, not the hand-off to
+// the client.
+func TestExportLeavesOutWhatWasSetAside(t *testing.T) {
+	e := newEnv(t)
+	e.newUser("alice", model.RoleOperator)
+	alice := e.login("alice")
+	m := alice.createMission("ACME & Co")
+	n := alice.createNetwork(m.ID, "VLAN10")
+	ctx := t.Context()
+
+	host, err := e.store.UpsertHost(ctx, model.Host{
+		MissionID: m.ID, NetworkID: n.ID, IP: "10.1.2.3",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	keep, err := e.store.UpsertFinding(ctx, model.Finding{
+		MissionID: m.ID, NetworkID: n.ID, HostID: host.ID, IP: host.IP,
+		CheckID: "smb.signing", Title: "SMB signing not required", Severity: model.SevMedium,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	drop, err := e.store.UpsertFinding(ctx, model.Finding{
+		MissionID: m.ID, NetworkID: n.ID, HostID: host.ID, IP: host.IP,
+		CheckID: "tls.weak", Title: "Weak TLS cipher", Severity: model.SevLow,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	status := model.TriageFalsePositive
+	if _, err := e.store.SetFindingTriage(ctx, drop.ID, &status, nil, alice.user.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	var deliverable model.MissionData
+	if st := alice.do("GET", "/api/missions/"+itoa(m.ID)+"/export?format=json",
+		nil, &deliverable); st != http.StatusOK {
+		t.Fatalf("export: %d", st)
+	}
+	if len(deliverable.Findings) != 1 || deliverable.Findings[0].ID != keep.ID {
+		t.Fatalf("the false positive must not be in the deliverable: %+v", deliverable.Findings)
+	}
+	if deliverable.Omitted.Total() != 1 {
+		t.Fatalf("the export has to say what it held back, got %+v", deliverable.Omitted)
+	}
+
+	var whole model.MissionData
+	if st := alice.do("GET", "/api/missions/"+itoa(m.ID)+"/export?format=json&include_dismissed=1",
+		nil, &whole); st != http.StatusOK {
+		t.Fatalf("full export: %d", st)
+	}
+	if len(whole.Findings) != 2 {
+		t.Fatalf("the whole record must carry both: %+v", whole.Findings)
+	}
+	if whole.Omitted.Any() {
+		t.Fatalf("nothing was held back, so nothing should be claimed: %+v", whole.Omitted)
+	}
+
+	// And the workbook says it on its first sheet, not only in the JSON.
+	status2, body, _ := alice.raw("GET", "/api/missions/"+itoa(m.ID)+"/export?format=markdown")
+	if status2 != http.StatusOK {
+		t.Fatalf("markdown export: %d", status2)
+	}
+	if !strings.Contains(string(body), "left out of this export") {
+		t.Fatal("a report that is shorter than the mission has to say so on its own")
+	}
+}

@@ -369,8 +369,10 @@ func TestBulkHostAndAssetTriageAreScopedToTheMission(t *testing.T) {
 	}
 }
 
-// TestExportsKeepTheSkippedRows: the report is the record of what was found,
-// and it must not quietly lose a machine because it was parked on screen.
+// TestExportsKeepTheSkippedRows: asked for the whole record, an export must
+// not quietly lose a machine because it was parked on screen. This is the
+// handover case, the one an incoming tester needs; the deliverable case, where
+// those rows are deliberately left out, is in export_scope_test.go.
 func TestExportsKeepTheSkippedRows(t *testing.T) {
 	ctx := context.Background()
 	s := testStore(t)
@@ -378,7 +380,7 @@ func TestExportsKeepTheSkippedRows(t *testing.T) {
 	h, _, _, _ := parked(t, s, m.ID, "10.0.0.12")
 	skip(t, s, h.ID)
 
-	d, err := s.MissionData(ctx, m.ID, 0)
+	d, err := s.MissionData(ctx, m.ID, ExportScope{IncludeDismissed: true})
 	if err != nil {
 		t.Fatalf("mission data: %v", err)
 	}

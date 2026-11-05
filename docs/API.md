@@ -208,9 +208,22 @@ works.
 | findings | `severity` (by rank, so `critical` is above `low`), `ip`, `check`, `title`, `status`, `network`, `last_seen` |
 | assets | `label`, `kind`, `os`, `domain`, `ips` (how many addresses), `status`, `last_seen` |
 
-**Exports are not filtered.** An export is the whole mission, so `ip`, `sort`
-and `dir` are not read by `/export`: a report must not quietly drop a machine
-because a screen filter was left on.
+**Exports do not inherit the screen filters.** `ip`, `sort` and `dir` are not
+read by `/export`: a report must not quietly drop a machine because a search
+box was left filled in.
+
+**Exports do honour the triage, and say so.** An export is usually a
+deliverable, so what the operator set aside stays out of it: a host or a
+machine marked `skipped`, with the services, findings and segmentation results
+attached to it, and any service or finding marked `skipped` or
+`false_positive`. The response carries an `omitted` object counting what was
+held back, and every human-readable format prints that count on its own front
+page, so a file that is shorter than the mission admits it without needing
+whoever opens it to remember which box was ticked.
+
+`include_dismissed=1` asks for the whole record instead, which is what a
+handover to another tester needs. The mission bundle (`/bundle`) is unaffected
+either way: a backup always carries everything.
 
 **Skipped hosts.** By default the service, finding, reachability and matrix
 listings leave out the rows of a host whose triage status is `skipped`, and the

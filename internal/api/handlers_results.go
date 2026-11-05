@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -565,7 +566,17 @@ func (a *API) handleExport(w http.ResponseWriter, r *http.Request, u model.User)
 	}
 	networkID := queryInt64(r, "network_id")
 
-	data, err := a.Store.MissionData(r.Context(), m.ID, networkID)
+	// An export is a deliverable, so what the operator set aside stays out of
+	// it by default: a skipped host or machine with everything attached to
+	// it, and the services and findings marked skipped or a false positive.
+	// `include_dismissed=1` asks for the whole record instead, which is what
+	// a handover to another tester needs. Either way the file says which of
+	// the two it is, and how many rows were held back.
+	scope := store.ExportScope{
+		NetworkID:        networkID,
+		IncludeDismissed: queryYes(r, "include_dismissed"),
+	}
+	data, err := a.Store.MissionData(r.Context(), m.ID, scope)
 	if err != nil {
 		a.failStore(w, err, "mission data")
 		return
@@ -586,5 +597,9 @@ func (a *API) handleExport(w http.ResponseWriter, r *http.Request, u model.User)
 		a.Log.Error("export failed", "mission", m.ID, "format", format, "error", err)
 		return
 	}
-	a.audit(r, u, m.ID, "mission.exported", format)
+	detail := format
+	if data.Omitted.Any() {
+		detail += fmt.Sprintf(" (%d rows set aside left out)", data.Omitted.Total())
+	}
+	a.audit(r, u, m.ID, "mission.exported", detail)
 }

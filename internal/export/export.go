@@ -354,3 +354,35 @@ func csvWriter(w io.Writer) (*csv.Writer, error) {
 	}
 	return csv.NewWriter(w), nil
 }
+
+// scopeLine is the one sentence every export carries about how much of the
+// mission it holds. An export that leaves out the rows the operator set
+// aside must say so itself: the file outlives the screen it was produced
+// from, and nobody reading it later knows which box was ticked.
+func scopeLine(d model.MissionData) string {
+	if !d.Omitted.Any() {
+		if d.Omitted == nil {
+			return "Scope: the whole mission, including what was skipped or called a false positive."
+		}
+		return "Scope: the whole mission. Nothing was set aside."
+	}
+	o := d.Omitted
+	var parts []string
+	add := func(n int, singular, plural string) {
+		if n == 0 {
+			return
+		}
+		word := plural
+		if n == 1 {
+			word = singular
+		}
+		parts = append(parts, fmt.Sprintf("%d %s", n, word))
+	}
+	add(o.Findings, "finding", "findings")
+	add(o.Services, "service", "services")
+	add(o.Hosts, "host", "hosts")
+	add(o.Assets, "machine", "machines")
+	add(o.Reach, "segmentation result", "segmentation results")
+	return "Scope: left out of this export because they were skipped or called " +
+		"a false positive: " + strings.Join(parts, ", ") + "."
+}

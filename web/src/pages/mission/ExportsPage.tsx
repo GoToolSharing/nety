@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { api } from '@/lib/api'
-import { useExportFormats, useMission, useNetworks } from '@/lib/queries'
+import { useExportFormats, useMission, useNetworks, useTriageSummary } from '@/lib/queries'
 import { useMissionId } from '@/lib/hooks'
 import PageContainer from '@/components/layout/PageContainer'
 import { Card, CardBody, CardHeader, PageHeader } from '@/components/ui/Card'
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/Feedback'
 import { Badge } from '@/components/ui/Badge'
 import { Mono } from '@/components/common'
+import { Toggle } from '@/components/ui/Field'
+import { formatNumber } from '@/lib/format'
 import { cn } from '@/lib/cn'
 import { DownloadIcon, ExportIcon } from '@/components/icons'
 import type { ExportFormat } from '@/types/api'
@@ -34,12 +36,14 @@ function FormatCard({
   format,
   missionId,
   networkId,
+  includeDismissed,
 }: {
   format: ExportFormat
   missionId: number
   networkId: number
+  includeDismissed: boolean
 }) {
-  const href = api.exportUrl(missionId, format.id, networkId || undefined)
+  const href = api.exportUrl(missionId, format.id, networkId || undefined, includeDismissed)
   return (
     <a
       href={href}
@@ -74,7 +78,18 @@ export default function ExportsPage() {
   const mission = useMission(missionId)
   const networks = useNetworks(missionId)
   const formats = useExportFormats()
+  const summary = useTriageSummary(missionId, 0)
   const [networkId, setNetworkId] = useState(0)
+  // An export is usually a deliverable, so what the operator set aside stays
+  // out of it unless they ask for the whole record.
+  const [includeDismissed, setIncludeDismissed] = useState(false)
+
+  const setAside =
+    (summary.data?.counts.skipped ?? 0) +
+    (summary.data?.counts.false_positive ?? 0) +
+    (summary.data?.findings.counts.skipped ?? 0) +
+    (summary.data?.findings.counts.false_positive ?? 0) +
+    (summary.data?.hosts.counts.skipped ?? 0)
 
   const scope =
     networkId === 0
@@ -113,6 +128,25 @@ export default function ExportsPage() {
             </label>
             <span className="text-xs text-faint">Downloads will cover {scope}.</span>
           </div>
+
+          <div className="mt-4 border-t border-border pt-4">
+            <Toggle
+              checked={includeDismissed}
+              onChange={setIncludeDismissed}
+              label="Include what I set aside"
+              hint={
+                includeDismissed
+                  ? 'Everything goes in, including skipped hosts and machines with all their services and findings, and anything marked skipped or a false positive. This is the handover version, not the one for the client.'
+                  : 'Off: skipped hosts and machines leave with everything attached to them, and services and findings marked skipped or a false positive are left out. The file says on its own front page how many rows were held back, so a short export is never a silent one.'
+              }
+            />
+            {setAside > 0 && !includeDismissed && (
+              <p className="mt-2 text-xs text-muted">
+                {formatNumber(setAside)} rows across this mission are currently set aside and
+                will not be in the download.
+              </p>
+            )}
+          </div>
         </CardBody>
       </Card>
 
@@ -143,7 +177,13 @@ export default function ExportsPage() {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {(formats.data ?? []).map((f) => (
-              <FormatCard key={f.id} format={f} missionId={missionId} networkId={networkId} />
+              <FormatCard
+                key={f.id}
+                format={f}
+                missionId={missionId}
+                networkId={networkId}
+                includeDismissed={includeDismissed}
+              />
             ))}
           </div>
         )}

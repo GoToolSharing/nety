@@ -417,11 +417,18 @@ export const api = {
     )
   },
 
-  exportUrl: (missionId: number, format: string, networkId?: number) =>
+  exportUrl: (
+    missionId: number,
+    format: string,
+    networkId?: number,
+    /** Keep the rows the operator set aside. The server leaves them out. */
+    includeDismissed?: boolean,
+  ) =>
     apiUrl(
       withQuery(`api/missions/${missionId}/export`, {
         format,
         network_id: networkId,
+        include_dismissed: includeDismissed ? 1 : undefined,
       }),
     ),
 

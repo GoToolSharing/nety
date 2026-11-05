@@ -115,6 +115,13 @@ The services CSV and the Excel sheet carry your status, note, author and
 timestamp next to the service itself, because that sheet is what ends up in the
 client's tracker.
 
+What you set aside stays out of the download: a skipped host or machine leaves
+with everything attached to it, and anything marked skipped or a false positive
+goes with it. Tick **Include what I set aside** for the whole record, which is
+what a handover to another tester needs. Either way the file says on its front
+page how many rows were held back, so a short export is never a silent one. A
+mission backup is not affected: it always carries everything.
+
 ---
 
 ## Reading a result

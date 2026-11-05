@@ -241,6 +241,13 @@ func sheetSummary(f *excelize.File, st xlsxStyles, d model.MissionData) error {
 	if err := f.SetCellStr(sheet, "A2", "Generated "+d.ExportedAt.Format("2006-01-02 15:04 MST")); err != nil {
 		return err
 	}
+	// A workbook that is shorter than the mission says so on its own first
+	// sheet. Whoever opens it months later will not remember which box was
+	// ticked when it was produced, and a count that is quietly short is the
+	// kind of thing a client asks about at the worst moment.
+	if err := f.SetCellStr(sheet, "A3", scopeLine(d)); err != nil {
+		return err
+	}
 	_ = f.SetColWidth(sheet, "A", "A", 34)
 	_ = f.SetColWidth(sheet, "B", "B", 18)
 
